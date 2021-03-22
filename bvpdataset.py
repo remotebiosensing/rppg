@@ -18,6 +18,7 @@ class bvpdataset(Dataset):
         mot_img = torch.tensor(self.m[index],dtype = dtype)
         label = torch.tensor(self.label[index],dtype= dtype)
 
+
         return norm_img,mot_img,label
 
     def __len__(self):
