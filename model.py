@@ -14,11 +14,11 @@ class appearnce_block(torch.nn.Module):
         #layer 1
         a = self.a_conv1(inputs)
         a = self.a_batch1(a)
-        a = torch.relu(a)
+        a = torch.tanh(a)
         #layer 2
         a = self.a_conv2(a)
         a = self.a_batch2(a)
-        attention = torch.relu(a)
+        attention = torch.tanh(a)
 
         return a, attention
 class attention_block(torch.nn.Module):
@@ -64,12 +64,12 @@ class motion_block(torch.nn.Module):
     def forward(self,inputs,mask):
         m = self.m_conv1(inputs)
         m = self.m_batch1(m)
-        m = torch.relu(m)
+        m = torch.tanh(m)
 
         m = self.m_conv2(m)
         m = self.m_batch2(m)
         m = torch.mul(m,mask)
-        m = torch.relu(m)
+        m = torch.tanh(m)
         m = self.m_drop3(m)
         m = self.m_avg3(m)
         return m
