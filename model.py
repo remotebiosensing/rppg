@@ -18,9 +18,10 @@ class appearnce_block(torch.nn.Module):
         #layer 2
         a = self.a_conv2(a)
         a = self.a_batch2(a)
-        attention = torch.tanh(a)
+        a = torch.tanh(a)
 
-        return a, attention
+        return a
+
 class attention_block(torch.nn.Module):
     def __init__(self,in_channels):
         super().__init__()
@@ -28,11 +29,12 @@ class attention_block(torch.nn.Module):
     def forward(self, input):
         mask = self.attention(input)
         mask = torch.sigmoid(mask)
-        B, _, H, W = mask.shape
+        B, _, H, W = input.shape
         norm = 2 * torch.norm(mask, p=1, dim=(1,2,3))
         norm = norm.reshape(B,1,1,1)
-        mask = torch.div(mask*H*W,norm)
+        mask = torch.div(mask*H*W, norm)
         return mask
+
 class appearance_model(torch.nn.Module):
     def __init__(self,in_channels,kernel_size,out_channels):
         #1st app_block
@@ -45,13 +47,14 @@ class appearance_model(torch.nn.Module):
         self.a_mask6 = attention_block(out_channels*2)
 
     def forward(self,inputs):
-        a,mask1 = self.a_block1(inputs)
+        a = self.a_block1(inputs)
+        mask1 = self.a_mask3(a)
         a = self.a_dropout2(a)
         a = self.a_avg2(a)
-        mask1 = self.a_mask3(mask1)
-        a,mask2 = self.a_block4(a)
-        mask2 = self.a_mask6(mask2)
-        return mask1,mask2
+        a = self.a_block4(a)
+        mask2 = self.a_mask6(a)
+        return mask1, mask2
+
 class motion_block(torch.nn.Module):
     def __init__(self,in_channels, out_channels, kernel_size):
         super().__init__()
@@ -70,9 +73,11 @@ class motion_block(torch.nn.Module):
         m = self.m_batch2(m)
         m = torch.mul(m,mask)
         m = torch.tanh(m)
+
         m = self.m_drop3(m)
         m = self.m_avg3(m)
         return m
+
 class motion_model(torch.nn.Module):
     def __init__(self,in_channels,out_channels,kernel_size):
         super().__init__()
@@ -82,22 +87,27 @@ class motion_model(torch.nn.Module):
         m =self.m_block1(inputs,mask1)
         m = self.m_block2(m,mask2)
         return m
+
 class fc(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.f_linear1 = torch.nn.Linear(64*9*9,128)
-        self.f_linear2 = torch.nn.Linear(128,1,bias=True)
+        self.f_drop1 = torch.nn.Dropout2d(0.5)
+        self.f_linear2 = torch.nn.Linear(64*9*9,128)
+        self.f_linear3 = torch.nn.Linear(128,1,bias=True)
     def forward(self,input):
         f = torch.flatten(input,start_dim=1)
-        f = self.f_linear1(f)
-        f = self.f_linear2(f)
+        f = self.f_drop1(f)
+        f = torch.tanh(self.f_linear2(f))
+        f = self.f_linear3(f)
         return f
+
 class DeepPhys(torch.nn.Module):
     def __init__(self,in_channels,out_channels,kernel_size):
         super().__init__()
         self.appearance_model = appearance_model(in_channels=in_channels,out_channels=out_channels,kernel_size=kernel_size)
         self.motion_model = motion_model(in_channels=in_channels,out_channels=out_channels,kernel_size=kernel_size)
         self.fc = fc()
+
     def forward(self,norm_input,motion_input):
         mask1,mask2 = self.appearance_model(norm_input)
         out = self.motion_model(motion_input,mask1,mask2)
