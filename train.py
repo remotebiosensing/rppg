@@ -30,7 +30,7 @@ GPU_NUM = 0
 torch.cuda.set_device(GPU_NUM)
 
 model = model.DeepPhys(in_channels=3, out_channels=32, kernel_size=3).to(device)
-
+print(model)
 MSEloss = torch.nn.MSELoss()
 Adadelta = optim.Adadelta(model.parameters(), lr=1)
 for epoch in range(1000000):
