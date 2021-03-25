@@ -29,6 +29,8 @@ print(torch.cuda.get_device_name(device))
 GPU_NUM = 0
 torch.cuda.set_device(GPU_NUM)
 
+tmp_valloss = 100
+
 model = model.DeepPhys(in_channels=3, out_channels=32, kernel_size=3).to(device)
 print(model)
 MSEloss = torch.nn.MSELoss()
@@ -36,8 +38,8 @@ Adadelta = optim.Adadelta(model.parameters(), lr=1)
 for epoch in range(1000000):
     print("==="+str(epoch))
     running_loss = 0.0
-    # for i_batch, (avg, mot, lab) in enumerate(train_loader):
-    for i_batch, (mot,avg, lab) in enumerate(train_loader):
+    for i_batch, (avg, mot, lab) in enumerate(train_loader):
+    #for i_batch, (mot,avg, lab) in enumerate(train_loader):
         Adadelta.zero_grad()
         avg, mot, lab = avg.to(device), mot.to(device), lab.to(device)
 
@@ -76,7 +78,13 @@ for epoch in range(1000000):
             #     continue
             val_loss += v_loss
             if k is 0:
-                writer.add_scalar('val loss', v_loss/128, epoch)
+                writer.add_scalar('val loss', v_loss, epoch)
+                if tmp_valloss > val_loss:
+                    checkpoint = { 'Epoch' :epoch,
+                                  'state_dict' : model.state_dict(),
+                                  'optimizer' : Adadelta.state_dict()}
+                    torch.save(checkpoint,'checkpoint.pth')
+                    tmp_valloss = val_loss
             # writer.add_scalar('val loss', val_loss / 128, epoch * len(val_loader) + i_batch)
     writer.close()
 print('Finished Training')
