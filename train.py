@@ -9,6 +9,8 @@ import torchvision
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
+import torchsummary
+
 writer = SummaryWriter()
 
 transform = transforms.Compose([transforms.ToTensor()])
@@ -19,20 +21,19 @@ train_set, val_set = torch.utils.data.random_split(dataset, [int(len(dataset)*0.
 train_loader = DataLoader(train_set, batch_size=128, shuffle=False)
 val_loader = DataLoader(val_set, batch_size=128, shuffle=False)
 
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-print('Availabel devices', torch.cuda.device_count())
+print('Available devices', torch.cuda.device_count())
 print('Current cuda device', torch.cuda.current_device())
 print(torch.cuda.get_device_name(device))
 
-GPU_NUM = 0
+GPU_NUM = 1
 torch.cuda.set_device(GPU_NUM)
 
 tmp_valloss = 100
 
 model = model.DeepPhys(in_channels=3, out_channels=32, kernel_size=3).to(device)
-print(model)
+torchsummary.summary(model, ((3,36,36),(3,36,36)), )
 MSEloss = torch.nn.MSELoss()
 Adadelta = optim.Adadelta(model.parameters(), lr=1)
 for epoch in range(1000000):
