@@ -16,6 +16,8 @@ class bvpdataset(Dataset):
 
         norm_img = torch.tensor(np.transpose(self.a[index]),dtype = dtype)
         mot_img = torch.tensor(np.transpose(self.m[index]),dtype = dtype)
+        # norm_img = torch.tensor(self.a[index], dtype=dtype)
+        # mot_img = torch.tensor(self.m[index], dtype=dtype)
         label = torch.tensor(self.label[index],dtype= dtype)
 
 

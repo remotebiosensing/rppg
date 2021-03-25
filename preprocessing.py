@@ -70,7 +70,7 @@ def generate_npz(root_dir="/mnt/a7930c08-d429-42fa-a09e-15291e166a27/BVP_js/subj
 
     target_image = np.delete(target_image,0,0)
     target_label = np.delete(target_label,0)
-    np.savez_compressed("./subject_test",A=target_image[:,:,:,:3],M=target_image[:,:,:,-3:],T=target_label)
+    np.savez_compressed("./subject_test",A=target_image[:,:,:,-3:],M=target_image[:,:,:,:3],T=target_label)
 
 
 
