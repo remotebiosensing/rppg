@@ -19,7 +19,7 @@ def preprocess_raw_video(videoFilePath, dim=36):
     while success:
         t.append(vidObj.get(cv2.CAP_PROP_POS_MSEC))# current timestamp in milisecond
         vidLxL = cv2.resize(img_as_float(img[:, int(width/2)-int(height/2 + 1):int(height/2)+int(width/2), :]), (dim, dim), interpolation = cv2.INTER_AREA)
-        vidLxL = cv2.rotate(vidLxL, cv2.ROTATE_90_CLOCKWISE) # rotate 90 degree
+        vidLxL = cv2.rotate(vidLxL, cv2.ROTATE_90_COUNTERCLOCKWISE) # rotate 90 degree
         vidLxL = cv2.cvtColor(vidLxL.astype('float32'), cv2.COLOR_BGR2RGB)
         vidLxL[vidLxL > 1] = 1
         vidLxL[vidLxL < (1/255)] = 1/255
@@ -36,7 +36,7 @@ def preprocess_raw_video(videoFilePath, dim=36):
     #########################################################################
     # Normalize raw frames in the apperance branch
     Xsub = Xsub - np.mean(Xsub)
-    Xsub = Xsub  / np.std(Xsub)
+    #Xsub = Xsub  / np.std(Xsub)
     Xsub = Xsub[:totalFrames-1, :, :, :]
     #########################################################################
     # Plot an example of data after preprocess
@@ -47,14 +47,20 @@ def preprocess_label(label_path):
     f = open(label_path, 'r')
     f_read = f.read().split('\n')
     label = ' '.join(f_read[0].split()).split()
-    label = np.array(label).astype('float32')
-    label = np.delete(label, len(label)-1,axis=0)
+    label = list(map(float,label))
+    delta_label = []
+    for i in range(len(label)-1):
+        delta_label.append(label[i+1]-label[i])
+    delta_label = np.array(delta_label).astype('float32')
+
+    # label = np.delete(label, len(label)-1,axis=0)
    # rr = rr.reshape(cnt, 1, 1, 1)
     f.close()
-    return label
+    return delta_label
 
-subject_cnt = [1, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 22, 23, 24, 25, 26, 27, 30, 31, 32, 33, 34, 35, 36,
-               37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49]
+#subject_cnt = [1, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 22, 23, 24, 25, 26, 27, 30, 31, 32, 33, 34, 35, 36,
+#               37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49]
+subject_cnt = [1]
 
 def generate_npz(root_dir="/mnt/a7930c08-d429-42fa-a09e-15291e166a27/BVP_js/subject"):
 
@@ -70,7 +76,7 @@ def generate_npz(root_dir="/mnt/a7930c08-d429-42fa-a09e-15291e166a27/BVP_js/subj
 
     target_image = np.delete(target_image,0,0)
     target_label = np.delete(target_label,0)
-    np.savez_compressed("./subject_test",A=target_image[:,:,:,-3:],M=target_image[:,:,:,:3],T=target_label)
+    np.savez_compressed("./subject_1",A=target_image[:,:,:,-3:],M=target_image[:,:,:,:3],T=target_label)
 
 
 
