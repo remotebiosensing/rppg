@@ -16,3 +16,7 @@ implement rppg model  using pytorch
 |-- test.py          : test model (load saved model)
 `-- train.py         : train model (save model)
 ~~~
+## Contacts
+TVSTORM inc.
+Kim Dae Yeol
+wagon0004@tvstorm.com
