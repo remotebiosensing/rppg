@@ -1,8 +1,7 @@
 import torch
 import torchvision
-from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
-import torchsummary
+from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter()
 
@@ -20,7 +19,7 @@ class train_model:
 
         self.model.to(device)
         tmp_valloss = 100
-        torchsummary.summary(self.model, ((3, 36, 36), (3, 36, 36)), )
+
 
         for epoch in range(1000000):
             print("Train : " + str(epoch)+"=======")
