@@ -1,14 +1,8 @@
 import model
 import bvpdataset
 import torch
-import torch.optim as optim
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
-import numpy as np
-import torchvision
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-import torch.nn.functional as F
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -21,16 +15,14 @@ torch.cuda.set_device(GPU_NUM)
 
 transform = transforms.Compose([transforms.ToTensor()])
 dataset = bvpdataset.bvpdataset(
-    data_path="subject_1.npz",
+    data_path="subject_test.npz",
     transform=transform)
 test_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
 
 model = model.DeepPhys(in_channels=3, out_channels=32, kernel_size=3).cuda()
-Adadelta = optim.Adadelta(model.parameters(), lr=1)
 checkpoint = torch.load("checkpoint.pth")
 model.load_state_dict(checkpoint['state_dict'])
-Adadelta.load_state_dict(checkpoint['optimizer'])
 
 with torch.no_grad():
     val_output = []
