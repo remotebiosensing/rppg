@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="1710eccc-d5b2-4eac-8e55-37edf9407d92" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="1qBHpCWf9mEqplv6iPUdLryFeN1" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../test/Pytorch_rppgs" />
+    <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.test">
+    <configuration name="bvpdataset" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Pytorch_rppgs" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/bvpdataset.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="preprocessing" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Pytorch_rppgs" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/preprocessing.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="preprocessing_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Pytorch_rppgs" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/preprocessing_test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Pytorch_rppgs" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="train" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Pytorch_rppgs" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.test" />
+        <item itemvalue="Python.preprocessing" />
+        <item itemvalue="Python.train" />
+        <item itemvalue="Python.preprocessing_test" />
+        <item itemvalue="Python.bvpdataset" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1710eccc-d5b2-4eac-8e55-37edf9407d92" name="Default Changelist" comment="" />
+      <created>1616546243612</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1616546243612</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="589" y="211" width="744" height="641" key="#Inspections" timestamp="1616735712867">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state x="589" y="211" width="744" height="641" key="#Inspections/0.0.1920.1052@0.0.1920.1052" timestamp="1616735712867" />
+    <state x="693" y="278" width="536" height="506" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1616641925382">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state x="693" y="278" width="536" height="506" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1920.1052@0.0.1920.1052" timestamp="1616641925382" />
+    <state x="743" y="295" width="436" height="488" key="FileChooserDialogImpl" timestamp="1616998866392">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state x="743" y="287" width="436" height="488" key="FileChooserDialogImpl/0.0.1920.1052@0.0.1920.1052" timestamp="1616737920827" />
+    <state x="743" y="295" width="436" height="488" key="FileChooserDialogImpl/0.1080.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1616998866392" />
+    <state width="1897" height="16" key="GridCell.Tab.0.bottom" timestamp="1616737689056">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="1897" height="16" key="GridCell.Tab.0.bottom/0.0.1920.1052@0.0.1920.1052" timestamp="1616737689056" />
+    <state width="1897" height="16" key="GridCell.Tab.0.center" timestamp="1616737689056">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="1897" height="16" key="GridCell.Tab.0.center/0.0.1920.1052@0.0.1920.1052" timestamp="1616737689056" />
+    <state width="1897" height="16" key="GridCell.Tab.0.left" timestamp="1616737689056">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="1897" height="16" key="GridCell.Tab.0.left/0.0.1920.1052@0.0.1920.1052" timestamp="1616737689056" />
+    <state width="1897" height="16" key="GridCell.Tab.0.right" timestamp="1616737689056">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="1897" height="16" key="GridCell.Tab.0.right/0.0.1920.1052@0.0.1920.1052" timestamp="1616737689056" />
+    <state width="1897" height="16" key="GridCell.Tab.1.bottom" timestamp="1616737689056">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="1897" height="16" key="GridCell.Tab.1.bottom/0.0.1920.1052@0.0.1920.1052" timestamp="1616737689056" />
+    <state width="1897" height="16" key="GridCell.Tab.1.center" timestamp="1616737689056">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="1897" height="16" key="GridCell.Tab.1.center/0.0.1920.1052@0.0.1920.1052" timestamp="1616737689056" />
+    <state width="1897" height="16" key="GridCell.Tab.1.left" timestamp="1616737689056">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="1897" height="16" key="GridCell.Tab.1.left/0.0.1920.1052@0.0.1920.1052" timestamp="1616737689056" />
+    <state width="1897" height="16" key="GridCell.Tab.1.right" timestamp="1616737689056">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="1897" height="16" key="GridCell.Tab.1.right/0.0.1920.1052@0.0.1920.1052" timestamp="1616737689056" />
+    <state x="449" y="164" width="1022" height="734" key="SettingsEditor" timestamp="1616725691237">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state x="449" y="164" width="1022" height="734" key="SettingsEditor/0.0.1920.1052@0.0.1920.1052" timestamp="1616725691237" />
+    <state x="599" y="220" key="SettingsEditor/0.0.2560.1412@0.0.2560.1412" timestamp="1616636423039" />
+    <state width="966" height="528" key="XDebugger.FullValuePopup" timestamp="1616553021974">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state width="966" height="528" key="XDebugger.FullValuePopup/0.0.1920.1052@0.0.1920.1052" timestamp="1616553021974" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>
