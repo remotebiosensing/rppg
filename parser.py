@@ -1,5 +1,5 @@
 import argparse
-import os
+from test import test_model
 from train import train_model
 from model import model
 import torch
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1.0, help='learning rate')
     parser.add_argument('--preprocessing', type=bool, default=False, help='preprocessing rate')
     parser.add_argument('--check_model', type=bool, default=False, help='True : check model summary False : train or test')
-    parser.add_argument('--train',type=bool,default=True,help="True : train, False, Test")
+    parser.add_argument('--train',type=bool,default=False,help="True : train, False, Test")
 
     # parser.add_argument('--pretrained_weights', type=str, help='if specified starts from checkpoint model')
     # parser.add_argument('--crop', type=bool, default=False, help='crop with blazeFace(preprocessing step)')
@@ -85,22 +85,6 @@ if __name__ == '__main__':
         print('\ncheck model architecture')
         exit(666)
 
-    if args.model.find('MT') is not -1:
-        print('Constructing data loader for DeepPhys architecture....')
-    else :
-        Dataset = DatasetDeepPhysUBFC(args.data,
-                                      img_size=args.img_size,
-                                      preprocessing=args.preprocessing)
-        Dataset = Dataset()
-
-    train_loader = DataLoader(Dataset[0], batch_size=args.batch_size, shuffle=False)
-    val_loader = DataLoader(Dataset[1], batch_size=args.batch_size, shuffle=False)
-
-    print('\nDataLoaders successfully constructed!')
-
-
-
-
     loss_fn = None
     if args.loss == 'L1':
         loss_fn = torch.nn.L1Loss()
@@ -110,5 +94,31 @@ if __name__ == '__main__':
         print('\nError! No such loss function. Choose from : L1, MSE')
         exit(666)
 
-    train_model(models, train_loader, val_loader, loss_fn, opts, args.checkpoint_dir,
-                args.epochs, device)
+    print('Constructing data loader for DeepPhys architecture....')
+
+    Dataset = DatasetDeepPhysUBFC(args.data,
+                                  img_size=args.img_size,
+                                  preprocessing=args.preprocessing,
+                                  train = args.train)
+
+    Dataset = Dataset()
+
+    if args.train is True:
+        train_loader = DataLoader(Dataset[0], batch_size=args.batch_size, shuffle=False)
+        val_loader = DataLoader(Dataset[1], batch_size=args.batch_size, shuffle=False)
+
+        print('\nDataLoaders successfully constructed!')
+
+        train_model(models, train_loader, val_loader, loss_fn, opts, args.checkpoint_dir,
+                    args.epochs, device)
+    else:
+        test_loader = DataLoader(Dataset,batch_size=args.batch_size,shuffle=False)
+        print('\nDataLoaders successfully constructed!')
+
+        checkpoint = torch.load("checkpoint_train.pth")
+        models.load_state_dict(checkpoint['state_dict'])
+        test_model(models, test_loader, loss_fn, opts, args.checkpoint_dir,
+                    args.epochs, device)
+
+
+

@@ -4,30 +4,24 @@ import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+class test_model:
+    def __init__(self, models, test_loader, criterion, optimizers, model_path, num_epochs, device):
+        self.model = models
+        self.num_epochs = num_epochs
+        self.model_path = model_path
+        self.optimizers = optimizers
+        self.criterion = criterion
+        self.test_loader = test_loader
+        self.device = device
 
-print('Availabel devices', torch.cuda.device_count())
-print('Current cuda device', torch.cuda.current_device())
-print(torch.cuda.get_device_name(device))
+        self.model.to(device)
 
-GPU_NUM = 0
-torch.cuda.set_device(GPU_NUM)
+        with torch.no_grad():
+            val_output = []
+            for k, (avg, mot, lab) in enumerate(test_loader):
+                if avg.shape[0] %2 is 1:
+                    continue
+                avg, mot, lab = avg.to(device), mot.to(device), lab.to(device)
+                val_output.append(self.model(avg, mot).cpu().clone().numpy()[0][0])
 
-transform = transforms.Compose([transforms.ToTensor()])
-dataset = bvpdataset.bvpdataset(
-    data_path="subject_test.npz",
-    transform=transform)
-test_loader = DataLoader(dataset, batch_size=1, shuffle=False)
-
-
-model = model.DeepPhys(in_channels=3, out_channels=32, kernel_size=3).cuda()
-checkpoint = torch.load("checkpoint.pth")
-model.load_state_dict(checkpoint['state_dict'])
-
-with torch.no_grad():
-    val_output = []
-    for k, (avg, mot, lab) in enumerate(test_loader):
-        avg, mot, lab = avg.to(device), mot.to(device), lab.to(device)
-        val_output.append(model(avg, mot).cpu().clone().numpy()[0][0])
-
-print(val_output)
+        print(val_output)

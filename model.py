@@ -1,7 +1,5 @@
 import torch
 
-
-
 class TSM(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -29,6 +27,7 @@ class TSM(torch.nn.Module):
         out = out.view([-1,C,H,W])
 
         return out
+
 class TSM_block(torch.nn.Module):
     def __init__(self,in_channels,out_channels, kernel_size):
         super().__init__()
@@ -38,6 +37,7 @@ class TSM_block(torch.nn.Module):
         t = self.tsm1(input,n_frame,fold_div)
         t = self.t_conv1(t)
         return t
+
 class appearnce_block(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size):
         super().__init__()
@@ -61,6 +61,7 @@ class appearnce_block(torch.nn.Module):
         a = torch.tanh(a)
 
         return a
+
 class attention_block(torch.nn.Module):
     def __init__(self, in_channels):
         super().__init__()
@@ -74,6 +75,7 @@ class attention_block(torch.nn.Module):
         norm = norm.reshape(B, 1, 1, 1)
         mask = torch.div(mask * H * W, norm)
         return mask
+
 class appearance_model(torch.nn.Module):
     def __init__(self, in_channels, kernel_size, out_channels):
         # 1st app_block
@@ -93,6 +95,7 @@ class appearance_model(torch.nn.Module):
         a = self.a_block4(a)
         mask2 = self.a_mask6(a)
         return mask1, mask2
+
 class motion_block(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, model):
         super().__init__()
@@ -128,6 +131,7 @@ class motion_block(torch.nn.Module):
         m = self.m_drop3(m)
         m = self.m_avg3(m)
         return m
+
 class motion_model(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, model):
         super().__init__()
@@ -152,7 +156,6 @@ class fc(torch.nn.Module):
         f = torch.tanh(self.f_linear2(f))
         f = self.f_linear3(f)
         return f
-
 
 class model(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, model="CAN"):
