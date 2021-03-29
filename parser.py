@@ -10,8 +10,8 @@ import torchsummary
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='MTTSCAN', help='[____]CAN, [MT] : Multi task learning, [TS] : TSM Module, '
-                                                'ex) MTTS-CAN, MTTSCAN, CAN')
+    parser.add_argument('--model', type=str, default='TSCAN', help='[____]CAN, [MT] : Multi task learning, [TS] : TSM Module, '
+                                                 'ex) MTTS-CAN, MTTSCAN, CAN')
     parser.add_argument('--GPU_num', type=int, default=1, help='GPU number : 0 or 1')
     parser.add_argument('--loss', type=str, help='MSE')
     parser.add_argument('--data', type=str, help='path to DATA')
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_dir', type=str, default='./', help='checkpoints will be saved in this directory')
     parser.add_argument('--img_size', type=int, default=36, help='size of image')
     parser.add_argument('--lr', type=float, default=1.0, help='learning rate')
-    parser.add_argument('--check_model',type=bool,default=True,help='True : check model summary False : train or test')
+    parser.add_argument('--check_model',type=bool,default=False,help='True : check model summary False : train or test')
     # parser.add_argument('--pretrained_weights', type=str, help='if specified starts from checkpoint model')
     # parser.add_argument('--crop', type=bool, default=False, help='crop with blazeFace(preprocessing step)')
     # parser.add_argument('--img_augm', type=bool, default=False, help='image augmentation(flip, color jitter)')
@@ -81,14 +81,12 @@ if __name__ == '__main__':
         print('\ncheck model architecture')
         exit(666)
 
-    if args.model == 'CAN':
+    if args.model.find('MT') is not -1:
         print('Constructing data loader for DeepPhys architecture....')
+    else :
         Dataset = DatasetDeepPhysUBFC(args.data,
                                       img_size=args.img_size)
         Dataset = Dataset()
-    else:
-        print('Error! No such Model.')
-        exit(666)
 
     train_loader = DataLoader(Dataset[0], batch_size=args.batch_size, shuffle=False)
     val_loader = DataLoader(Dataset[1], batch_size=args.batch_size, shuffle=False)
