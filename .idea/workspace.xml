@@ -36,14 +36,21 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectId" id="1qBHpCWf9mEqplv6iPUdLryFeN1" />
+<<<<<<< HEAD
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+=======
+>>>>>>> 374c93ee32f06817932f75cd944902cf9bbe3eda
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+<<<<<<< HEAD
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../test/Pytorch_rppgs" />
+=======
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+>>>>>>> 374c93ee32f06817932f75cd944902cf9bbe3eda
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RecentsManager">
@@ -199,11 +206,18 @@
       <screen x="0" y="0" width="1920" height="1052" />
     </state>
     <state x="693" y="278" width="536" height="506" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1920.1052@0.0.1920.1052" timestamp="1616641925382" />
+<<<<<<< HEAD
     <state x="743" y="295" width="436" height="488" key="FileChooserDialogImpl" timestamp="1616998866392">
       <screen x="0" y="0" width="1920" height="1080" />
     </state>
     <state x="743" y="287" width="436" height="488" key="FileChooserDialogImpl/0.0.1920.1052@0.0.1920.1052" timestamp="1616737920827" />
     <state x="743" y="295" width="436" height="488" key="FileChooserDialogImpl/0.1080.1920.1080/0.0.1920.1080@0.0.1920.1080" timestamp="1616998866392" />
+=======
+    <state x="743" y="287" width="436" height="488" key="FileChooserDialogImpl" timestamp="1616737920827">
+      <screen x="0" y="0" width="1920" height="1052" />
+    </state>
+    <state x="743" y="287" width="436" height="488" key="FileChooserDialogImpl/0.0.1920.1052@0.0.1920.1052" timestamp="1616737920827" />
+>>>>>>> 374c93ee32f06817932f75cd944902cf9bbe3eda
     <state width="1897" height="16" key="GridCell.Tab.0.bottom" timestamp="1616737689056">
       <screen x="0" y="0" width="1920" height="1052" />
     </state>

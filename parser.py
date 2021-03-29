@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, default='MTTSCAN', help='[____]CAN, [MT] : Multi task learning, [TS] : TSM Module, '
-                                             'ex) MTTS-CAN, MTTSCAN, CAN')
+                                                'ex) MTTS-CAN, MTTSCAN, CAN')
     parser.add_argument('--GPU_num', type=int, default=1, help='GPU number : 0 or 1')
     parser.add_argument('--loss', type=str, help='MSE')
     parser.add_argument('--data', type=str, help='path to DATA')
@@ -25,7 +25,6 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1.0, help='learning rate')
     parser.add_argument('--preprocessing', type=bool, default=False, help='preprocessing rate')
     parser.add_argument('--check_model', type=bool, default=True, help='True : check model summary False : train or test')
-
     # parser.add_argument('--pretrained_weights', type=str, help='if specified starts from checkpoint model')
     # parser.add_argument('--crop', type=bool, default=False, help='crop with blazeFace(preprocessing step)')
     # parser.add_argument('--img_augm', type=bool, default=False, help='image augmentation(flip, color jitter)')
