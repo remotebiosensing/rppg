@@ -23,12 +23,15 @@ class DatasetDeepPhysUBFC():
 
         for sub_cnt in self.subject_cnt:
             if self.preprocessing is False:
-                dataset = np.load("./subject_train.npz")
+                dataset = np.load("./subject_test.npz")
                 print("Complete Dataset : subject_train.npz")
                 dataset = bvpdataset(A=dataset['A'], M=dataset['M'], T=dataset['T'])
+                tot = int(len(dataset))//128
+                bias = tot//10
                 train_set, val_set = torch.utils.data.random_split(dataset,
-                                                                   [int(len(dataset) * 0.8),
-                                                                    int(len(dataset) * 0.2 + 1)],
+                                                                   [ 128 * bias * 8, int(len(dataset)) - 128 * bias * 8],
+                                                                   # [int(len(dataset) * 0.8),
+                                                                   #  int(len(dataset) * 0.2 + 1)],
                                                                    generator=torch.Generator().manual_seed(1))
                 return train_set, val_set
             

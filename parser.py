@@ -13,7 +13,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='TSCAN', help='[____]CAN, [MT] : Multi task learning, [TS] : TSM Module, '
                                                  'ex) MTTS-CAN, MTTSCAN, CAN')
     parser.add_argument('--GPU_num', type=int, default=1, help='GPU number : 0 or 1')
-    parser.add_argument('--loss', type=str, help='MSE')
+    parser.add_argument('--loss', type=str,default='MSE', help='MSE')
     parser.add_argument('--data', type=str, help='path to DATA')
     parser.add_argument('--epochs', type=int, default=1000, help='number of epochs')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
@@ -24,7 +24,8 @@ if __name__ == '__main__':
     parser.add_argument('--img_size', type=int, default=36, help='size of image')
     parser.add_argument('--lr', type=float, default=1.0, help='learning rate')
     parser.add_argument('--preprocessing', type=bool, default=False, help='preprocessing rate')
-    parser.add_argument('--check_model', type=bool, default=True, help='True : check model summary False : train or test')
+    parser.add_argument('--check_model', type=bool, default=False, help='True : check model summary False : train or test')
+    parser.add_argument('--train',type=bool,default=True,help="True : train, False, Test")
 
     # parser.add_argument('--pretrained_weights', type=str, help='if specified starts from checkpoint model')
     # parser.add_argument('--crop', type=bool, default=False, help='crop with blazeFace(preprocessing step)')
