@@ -12,7 +12,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, default='TSCAN', help='[____]CAN, [MT] : Multi task learning, [TS] : TSM Module, '
                                                  'ex) MTTS-CAN, MTTSCAN, CAN')
-    parser.add_argument('--GPU_num', type=int, default=1, help='GPU number : 0 or 1')
+    parser.add_argument('--GPU_num', type=int, default=0, help='GPU number : 0 or 1')
     parser.add_argument('--loss', type=str, help='MSE')
     parser.add_argument('--data', type=str, help='path to DATA')
     parser.add_argument('--epochs', type=int, default=1000, help='number of epochs')
