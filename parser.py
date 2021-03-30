@@ -26,17 +26,28 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_dir', type=str, default='./', help='checkpoints will be saved in this directory')
     parser.add_argument('--img_size', type=int, default=36, help='size of image')
     parser.add_argument('--lr', type=float, default=1.0, help='learning rate')
-    parser.add_argument('--preprocessing', type=bool, default=True, help='preprocessing rate')
+    parser.add_argument('--preprocessing', type=bool, default=False, help='preprocessing rate')
     parser.add_argument('--check_model', type=bool, default=False,
                         help='True : check model summary False : train or test')
-    parser.add_argument('--train', type=bool, default=True, help="True : train, False, Test")
+    parser.add_argument('--train', type=bool, default=False, help="True : train, False, Test")
 
     # parser.add_argument('--pretrained_weights', type=str, help='if specified starts from checkpoint model')
     # parser.add_argument('--crop', type=bool, default=False, help='crop with blazeFace(preprocessing step)')
     # parser.add_argument('--img_augm', type=bool, default=False, help='image augmentation(flip, color jitter)')
     # parser.add_argument('--freq_augm', type=bool, default=False, help='apply frequency augmentation')
-
     args = parser.parse_args()
+
+    reply = input('Select Model\n'
+                  '1. DeepPhys 2. MTTS-CAN 3. MT-CAN 4. TS-CAN')
+    if reply is '1':
+        args.model = 'CAN'
+    elif reply is '2':
+        args.model = 'MTTS-CAN'
+    elif reply is '3':
+        args.model = 'MT-CAN '
+    elif reply is '4':
+        args.model = 'TS-CAN'
+
     if args.train is True:
         if args.checkpoint_dir:
             try:

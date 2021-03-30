@@ -19,8 +19,9 @@ class test_model:
         with torch.no_grad():
             val_output = []
             for k, (avg, mot, lab) in enumerate(test_loader):
-                if avg.shape[0] %2 is 1:
-                    continue
+                if self.model.find("TS") is not -1:
+                    if avg.shape[0] %2 is 1:
+                        continue
                 avg, mot, lab = avg.to(device), mot.to(device), lab.to(device)
                 val_output.append(self.model(avg, mot).cpu().clone().numpy()[0][0])
 

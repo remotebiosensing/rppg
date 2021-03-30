@@ -53,8 +53,9 @@ class train_model:
                 val_loss = 0.0
                 for k, (avg, mot, lab) in enumerate(val_loader):
                     avg, mot, lab = avg.to(device), mot.to(device), lab.to(device)
-                    if avg.shape[0] % 2 is 1: # TS network need 2 images
-                        continue
+                    if self.model.find("TS") is not -1:
+                        if avg.shape[0] % 2 is 1: # TS network need 2 images
+                            continue
                     val_output = self.model(avg, mot)
                     v_loss = criterion(val_output, lab)
                     val_loss += v_loss
