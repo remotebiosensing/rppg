@@ -21,7 +21,7 @@ class train_model:
         tmp_valloss = 100
 
 
-        for epoch in range(1000000):
+        for epoch in range(25):
             print("Train : " + str(epoch)+"=======")
             running_loss = 0.0
             for i_batch, (avg, mot, lab) in enumerate(self.train_loader):
