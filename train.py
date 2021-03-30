@@ -6,8 +6,8 @@ from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
 class train_model:
-    def __init__(self, models, train_loader, val_loader, criterion, optimizers, model_path, num_epochs, device):
-
+    def __init__(self, name, models, train_loader, val_loader, criterion, optimizers, model_path, num_epochs, device):
+        self.name = name
         self.model = models
         self.num_epochs = num_epochs
         self.model_path = model_path
@@ -53,8 +53,9 @@ class train_model:
                 val_loss = 0.0
                 for k, (avg, mot, lab) in enumerate(val_loader):
                     avg, mot, lab = avg.to(device), mot.to(device), lab.to(device)
-                    if avg.shape[0] % 2 is 1: # TS network need 2 images
-                        continue
+                    if self.name.find("TS") is not -1:
+                        if avg.shape[0] % 2 is 1: # TS network need 2 images
+                            continue
                     val_output = self.model(avg, mot)
                     v_loss = criterion(val_output, lab)
                     val_loss += v_loss
