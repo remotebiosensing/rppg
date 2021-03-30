@@ -1,2 +1,3 @@
 checkpoint_train.pth
 runs/*
+__pycache__/*
