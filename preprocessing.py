@@ -52,9 +52,13 @@ class DatasetDeepPhysUBFC():
                 target_label = np.delete(target_label, 0)
                 np.savez_compressed("./subject_train", A=target_image[:, :, :, -3:], M=target_image[:, :, :, :3], T=target_label)
                 dataset = bvpdataset(A=target_image[:, :, :, -3:], M=target_image[:, :, :, :3], T=target_label)
+                tot = int(len(dataset)) // 128
+                bias = tot // 10
                 train_set, val_set = torch.utils.data.random_split(dataset,
-                                                                   [int(len(dataset) * 0.8), int(len(dataset) * 0.2 + 1)],
-                                                               generator=torch.Generator().manual_seed(1))
+                                                                   [128 * bias * 8, int(len(dataset)) - 128 * bias * 8],
+                                                                   # [int(len(dataset) * 0.8),
+                                                                   #  int(len(dataset) * 0.2 + 1)],
+                                                                   generator=torch.Generator().manual_seed(1))
             return train_set, val_set
 
     def preprocess_raw_video(self, image_root):
