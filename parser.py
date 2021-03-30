@@ -6,6 +6,7 @@ import torch
 from preprocessing import DatasetDeepPhysUBFC
 from torch.utils.data import DataLoader
 import torchsummary
+import os
 
 if __name__ == '__main__':
 
@@ -33,16 +34,16 @@ if __name__ == '__main__':
     # parser.add_argument('--freq_augm', type=bool, default=False, help='apply frequency augmentation')
 
     args = parser.parse_args()
-
-    # if args.checkpoint_dir:
-    #     try:
-    #         os.makedirs(f'checkpoints/{args.checkpoint_dir}')
-    #         print("Output directory is created")
-    #     except FileExistsError:
-    #         reply = input('Override existing weights? [y/n]')
-    #         if reply == 'n':
-    #             print('Add another output path then!')
-    #             exit(0)
+    if args.train is True:
+        if args.checkpoint_dir:
+            try:
+                os.makedirs(f'checkpoints/{args.checkpoint_dir}')
+                print("Output directory is created")
+            except FileExistsError:
+                reply = input('Override existing weights? [y/n]')
+                if reply == 'n':
+                    print('Add another output path then!')
+                    exit(0)
 
     hyper_params = {
         "model": args.model,
@@ -74,11 +75,7 @@ if __name__ == '__main__':
     models = model(in_channels=args.in_channels, out_channels=args.out_channels, kernel_size=args.kernel_size,
                    model=args.model)
     opts = torch.optim.Adadelta(models.parameters(), lr=args.lr)
-    # if args.model == 'CAN':
-    #     opts = torch.optim.Adadelta(models.parameters(), lr=args.lr)
-    # else:
-    #     print('\nError! No such model. Choose from: DeepPhys, MTTS-CAN')
-    #     exit(666)
+
     if args.check_model is True:
         models.to(device)
         torchsummary.summary(models, ((3, 36, 36), (3, 36, 36)), )
