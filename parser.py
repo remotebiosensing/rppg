@@ -11,22 +11,25 @@ import os
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='TSCAN', help='[____]CAN, [MT] : Multi task learning, [TS] : TSM Module, '
-                                                 'ex) MTTS-CAN, MTTSCAN, CAN')
+    parser.add_argument('--model', type=str, default='TSCAN',
+                        help='[____]CAN, [MT] : Multi task learning, [TS] : TSM Module, '
+                             'ex) MTTS-CAN, MTTSCAN, CAN')
     parser.add_argument('--GPU_num', type=int, default=1, help='GPU number : 0 or 1')
-    parser.add_argument('--loss', type=str,default='MSE', help='MSE')
-    parser.add_argument('--data', type=str, help='path to DATA')
+    parser.add_argument('--loss', type=str, default='MSE', help='MSE')
+    parser.add_argument('--data', type=str, default='/mnt/a7930c08-d429-42fa-a09e-15291e166a27/BVP_js/subject',
+                        help='path to DATA')
     parser.add_argument('--epochs', type=int, default=1000, help='number of epochs')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
     parser.add_argument('--in_channels', type=int, default=3, help='in_channels')
     parser.add_argument('--out_channels', type=int, default=32, help='out_channels')
     parser.add_argument('--kernel_size', type=int, default=3, help='kernel_size')
-    parser.add_argument('--checkpoint_dir', type=str, default='./',help='checkpoints will be saved in this directory')
+    parser.add_argument('--checkpoint_dir', type=str, default='./', help='checkpoints will be saved in this directory')
     parser.add_argument('--img_size', type=int, default=36, help='size of image')
     parser.add_argument('--lr', type=float, default=1.0, help='learning rate')
-    parser.add_argument('--preprocessing', type=bool, default=False, help='preprocessing rate')
-    parser.add_argument('--check_model', type=bool, default=False, help='True : check model summary False : train or test')
-    parser.add_argument('--train',type=bool,default=False,help="True : train, False, Test")
+    parser.add_argument('--preprocessing', type=bool, default=True, help='preprocessing rate')
+    parser.add_argument('--check_model', type=bool, default=False,
+                        help='True : check model summary False : train or test')
+    parser.add_argument('--train', type=bool, default=True, help="True : train, False, Test")
 
     # parser.add_argument('--pretrained_weights', type=str, help='if specified starts from checkpoint model')
     # parser.add_argument('--crop', type=bool, default=False, help='crop with blazeFace(preprocessing step)')
@@ -96,8 +99,7 @@ if __name__ == '__main__':
     Dataset = DatasetDeepPhysUBFC(args.data,
                                   img_size=args.img_size,
                                   preprocessing=args.preprocessing,
-                                  train = args.train)
-
+                                  train=args.train)
     Dataset = Dataset()
 
     if args.train is True:
@@ -109,13 +111,10 @@ if __name__ == '__main__':
         train_model(models, train_loader, val_loader, loss_fn, opts, args.checkpoint_dir,
                     args.epochs, device)
     else:
-        test_loader = DataLoader(Dataset,batch_size=args.batch_size,shuffle=False)
+        test_loader = DataLoader(Dataset, batch_size=args.batch_size, shuffle=False)
         print('\nDataLoaders successfully constructed!')
 
         checkpoint = torch.load("checkpoint_train.pth")
         models.load_state_dict(checkpoint['state_dict'])
         test_model(models, test_loader, loss_fn, opts, args.checkpoint_dir,
-                    args.epochs, device)
-
-
-
+                   args.epochs, device)
