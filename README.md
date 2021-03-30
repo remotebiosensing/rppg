@@ -18,5 +18,5 @@ implement rppg model  using pytorch
 ~~~
 ## Contacts
 TVSTORM inc.\
-Kim Dae Yeol\
-wagon0004@tvstorm.com
+Kim Dae Yeol &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Kim Jin Soo\
+wagon0004@tvstorm.com &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;wlstn25092303@tvstorm.com
