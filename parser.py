@@ -11,7 +11,7 @@ import os
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='TSCAN',
+    parser.add_argument('--model', type=str, default='CAN',
                         help='[____]CAN, [MT] : Multi task learning, [TS] : TSM Module, '
                              'ex) MTTS-CAN, MTTSCAN, CAN')
     parser.add_argument('--GPU_num', type=int, default=1, help='GPU number : 0 or 1')
@@ -137,13 +137,15 @@ if __name__ == '__main__':
 
         print('\nDataLoaders successfully constructed!')
 
-        train_model(models, train_loader, val_loader, loss_fn, lr, args.checkpoint_dir,
+        train_model(args.model,models, train_loader, val_loader, loss_fn, args.lr, args.checkpoint_dir,
                     args.epochs, device)
-    elif args.train is False:
-        test_loader = DataLoader(Dataset, batch_size=args.batch_size, shuffle=False)
+    else:
+        test_loader = DataLoader(Dataset, batch_size=1, shuffle=False)
+
         print('\nDataLoaders successfully constructed!')
 
         checkpoint = torch.load("checkpoint_train.pth")
         models.load_state_dict(checkpoint['state_dict'])
-        test_model(models, test_loader, loss_fn,  args.checkpoint_dir,
+
+        test_model(args.model,models, test_loader, loss_fn,  args.checkpoint_dir,
                    args.epochs, device)

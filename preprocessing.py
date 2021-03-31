@@ -9,9 +9,8 @@ from torch.utils.data import Dataset
 class DatasetDeepPhysUBFC():
     def __init__(self, video_path, img_size, preprocessing, train):
         # self.subject_cnt = [1, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 22, 23, 24, 25, 26, 27, 30, 31, 32, 33, 34, 35, 36,
-        #               37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49]
-        self.subject_cnt = [1, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 22, 23, 24, 25, 26, 27, 30, 31, 32, 33, 34, 35, 36,
-                      37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+        #               37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+        self.subject_cnt = [48]
         self.root_dir = video_path
         self.dim = img_size
         self.preprocessing = preprocessing
@@ -20,7 +19,7 @@ class DatasetDeepPhysUBFC():
     def __call__(self):
         if self.preprocessing is False:
             if self.train is True:
-                dataset = np.load("./subject_test.npz")
+                dataset = np.load("./subject_train.npz")
                 print("Complete Dataset : subject_train.npz")
                 dataset = bvpdataset(A=dataset['A'], M=dataset['M'], T=dataset['T'])
                 tot = int(len(dataset)) // 128
@@ -32,7 +31,7 @@ class DatasetDeepPhysUBFC():
                                                                    generator=torch.Generator().manual_seed(1))
                 return train_set, val_set
             else:
-                dataset = np.load("./subject_test.npz")
+                dataset = np.load("./subject_test_49.npz")
                 print("Complete Dataset : subject_test.npz")
                 test_set = bvpdataset(A=dataset['A'], M=dataset['M'], T=dataset['T'])
                 return test_set
@@ -51,7 +50,7 @@ class DatasetDeepPhysUBFC():
                 target_image = np.delete(target_image, 0, 0)
                 target_label = np.delete(target_label, 0)
 
-            np.savez_compressed("./subject_train", A=target_image[:, :, :, -3:], M=target_image[:, :, :, :3], T=target_label)
+            np.savez_compressed("./subject_test_48", A=target_image[:, :, :, -3:], M=target_image[:, :, :, :3], T=target_label)
             dataset = bvpdataset(A=target_image[:, :, :, -3:], M=target_image[:, :, :, :3], T=target_label)
             tot = int(len(dataset)) // 128
             bias = tot // 10
