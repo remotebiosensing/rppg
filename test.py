@@ -5,11 +5,10 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 class test_model:
-    def __init__(self, models, test_loader, criterion, optimizers, model_path, num_epochs, device):
+    def __init__(self, models, test_loader, criterion,  model_path, num_epochs, device):
         self.model = models
         self.num_epochs = num_epochs
         self.model_path = model_path
-        self.optimizers = optimizers
         self.criterion = criterion
         self.test_loader = test_loader
         self.device = device

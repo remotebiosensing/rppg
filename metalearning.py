@@ -5,23 +5,28 @@ from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter()
 
-class train_model:
-    def __init__(self, models, train_loader, val_loader, criterion, lr, model_path, num_epochs, device):
+class meta_train_model:
+    def __init__(self, models, train_loader, val_loader, test_loader, criterion, lr,meta_lr, model_path, num_epochs, device):
 
         self.model = models
         self.num_epochs = num_epochs
         self.model_path = model_path
         self.lr = lr
+        self.meta_lr = meta_lr
         self.criterion = criterion
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.device = device
-        self.optimizers = torch.optim.Adadelta(models.parameters(),lr = self.lr)
+        self.optimizers = torch.optim.Adadelta(models.prameters(), lr = self.lr)
+        self.params = []
+        for param in self.models.parameters():
+            self.params.apped(param)
+
         self.model.to(device)
         tmp_valloss = 100
 
 
-        for epoch in range(1000000):
+        for epoch in range(self.num_epochs):
             print("Train : " + str(epoch)+"=======")
             running_loss = 0.0
             for i_batch, (avg, mot, lab) in enumerate(self.train_loader):
@@ -70,3 +75,5 @@ class train_model:
                     # writer.add_scalar('val loss', val_loss / 128, epoch * len(val_loader) + i_batch)
             writer.close()
         print('Finished Training')
+
+    def inner_loop(self,):

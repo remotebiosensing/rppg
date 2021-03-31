@@ -1,5 +1,7 @@
 import torch
+from torch import nn
 
+import torch.nn.functional as F
 class TSM(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -33,6 +35,7 @@ class TSM_block(torch.nn.Module):
         super().__init__()
         self.tsm1 = TSM()
         self.t_conv1 = torch.nn.Conv2d(in_channels = in_channels, out_channels = out_channels, kernel_size=kernel_size,padding=1)
+
     def forward(self,input,n_frame=2, fold_div=3):
         t = self.tsm1(input,n_frame,fold_div)
         t = self.t_conv1(t)
@@ -131,6 +134,8 @@ class motion_block(torch.nn.Module):
         m = self.m_drop3(m)
         m = self.m_avg3(m)
         return m
+
+
 
 class motion_model(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, model):

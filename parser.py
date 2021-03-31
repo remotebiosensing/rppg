@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_dir', type=str, default='./', help='checkpoints will be saved in this directory')
     parser.add_argument('--img_size', type=int, default=36, help='size of image')
     parser.add_argument('--lr', type=float, default=1.0, help='learning rate')
+    parser.add_argument('--meta_lr', type=float, default=0.2, help='meta learning rate')
     parser.add_argument('--preprocessing', type=bool, default=False, help='preprocessing rate')
     parser.add_argument('--check_model', type=bool, default=False,
                         help='True : check model summary False : train or test')
@@ -47,6 +48,15 @@ if __name__ == '__main__':
         args.model = 'MT-CAN '
     elif reply is '4':
         args.model = 'TS-CAN'
+    else:
+        print("error")
+        exit(0)
+
+    reply = input('Meta Learning [y/n]')
+    if reply is 'y' or reply is 'Y':
+        args.meta = True
+    else:
+        args.meta = False
 
     if args.train is True:
         if args.checkpoint_dir:
@@ -88,7 +98,13 @@ if __name__ == '__main__':
 
     models = model(in_channels=args.in_channels, out_channels=args.out_channels, kernel_size=args.kernel_size,
                    model=args.model)
-    opts = torch.optim.Adadelta(models.parameters(), lr=args.lr)
+
+    params = []
+
+    for param in model.parameters():
+        params.apped(param)
+
+    #print(models.appearance_model.a_block1.a_conv1.weight)
 
     if args.check_model is True:
         models.to(device)
@@ -113,19 +129,21 @@ if __name__ == '__main__':
                                   train=args.train)
     Dataset = Dataset()
 
-    if args.train is True:
+    if args.meta is True:
+
+    #elif args.train is True:
         train_loader = DataLoader(Dataset[0], batch_size=args.batch_size, shuffle=False)
         val_loader = DataLoader(Dataset[1], batch_size=args.batch_size, shuffle=False)
 
         print('\nDataLoaders successfully constructed!')
 
-        train_model(models, train_loader, val_loader, loss_fn, opts, args.checkpoint_dir,
+        train_model(models, train_loader, val_loader, loss_fn, lr, args.checkpoint_dir,
                     args.epochs, device)
-    else:
+    elif args.train is False:
         test_loader = DataLoader(Dataset, batch_size=args.batch_size, shuffle=False)
         print('\nDataLoaders successfully constructed!')
 
         checkpoint = torch.load("checkpoint_train.pth")
         models.load_state_dict(checkpoint['state_dict'])
-        test_model(models, test_loader, loss_fn, opts, args.checkpoint_dir,
+        test_model(models, test_loader, loss_fn,  args.checkpoint_dir,
                    args.epochs, device)
