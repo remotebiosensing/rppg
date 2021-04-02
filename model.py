@@ -6,7 +6,8 @@ class TSM(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-    def __call__(self,input, n_frame, fold_div=3):
+    def __call__(self,input, n_frame=4, fold_div=3):
+        n_frame=4
         B, C, H, W = input.shape
         input = input.view(-1,n_frame,H,W,C)
         fold = C // fold_div
@@ -22,7 +23,7 @@ class TSM(torch.nn.Module):
         padding2 = torch.zeros_like(out2)
         padding2 = padding2[:,0,:,:,:]
         padding2 = torch.unsqueeze(padding2,1)
-        _, out2 = torch.split(out2,[n_frame -1,1], 1)
+        out2, _ = torch.split(out2,[n_frame -1,1], 1)
         out2 = torch.cat((padding2,out2),1)
 
         out = torch.cat((out1,out2,out3), -1)
