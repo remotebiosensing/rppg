@@ -65,10 +65,10 @@ class RPPG_DATASET(MetaDataset):
                 cnt = 1
             temp_path = random.sample(sample_paths, 1)[0]
             file_name = temp_path.split('/')[-1].split('.')[0]
-            if sample_type == 'task':
+            if sample_type == 'task':                  # file name : T           V
                 first_index = file_name.find('T')
                 last_index = file_name.find('V')
-            elif sample_type == 'person':
+            elif sample_type == 'person':              # file name : P           T
                 first_index = file_name.find('P')
                 last_index = file_name.find('T')
             else:

@@ -31,7 +31,7 @@ class DatasetDeepPhysUBFC():
                                                                    generator=torch.Generator().manual_seed(1))
                 return train_set, val_set
             else:
-                dataset = np.load("./subject_test_49.npz")
+                dataset = np.load("./subject_1.npz")
                 print("Complete Dataset : subject_test.npz")
                 test_set = bvpdataset(A=dataset['A'], M=dataset['M'], T=dataset['T'])
                 return test_set

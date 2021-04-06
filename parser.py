@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--preprocessing', type=bool, default=False, help='preprocessing rate')
     parser.add_argument('--check_model', type=bool, default=False,
                         help='True : check model summary False : train or test')
-    parser.add_argument('--train', type=bool, default=False, help="True : train, False, Test")
+    parser.add_argument('--train', type=bool, default=True, help="True : train, False, Test")
 
     # parser.add_argument('--pretrained_weights', type=str, help='if specified starts from checkpoint model')
     # parser.add_argument('--crop', type=bool, default=False, help='crop with blazeFace(preprocessing step)')
@@ -98,11 +98,6 @@ if __name__ == '__main__':
 
     models = model(in_channels=args.in_channels, out_channels=args.out_channels, kernel_size=args.kernel_size,
                    model=args.model)
-
-    params = []
-
-    for param in model.parameters():
-        params.apped(param)
 
     #print(models.appearance_model.a_block1.a_conv1.weight)
 

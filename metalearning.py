@@ -1,6 +1,19 @@
+import glob
+import logging
+import os
+
+import higher
+import numpy as np
+
 import torch
 import torchvision
 import torch.nn.functional as F
+
+from torch.utils.data import DataLoader
+from torchmeta.utils.data import BatchMetaDataLoader
+
+from metadataset import RPPG_DATASET
+
 from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter()
@@ -16,14 +29,26 @@ class meta_train_model:
         self.criterion = criterion
         self.train_loader = train_loader
         self.val_loader = val_loader
+        self.test_loader = test_loader
         self.device = device
+        self.inner_optimizer = torch.optim.SGD(self.model.parameters(),lr = self.meta_lr)
         self.optimizers = torch.optim.Adadelta(models.prameters(), lr = self.lr)
-        self.params = []
-        for param in self.models.parameters():
-            self.params.apped(param)
+        self.weights = list(models.prameters())
 
         self.model.to(device)
         tmp_valloss = 100
+
+        for batch_idx,(in_avg,in_mot,in_lab),(out_avg,out_mot,out_lab) \
+                in enumerate (test_loader,val_loader):
+            with higher.innerloop_ctx(self.model,self.inner_optimizer, copy_initial_weights=False) as (fmodel, diffopt):
+                for step in range(10): #10 = adaptation loop
+                    out = fmodel((in_avg,in_mot))
+                    inner_loss = F.mse_loss(out,in_lab)
+                    diffopt.step(inner_loss)
+                out = fmodel((out_avg,out_mot))
+                outter_loss = F.mse_loss(out,out_lab)
+                outter_loss.backward()
+        self.inner_optimizer.step()
 
 
         for epoch in range(self.num_epochs):
@@ -50,7 +75,7 @@ class meta_train_model:
                 loss = criterion(output, lab)
                 loss.backward()
                 running_loss += loss.item()
-                optimizers.step()
+                self.optimizers.step()
                 if i_batch is 0:
                     writer.add_scalar('training loss', running_loss, epoch)
                 # writer.add_scalar('training loss',running_loss / 128 ,epoch * len(train_loader) + i_batch)
@@ -76,4 +101,18 @@ class meta_train_model:
             writer.close()
         print('Finished Training')
 
-    def inner_loop(self,):
+    def inner_loop(self):
+        # avg,mot,lab = 0
+        for step,(avg,mot,lab) in enumerate(self.train_loader):
+            avg, mot, lab = avg.to(self.device), mot.to(self.device), lab.to(self.device)
+            output = self.model(avg, mot)
+            loss = self.criterion(output, lab)/avg.shape[0]
+            self.model.zero_grad()
+            loss.backward()
+            with torch.no_grad():
+                for param in self.model.parameters():
+                    param -= self.lr * param.grad
+        output = self.model(avg,mot)
+        loss = self.model(avg,mot) / avg.shape[0]
+        return loss
+
