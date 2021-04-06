@@ -41,6 +41,7 @@ class meta_train_model:
         for batch_idx,(in_avg,in_mot,in_lab),(out_avg,out_mot,out_lab) \
                 in enumerate (test_loader,val_loader):
             with higher.innerloop_ctx(self.model,self.inner_optimizer, copy_initial_weights=False) as (fmodel, diffopt):
+                print("Train : batch" + str(batch_idx) + "=======")
                 for step in range(10): #10 = adaptation loop
                     out = fmodel((in_avg,in_mot))
                     inner_loss = F.mse_loss(out,in_lab)
@@ -101,18 +102,33 @@ class meta_train_model:
             writer.close()
         print('Finished Training')
 
-    def inner_loop(self):
-        # avg,mot,lab = 0
-        for step,(avg,mot,lab) in enumerate(self.train_loader):
-            avg, mot, lab = avg.to(self.device), mot.to(self.device), lab.to(self.device)
-            output = self.model(avg, mot)
-            loss = self.criterion(output, lab)/avg.shape[0]
-            self.model.zero_grad()
-            loss.backward()
-            with torch.no_grad():
-                for param in self.model.parameters():
-                    param -= self.lr * param.grad
-        output = self.model(avg,mot)
-        loss = self.model(avg,mot) / avg.shape[0]
-        return loss
 
+class meta_test_model:
+    def __init__(self, models, train_loader, test_loader, criterion, lr,meta_lr, model_path, num_epochs, device):
+
+        self.model = models
+        self.num_epochs = num_epochs
+        self.model_path = model_path
+        self.lr = lr
+        self.meta_lr = meta_lr
+        self.criterion = criterion
+        self.train_loader = train_loader
+        self.test_loader = test_loader
+        self.device = device
+        self.inner_optimizer = torch.optim.SGD(self.model.parameters(),lr = self.meta_lr)
+        self.optimizers = torch.optim.Adadelta(models.prameters(), lr = self.lr)
+        self.weights = list(models.prameters())
+
+        self.model.to(device)
+        tmp_valloss = 100
+        val_output = []
+        for batch_idx,(in_avg,in_mot,in_lab),(out_avg,out_mot,out_lab) \
+                in enumerate (test_loader,test_loader):
+            with higher.innerloop_ctx(self.model,self.inner_optimizer, copy_initial_weights=False) as (fmodel, diffopt):
+                print("Train : batch" + str(batch_idx) + "=======")
+                for step in range(10): #10 = adaptation loop
+                    out = fmodel((in_avg,in_mot))
+                    inner_loss = F.mse_loss(out,in_lab)
+                    diffopt.step(inner_loss)
+                out = fmodel((out_avg,out_mot))
+                val_output.append(out)

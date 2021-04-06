@@ -7,6 +7,7 @@ from preprocessing import DatasetDeepPhysUBFC
 from torch.utils.data import DataLoader
 import torchsummary
 import os
+from metalearning import meta_train_model
 
 if __name__ == '__main__':
 
@@ -124,9 +125,9 @@ if __name__ == '__main__':
                                   train=args.train)
     Dataset = Dataset()
 
-    if args.meta is True:
 
-    #elif args.train is True:
+
+    if args.train is True:
         train_loader = DataLoader(Dataset[0], batch_size=args.batch_size, shuffle=False)
         val_loader = DataLoader(Dataset[1], batch_size=args.batch_size, shuffle=False)
 
