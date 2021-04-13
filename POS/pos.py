@@ -86,7 +86,7 @@ while (i >= start_index and i < end_index):
 
     if (len(rects) > 0):
         rect = rects[0]
-        '''          
+        '''
         shape = predictor(gray, rect)
         shape = face_utils.shape_to_np(shape)
 
@@ -181,7 +181,7 @@ for n in range(mean_rgb.shape[0]-l) :
     # Step2 :Temporal normalization - Cn=diag(mean(C,2))^-1*C
     mean_C = np.mean(C, axis=1) # Mean
     diag_mean_C = np.diag(mean_C) # Diagonal
-    diag_mean_C_inv = np.linalg.inv(diag_mean_C) # inverse
+    diag_mean_C_inv = np.linalg.inv(diag_mean_C) # Inverse
     Cn = np.matmul(diag_mean_C_inv, C)
 
     # Step3 :Projection(3D signal to 2D signal)
@@ -196,8 +196,13 @@ for n in range(mean_rgb.shape[0]-l) :
     #Step5 :Overlap-adding
     H[n:n+l-1] = H[n:n+l-1] + (P-np.mean(P))/np.std(P)
 
-if plot :
-    from matplotlib import pyplot
-    pyplot.plot(range(H.shape[0]), H, 'g')
-    pyplot.title('Filtered green signal')
-    pyplot.show()
+
+# 1D signal(the maximum amount of pulsating component)
+from matplotlib import pyplot
+pyplot.plot(range(H.shape[0]), H, 'g')
+pyplot.title('Filtered green signal')
+pyplot.show()
+
+
+
+
