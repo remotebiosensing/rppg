@@ -10,7 +10,7 @@ from . import scripts
 
 logger = logging.getLogger('main')
 
-
+# Masking 1 with pixels, which are in the range
 def get_hsv_mask(img, debug=False):
     assert isinstance(img, numpy.ndarray), 'image must be a numpy array'
     assert img.ndim == 3, 'skin detection can only work on color images'
@@ -18,9 +18,13 @@ def get_hsv_mask(img, debug=False):
 
     lower_thresh = numpy.array([0, 50, 0], dtype=numpy.uint8)
     upper_thresh = numpy.array([120, 150, 255], dtype=numpy.uint8)
+
+    # Convert RGB to HSV
     img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    # if the pixel value in the range, it gives 255(white) ,or 0(black) - Extact pixels in the range
     msk_hsv = cv2.inRange(img_hsv, lower_thresh, upper_thresh)
 
+    # Masking with extracted pixels
     msk_hsv[msk_hsv < 128] = 0
     msk_hsv[msk_hsv >= 128] = 1
 
@@ -36,14 +40,18 @@ def get_rgb_mask(img, debug=False):
     assert img.ndim == 3, 'skin detection can only work on color images'
     logger.debug('getting rgb mask')
 
+    # set the range
     lower_thresh = numpy.array([45, 52, 108], dtype=numpy.uint8)
     upper_thresh = numpy.array([255, 255, 255], dtype=numpy.uint8)
 
+    # if the pixel value in the range, it gives 255(white) ,or 0(black)
     mask_a = cv2.inRange(img, lower_thresh, upper_thresh)
     mask_b = 255 * ((img[:, :, 2] - img[:, :, 1]) / 20)
+
     mask_c = 255 * ((numpy.max(img, axis=2) - numpy.min(img, axis=2)) / 20)
     # msk_rgb = cv2.bitwise_and(mask_c, cv2.bitwise_and(mask_a, mask_b))
     mask_d = numpy.bitwise_and(numpy.uint64(mask_a), numpy.uint64(mask_b))
+
     msk_rgb = numpy.bitwise_and(numpy.uint64(mask_c), numpy.uint64(mask_d))
 
     msk_rgb[msk_rgb < 128] = 0
@@ -126,6 +134,8 @@ def closing(mask):
 
 
 def process(img, thresh=0.5, debug=False):
+
+    # Check if the data is color images
     assert isinstance(img, numpy.ndarray), 'image must be a numpy array'
     assert img.ndim == 3, 'skin detection can only work on color images'
     logger.debug("processing image of shape {0}".format(img.shape))
@@ -135,8 +145,11 @@ def process(img, thresh=0.5, debug=False):
     mask_ycrcb = get_ycrcb_mask(img, debug=debug)
 
     n_masks = 3.0
+
+    # Add 3 color space values and get its mean
     mask = (mask_hsv + mask_rgb + mask_ycrcb) / n_masks
 
+    # If the mean over the threshold > 0.5, mask 255, or not 0
     mask[mask < thresh] = 0.0
     mask[mask >= thresh] = 255.0
     logger.debug('{0}% of the image is skin'.format(int((100.0 / 255.0) * numpy.sum(mask) / mask.size)))
