@@ -1,232 +1,122 @@
-import random
-
-import h5py
+import torch
+from torch.utils.data import Dataset
+from torch.utils.data.dataset import T_co
+import torchvision.transforms as transforms
 import numpy as np
-import scipy.io
-from scipy.signal import butter
-from torchmeta.utils.data import Task, MetaDataset
-
-from spliiter import ClassSplitter
-
-np.random.seed(100)
-
-class RPPG_DATASET(MetaDataset):
-    """
-    Simple regression task, based on sinusoids, as introduced in [1].
-    Parameters
-    ----------
-    num_samples_per_task : int
-        Number of examples per task.
-    num_tasks : int (default: 1,000,000)
-        Overall number of tasks to sample.
-    transform : callable, optional
-        A function/transform that takes a numpy array of size (1,) and returns a
-        transformed version of the input.
-    target_transform : callable, optional
-        A function/transform that takes a numpy array of size (1,) and returns a
-        transformed version of the target.
-    dataset_transform : callable, optional
-        A function/transform that takes a dataset (ie. a task), and returns a
-        transformed version of it. E.g. `torchmeta.transforms.ClassSplitter()`.
-    """
-    def __init__(self, dataset, num_shots_tr, num_shots_ts, person_data_path, num_tasks=1000000, state='train',
-                 transform=None, target_transform=None, sample_type='person', random_seed=10,
-                 frame_depth=10, fs=30, signal='pulse', unsupervised=0):
-        super(RPPG_DATASET, self).__init__(meta_split='train', target_transform=target_transform)
-        self.num_samples_per_task = num_shots_tr + num_shots_ts
-        self.num_tasks = num_tasks
-        self.person_data_path = person_data_path
-        self.target_transform = target_transform
-        self.transform = transform
-        self.sample_type = sample_type
-        self.dataset = dataset
-        self.frame_depth = frame_depth
-        self.fs = fs
-        self.state = state
-        self.num_shots_tr = num_shots_tr
-        self.signal = signal
-        self.unsupervised = unsupervised
-        np.random.seed(random_seed)
-        if self.state == 'train':
-            self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=num_shots_tr,
-                                                   num_test_per_class=num_shots_ts)
-
-    def __len__(self):
-        return self.num_tasks
-
-    def _diverse_sampling(self, sample_paths, num_shots, sample_type='task'):
-        sample_id = []
-        final_paths = []
-        cnt = 1
-        while len(final_paths) < num_shots:
-            # reset every 12 files added
-            if len(sample_id) == 12:
-                sample_id = []
-                cnt = 1
-            temp_path = random.sample(sample_paths, 1)[0]
-            file_name = temp_path.split('/')[-1].split('.')[0]
-            if sample_type == 'task':                  # file name : T           V
-                first_index = file_name.find('T')
-                last_index = file_name.find('V')
-            elif sample_type == 'person':              # file name : P           T
-                first_index = file_name.find('P')
-                last_index = file_name.find('T')
-            else:
-                raise ValueError('The sample type is not supported!')
-
-            id_temp = file_name[first_index + 1:last_index]
-            if (id_temp not in sample_id) and (int(id_temp) == cnt) and (temp_path not in final_paths):
-                sample_id.append(id_temp)
-                final_paths.append(temp_path)
-                cnt += 1
-        return final_paths
-
-    def _hard_sampling(self, sample_paths, num_shots, sample_type='task'):
-        final_paths = []
-        if num_shots == 20:
-            while len(final_paths) < num_shots:
-                # reset every 12 files added
-                temp_path = random.sample(sample_paths, 1)[0]
-                file_name = temp_path.split('/')[-1].split('.')[0]
-                if sample_type == 'task':
-                    first_index = file_name.find('T')
-                    last_index = file_name.find('V')
-                elif sample_type == 'person':
-                    first_index = file_name.find('P')
-                    last_index = file_name.find('T')
-                else:
-                    raise ValueError('The sample type is not supported!')
-
-                id_temp = file_name[first_index + 1:last_index]
-                if int(id_temp) in [6, 12] and (temp_path not in final_paths):
-                    final_paths.append(temp_path)
-        else:
-            while len(final_paths) < num_shots:
-                # reset every 12 files added
-                temp_path = random.sample(sample_paths, 1)[0]
-                file_name = temp_path.split('/')[-1].split('.')[0]
-                if sample_type == 'task':
-                    first_index = file_name.find('T')
-                    last_index = file_name.find('V')
-                elif sample_type == 'person':
-                    first_index = file_name.find('P')
-                    last_index = file_name.find('T')
-                else:
-                    raise ValueError('The sample type is not supported!')
-
-                id_temp = file_name[first_index + 1:last_index]
-                if (int(id_temp) in [6, 12] and (temp_path not in final_paths)) or \
-                        (len(final_paths) >= 10 and (temp_path not in final_paths)):
-                    final_paths.append(temp_path)
-        return final_paths
-
-    def __getitem__(self, index):
-        per_task_data = self.person_data_path[index]
-        # task_path = self._diverse_sampling(per_task_data, self.num_samples_per_task, self.sample_type)
-        # task_path = self._hard_sampling(per_task_data, self.num_samples_per_task, self.sample_type)
-        # if self.num_samples_per_task == 20:
-        #    print('task_path: ', task_path)
-        #    print('=============================================')
-
-        if self.state == 'test':
-            self.num_shots_ts = len(per_task_data) - self.num_shots_tr
-            self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=self.num_shots_tr,
-                                                   num_test_per_class=self.num_shots_ts)
-            self.num_samples_per_task = self.num_shots_tr + self.num_shots_ts
-
-        if self.state == 'train':
-            random.shuffle(per_task_data)
-            if 'AFRL' in per_task_data[0]:
-                self.num_shots_ts = 8
-                self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=self.num_shots_tr,
-                                                                           num_test_per_class=self.num_shots_ts)
-                self.num_samples_per_task = self.num_shots_tr + self.num_shots_ts
-            else:
-                self.num_shots_ts = len(per_task_data) - self.num_shots_tr
-                if self.num_shots_ts > 8:
-                    self.num_shots_ts = 8
-                self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=self.num_shots_tr,
-                                                                           num_test_per_class=self.num_shots_ts)
-                self.num_samples_per_task = self.num_shots_tr + self.num_shots_ts
-
-        task_path = per_task_data[:self.num_samples_per_task]
-        task = PersonTask(self.num_samples_per_task, task_path, self.num_shots_tr, self.dataset, self.transform,
-                          self.target_transform, frame_depth=self.frame_depth, fs=self.fs, state=self.state,
-                          signal=self.signal, unsupervised=self.unsupervised)
-
-        if self.dataset_transform is not None:
-            task = self.dataset_transform(task)
-        return task
 
 
 
-class PersonTask(Task):
-    def __init__(self, num_samples, task_data_path, num_shots_tr, dataset, transform=None, target_transform=None, frame_depth=10,
-                 fs=30, state='train', signal='pulse', unsupervised=0):
-        super(PersonTask, self).__init__(None, None) # Regression task
-        self.num_shots_tr = num_shots_tr
-        self.num_samples = num_samples
-        self.transform = transform
-        self.target_transform = target_transform
-        self.task_data_path = task_data_path
-        self.dataset = dataset
-        self.frame_depth = frame_depth
-        self.fs = fs
-        self.state = state
-        self.signal = signal
-        self.unsupervised = unsupervised
+class metadataset(Dataset):
+    '''
+    * train.npz
+    * test.npz
+    * val.npz
+    '''
 
-    def __len__(self):
-        return self.num_samples
+    def __init__(self, root, mode, batchsz, n_way, k_shot, k_query, resize, startidx=0):
+        '''
+        :param root: root dir path
+        :param mode: train/test/val
+        :param batchsz: batch size of sets
+        :param n_way: n class
+        :param k_shot: k data per each class
+        :param k_query: target(personalized) number of samples per set for evaluation
+        :param resize: resize
+        :param startidx: start indx
+        '''
+        self.transform = transforms.Compose([transforms.ToTensor()])
+        self.batchsz = batchsz
+        self.n_way = n_way
+        self.k_shot = k_shot
+        self.k_query = k_query
+        self.setsz = self.n_way*self.k_shot
+        self.querysz = self.n_way*self.k_query
+        self.resize = resize
+        self.startidx = startidx
+        print('shuffle DB :%s, b:%d, %d-way, %d-shot, %d-query, resize:%d' % (
+            mode, batchsz, n_way, k_shot, k_query, resize))
 
-    def __getitem__(self, index):
-        temp_path = self.task_data_path[index]
-        if self.dataset == 'MAHNOB-HCI':
-            f1 = scipy.io.loadmat(temp_path)
-        else:
-            f1 = h5py.File(temp_path, 'r')
-        output = np.transpose(np.array(f1["dXsub"]), [3, 0, 2, 1])
-        if self.unsupervised == 1 and self.state == 'train':
-            label = np.array(f1["dssub"])
-        elif self.unsupervised == 1 and self.state == 'test' and index < self.num_shots_tr:
-            label = np.array(f1["dssub"])
-        else:
-            label = np.array(f1["dysub"])
+        if mode is 'train':
+            self.dataset = np.load("./COHFACE_train_set_1~28_.npz")
+            print("complete load train set")
+        elif mode is 'val':
+            self.dataset = np.load("./COHFACE_val_set_29~36_.npz")
+            print("complete load val set")
+        elif mode is 'test':
+            self.dataset = np.load("./COHFACE_test_set_37~40_.npz")
+            print("complete load test set")
+        # dataset = bvpdataset(A=dataset['A'], M=dataset['M'], T=dataset['T'],N=dataset['N'])
+        # A : Appearance M : Motion T : Target N : Person NUmber
+        number = self.dataset['N']
+        self.cls = list(set(self.dataset['N']))
+        self.cls_num = len(self.cls)
+        self.data_cnt = [0,]
+        for num in self.cls:
+            self.data_cnt.append(len(np.where(number == num)[0]))
+        self.data_cnt = np.nancumsum(self.data_cnt)
+        self.create_batch(self.batchsz)
 
-        if 'AFRL' in temp_path:
-            self.fs = 30
-            if self.signal == 'pulse':
-                [b, a] = butter(1, [0.75 / self.fs * 2, 2.5 / self.fs * 2], btype='bandpass')
-            else:
-                # Resp filter
-                label = np.array(f1["drsub"])
-                [b, a] = butter(1, [0.08 / self.fs * 2, 0.5 / self.fs * 2], btype='bandpass')
-            label = scipy.signal.filtfilt(b, a, np.squeeze(label))
-            label = np.expand_dims(label, axis=1)
-        elif 'MMSE' in temp_path:
-            self.fs = 25
-            [b, a] = butter(1, [0.75 / self.fs * 2, 2.5 / self.fs * 2], btype='bandpass')
-            label = scipy.signal.filtfilt(b, a, np.squeeze(label))
-            label = np.expand_dims(label, axis=1)
-        else:
-            self.fs = 30
-            [b, a] = butter(1, [0.75 / self.fs * 2, 2.5 / self.fs * 2], btype='bandpass')
-            label = scipy.signal.filtfilt(b, a, np.squeeze(label))
-            label = np.expand_dims(label, axis=1)
-        # Average the frame
-        motion_data = output[:, :3, :, :]
-        apperance_data = output[:, 3:, :, :]
-        apperance_data = np.reshape(apperance_data, (int(180/self.frame_depth), self.frame_depth, 3, 36, 36))
-        apperance_data = np.average(apperance_data, axis=1)
-        apperance_data = np.repeat(apperance_data[:, np.newaxis, :, :, :], self.frame_depth, axis=1)
-        apperance_data = np.reshape(apperance_data, (apperance_data.shape[0] * apperance_data.shape[1],
-                                                     apperance_data.shape[2], apperance_data.shape[3],
-                                                     apperance_data.shape[4]))
-        output = np.concatenate((motion_data, apperance_data), axis=1)
+    def create_batch(self, batchsz):
+        '''
+        :param batchsz: batch size
+        :return:
+        '''
 
-        if self.transform is not None:
-            output = self.transform(output)
+        self.support_A_batch = [] # support Appearance dataset # Dtrain
+        self.support_M_batch = [] # support Motion dataset
+        self.suuport_T_batch = [] # support Target dataset
+        self.query_A_batch = [] # query Appearance dataset # Dtest
+        self.query_M_batch = [] # query Motion dataset
+        self.query_T_batch = [] # query Target dataset
 
-        if self.target_transform is not None:
-            label = self.target_transform(label)
-        return output, label
+        for b in range(batchsz):
+            selected_cls = np.random.choice(self.cls_num, self.n_way, False)
+            np.random_shuffle(selected_cls)
+            support_A = []
+            support_M = []
+            support_T = []
+            query_A = []
+            query_M = []
+            query_T = []
+            for cls in selected_cls: # Support 80% query 20%
+                data_len = self.data_cnt[cls] - self.data_cnt[cls-1]
+                support_A.append(self.dataset['A'][self.data_cnt[cls-1]:self.data_cnt[cls-1]+data_len//10*8])
+                support_M.append(self.dataset['M'][self.data_cnt[cls - 1]:self.data_cnt[cls - 1] + data_len // 10 * 8])
+                support_T.append(self.dataset['T'][self.data_cnt[cls - 1]:self.data_cnt[cls - 1] + data_len // 10 * 8])
+                query_A.append(self.dataset['A'][self.data_cnt[cls-1]+data_len//10*8:self.data_cnt[cls]])
+                query_M.append(self.dataset['M'][self.data_cnt[cls - 1] + data_len // 10 * 8:self.data_cnt[cls]])
+                query_T.append(self.dataset['T'][self.data_cnt[cls - 1] + data_len // 10 * 8:self.data_cnt[cls]])
+            self.support_A_batch.append(support_A)
+            self.support_M_batch.append(support_M)
+            self.support_T_batch.append(support_T)
+            self.query_A_batch.append(query_A)
+            self.query_M_batch.append(query_M)
+            self.query_T_batch.append(query_T)
+        #   for cls in selected_cls:# k-shot``
+
+        '''
+        shuffle x
+        '''
+        # np.random.shuffle(support_A)
+        # np.random.shuffle(support_M)
+        # np.random.shuffle(query_A)
+        # np.random.shuffle(query_M)
+
+    def __getitem__(self, N):
+        '''
+
+        :param N: data number( Target person number )
+        :return: Nth Person's data( Appearance, Motion, Target x Query & Support )
+        '''
+        data_len = self.data_cnt[N] - self.data_cnt[N - 1]
+        support_A = torch.FloatTensor(self.dataset['A'][self.data_cnt[N-1]:self.data_cnt[N-1]+data_len//10*8])
+        support_M = torch.FloatTensor(self.dataset['M'][self.data_cnt[N-1]:self.data_cnt[N-1]+data_len//10*8])
+        support_t = torch.FloatTensor(self.dataset['T'][self.data_cnt[N-1]:self.data_cnt[N-1]+data_len//10*8])
+        query_A = torch.FloatTensor(self.dataset['A'][self.data_cnt[N-1]+data_len//10*8:self.data_cnt[N]])
+        query_M = torch.FloatTensor(self.dataset['M'][self.data_cnt[N-1]+data_len//10*8:self.data_cnt[N]])
+        query_t = torch.FloatTensor(self.dataset['T'][self.data_cnt[N-1]+data_len//10*8:self.data_cnt[N]])
+
+        return support_A,support_M,support_t,query_A,query_M,query_t
+
+
+

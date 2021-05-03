@@ -7,7 +7,7 @@ import numpy as np
 
 
 class bvpdataset(Dataset):
-    def __init__(self, A, M, T):
+    def __init__(self, A, M, T,N):
         self.transform = transforms.Compose([transforms.ToTensor()])
         self.a = A
         self.m = M
