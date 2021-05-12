@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 from skimage.util import img_as_float
-from bvpdataset import bvpdataset
+import bvpdataset as bp
 import torch
 from torch.utils.data import Dataset
 
@@ -18,10 +18,10 @@ class DatasetDeepPhysUBFC():
 
     def __call__(self):
         if self.preprocessing is False:
-            if self.train is True:
+            if self.train is 1:
                 dataset = np.load("./subject_train.npz")
                 print("Complete Dataset : subject_train.npz")
-                dataset = bvpdataset(A=dataset['A'], M=dataset['M'], T=dataset['T'])
+                dataset = bp.dataset(A=dataset['A'], M=dataset['M'], labels=dataset['T'])
                 tot = int(len(dataset)) // 128
                 bias = tot // 10
                 train_set, val_set = torch.utils.data.random_split(dataset,
@@ -30,11 +30,28 @@ class DatasetDeepPhysUBFC():
                                                                    #  int(len(dataset) * 0.2 + 1)],
                                                                    generator=torch.Generator().manual_seed(1))
                 return train_set, val_set
-            else:
+            elif self.train is 2:
                 dataset = np.load("./subject_1.npz")
                 print("Complete Dataset : subject_test.npz")
-                test_set = bvpdataset(A=dataset['A'], M=dataset['M'], T=dataset['T'])
+                test_set = bp.dataset(A=dataset['A'], M=dataset['M'], T=dataset['T'])
                 return test_set
+            elif self.train is 3 or 4:
+                dataset = np.load("./subject_train.npz")
+                print("Complete Dataset : subject_train.npz")
+                # l2l not suppoort multi-label dataset
+                train_app = bp.appdataset(A=dataset['A'][:2], labels=dataset['T'][:2])
+                train_mot = bp.motdataset(M=dataset['M'][:2], labels=dataset['T'][:2])
+                # tot = int(len(dataset)) // 128
+                # bias = tot // 10
+                # train_set, val_set = torch.utils.data.random_split(dataset,
+                #                                                    [128 * bias * 8, int(len(dataset)) - 128 * bias * 8],
+                #                                                    generator=torch.Generator().manual_seed(1))
+                dataset = np.load("./COHFACE_test_set_37~40_.npz")
+                test_app = bp.appdataset(A=dataset['A'], labels=dataset['T'])
+                test_mot = bp.motdataset(M=dataset['M'], labels=dataset['T'])
+                # print("Complete Dataset : subject_test.npz")
+                # test_set = bvpdataset(A=dataset['A'], M=dataset['M'], labels=dataset['T'],N=dataset['N'])
+                return train_app, train_mot, test_app,test_mot
         else:
             target_image = np.empty(shape=(1, 36, 36, 6))
             target_label = np.empty(shape=(1,))
