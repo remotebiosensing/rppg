@@ -1,35 +1,88 @@
 import torch
 
 
-class appearnce_block(torch.nn.Module):
+class appearance_model(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size):
+        # Appearance model
         super().__init__()
-        # layer 1
-        self.a_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                       stride=1, padding=1)
-        self.a_batch1 = torch.nn.BatchNorm2d(self.a_conv1.out_channels)
-        # layer 2
-        self.a_conv2 = torch.nn.Conv2d(in_channels=self.a_conv1.out_channels, out_channels=out_channels,
-                                       kernel_size=kernel_size, stride=1, padding=1)
-        self.a_batch2 = torch.nn.BatchNorm2d(self.a_conv2.out_channels)
+        self.a_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=1, padding=1)
+        self.a_batch_Normalization1 = torch.nn.BatchNorm2d(32)
+        self.a_conv2 = torch.nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.a_batch_Normalization2 = torch.nn.BatchNorm2d(32)
+        self.a_dropout1 = torch.nn.Dropout2d(p=0.50)
+        # Attention mask1
+        self.attention_mask1 = attention_block(32)
+        self.a_avg1 = torch.nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
+        self.a_conv3 = torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.a_Batch_Normalization3 = torch.nn.BatchNorm2d(64)
+        self.a_conv4 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.a_Batch_Normalization4 = torch.nn.BatchNorm2d(64)
+        self.a_dropout2 = torch.nn.Dropout2d(p=0.50)
+        # Attention mask2
+        self.attention_mask2 = attention_block(64)
 
     def forward(self, inputs):
-        # layer 1
-        a = self.a_conv1(inputs)
-        a = self.a_batch1(a)
-        a = torch.tanh(a)
-        # layer 2
-        a = self.a_conv2(a)
-        a = self.a_batch2(a)
-        a = torch.tanh(a)
+        # Convlution layer
+        A1 = torch.tanh(self.a_batch_Normalization1(self.a_conv1(inputs)))
+        A2 = torch.tanh(self.a_batch_Normalization2(self.a_conv2(A1)))
+        A3 = self.a_dropout1(A2)
+        # Calculate Mask1
+        M1 = self.attention_mask1(A3)
+        # Pooling
+        A4 = self.a_avg1(A3)
+        # Convolution layer
+        A5 = torch.tanh(self.a_Batch_Normalization3(self.a_conv3(A4)))
+        A6 = torch.tanh(self.a_Batch_Normalization4(self.a_conv4(A5)))
+        A7 = self.a_dropout2(A6)
+        # Calculate Mask2
+        M2 = self.attention_mask2(A7)
 
-        return a
+        return M1, M2
+
+
+class motion_model(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, model):
+        super().__init__()
+        # Motion model
+        self.m_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                       stride=1, padding=1)
+        self.m_batch_Normalization1 = torch.nn.BatchNorm2d(32)
+        self.m_conv2 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                       stride=1, padding=1)
+        self.m_batch_Normalization2 = torch.nn.BatchNorm2d(32)
+        self.m_dropout1 = torch.nn.Dropout2d(p=0.50)
+
+        self.m_avg1 = torch.nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
+        self.m_conv3 = torch.nn.Conv2d(in_channels=out_channels, out_channels=64, kernel_size=kernel_size, stride=1,
+                                       padding=1)
+        self.m_batch_Normalization3 = torch.nn.BatchNorm2d(64)
+        self.m_conv4 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=kernel_size, stride=1, padding=1)
+        self.m_batch_Normalization4 = torch.nn.BatchNorm2d(64)
+        self.m_dropout2 = torch.nn.Dropout2d(p=0.50)
+        self.m_avg2 = torch.nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
+
+    def forward(self, inputs, mask1, mask2):
+        M1 = torch.tanh(self.m_batch_Normalization1(self.m_conv1(inputs)))
+        M2 = self.m_batch_Normalization2(self.m_conv2(M1))
+        # element wise multiplication Mask1
+        g1 = torch.tanh(torch.mul(1 * mask1, M2))
+        M3 = self.m_dropout1(g1)
+        # pooling
+        M4 = self.m_avg1(M3)
+        M5 = torch.tanh(self.m_batch_Normalization3(self.m_conv3(M4)))
+        M6 = self.m_batch_Normalization4(self.m_conv4(M5))
+        # element wise multiplication Mask2
+        g2 = torch.tanh(torch.mul(1 * mask2, M6))
+        M7 = self.m_dropout2(g2)
+        out = self.m_avg2(M7)
+
+        return out
 
 
 class attention_block(torch.nn.Module):
     def __init__(self, in_channels):
         super().__init__()
-        self.attention = torch.nn.Conv2d(in_channels, 1, kernel_size=1, padding=0)
+        self.attention = torch.nn.Conv2d(in_channels, 1, kernel_size=1, stride=1, padding=0)
 
     def forward(self, input):
         mask = self.attention(input)
@@ -41,44 +94,93 @@ class attention_block(torch.nn.Module):
         return mask
 
 
-class appearance_model(torch.nn.Module):
-    def __init__(self, in_channels, kernel_size, out_channels):
-        # 1st app_block
+class fc(torch.nn.Module):
+    def __init__(self):
         super().__init__()
-        self.a_block1 = appearnce_block(in_channels, out_channels, kernel_size)
-        self.a_dropout2 = torch.nn.Dropout2d(0.5)
-        self.a_avg2 = torch.nn.AvgPool2d(kernel_size=2, stride=2)
-        self.a_mask3 = attention_block(out_channels)
-        self.a_block4 = appearnce_block(out_channels, out_channels * 2, kernel_size)
-        self.a_mask6 = attention_block(out_channels * 2)
+        self.f_drop1 = torch.nn.Dropout(0.25)
+        self.f_linear1 = torch.nn.Linear(64 * 9 * 9, 128, bias=True)
+        self.f_linear2 = torch.nn.Linear(128, 1, bias=True)
 
-    def forward(self, inputs):
-        a = self.a_block1(inputs)
-        mask1 = self.a_mask3(a)
-        a = self.a_dropout2(a)
-        a = self.a_avg2(a)
-        a = self.a_block4(a)
-        mask2 = self.a_mask6(a)
-        return mask1, mask2
+    def forward(self, input):
+        f1 = torch.flatten(input, start_dim=1)
+        f2 = self.f_drop1(f1)
+        f3 = torch.tanh(self.f_linear1(f2))
+        f4 = self.f_linear2(f3)
+        return f4
+
+
+class TSM(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, input, n_frame=4, fold_div=3):
+        n_frame = 4
+        B, C, H, W = input.shape
+        input = input.view(-1, n_frame, H, W, C)
+        fold = C // fold_div
+        last_fold = C - (fold_div - 1) * fold
+        out1, out2, out3 = torch.split(input, [fold, fold, last_fold], -1)
+
+        padding1 = torch.zeros_like(out1)
+        padding1 = padding1[:, -1, :, :, :]
+        padding1 = torch.unsqueeze(padding1, 1)
+        _, out1 = torch.split(out1, [1, n_frame - 1], 1)
+        out1 = torch.cat((out1, padding1), 1)
+
+        padding2 = torch.zeros_like(out2)
+        padding2 = padding2[:, 0, :, :, :]
+        padding2 = torch.unsqueeze(padding2, 1)
+        out2, _ = torch.split(out2, [n_frame - 1, 1], 1)
+        out2 = torch.cat((padding2, out2), 1)
+
+        out = torch.cat((out1, out2, out3), -1)
+        out = out.view([-1, C, H, W])
+
+        return out
+
+
+class TSM_block(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size):
+        super().__init__()
+        self.tsm1 = TSM()
+        self.t_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                       padding=1)
+
+    def forward(self, input, n_frame=2, fold_div=3):
+        t = self.tsm1(input, n_frame, fold_div)
+        t = self.t_conv1(t)
+        return t
 
 
 class motion_block(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size):
+    def __init__(self, in_channels, out_channels, kernel_size, model):
         super().__init__()
-        self.m_conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size, padding=1)
-        self.m_batch1 = torch.nn.BatchNorm2d(out_channels)
-        self.m_conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size, padding=1)
-        self.m_batch2 = torch.nn.BatchNorm2d(out_channels)
+        self.model = model
+
+        if self.model.find("TS") is not -1:
+            self.m_tsm1 = TSM_block(in_channels, out_channels, kernel_size)
+            self.m_tsm2 = TSM_block(out_channels, out_channels, kernel_size)
+        else:
+            self.m_conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size, padding=1)
+            self.m_batch1 = torch.nn.BatchNorm2d(out_channels)
+            self.m_conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size, padding=1)
+            self.m_batch2 = torch.nn.BatchNorm2d(out_channels)
         self.m_drop3 = torch.nn.Dropout2d(0.5)
         self.m_avg3 = torch.nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
 
     def forward(self, inputs, mask):
-        m = self.m_conv1(inputs)
-        m = self.m_batch1(m)
-        m = torch.tanh(m)
+        if self.model.find("TS") is not -1:
+            m = self.m_tsm1(inputs)
+            m = torch.tanh(m)
+            m = self.m_tsm2(m)
+        else:
+            m = self.m_conv1(inputs)
+            m = self.m_batch1(m)
+            m = torch.tanh(m)
 
-        m = self.m_conv2(m)
-        m = self.m_batch2(m)
+            m = self.m_conv2(m)
+            m = self.m_batch2(m)
+
         m = torch.mul(m, mask)
         m = torch.tanh(m)
 
@@ -87,43 +189,23 @@ class motion_block(torch.nn.Module):
         return m
 
 
-class motion_model(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size):
+class model(torch.nn.Module):
+    def __init__(self, model="CAN"):
         super().__init__()
-        self.m_block1 = motion_block(in_channels, out_channels, kernel_size)
-        self.m_block2 = motion_block(out_channels, out_channels * 2, kernel_size)
+        self.model = model
+        self.in_channels = 3
+        self.out_channels = 32
+        self.kernel_size = 3
 
-    def forward(self, inputs, mask1, mask2):
-        m = self.m_block1(inputs, mask1)
-        m = self.m_block2(m, mask2)
-        return m
+        self.appearance_model = appearance_model(in_channels=self.in_channels, out_channels=self.out_channels,
+                                                 kernel_size=self.kernel_size)
+        self.motion_model = motion_model(in_channels=self.in_channels, out_channels=self.out_channels,
+                                         kernel_size=self.kernel_size, model=model)
+        self.fully = fc()
 
+    def forward(self, appearance_input, motion_input):
+        attention_mask1, attention_mask2 = self.appearance_model(appearance_input)
+        motion_output = self.motion_model(motion_input, attention_mask1, attention_mask2)
+        out = self.fully(motion_output)
 
-class fc(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.f_drop1 = torch.nn.Dropout2d(0.5)
-        self.f_linear2 = torch.nn.Linear(64 * 9 * 9, 128)
-        self.f_linear3 = torch.nn.Linear(128, 1, bias=True)
-
-    def forward(self, input):
-        f = torch.flatten(input, start_dim=1)
-        f = self.f_drop1(f)
-        f = torch.tanh(self.f_linear2(f))
-        f = self.f_linear3(f)
-        return f
-
-
-class DeepPhys(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size):
-        super().__init__()
-        self.appearance_model = appearance_model(in_channels=in_channels, out_channels=out_channels,
-                                                 kernel_size=kernel_size)
-        self.motion_model = motion_model(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size)
-        self.fc = fc()
-
-    def forward(self, norm_input, motion_input):
-        mask1, mask2 = self.appearance_model(norm_input)
-        out = self.motion_model(motion_input, mask1, mask2)
-        out = self.fc(out)
-        return out
+        return out, attention_mask1, attention_mask2

@@ -1,33 +1,49 @@
-import model
-import bvpdataset
+import scipy.signal
 import torch
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
+import numpy as np
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+from matplotlib import pyplot as plt
+from scipy.signal import butter
+from torch.utils.tensorboard import SummaryWriter
 
-print('Availabel devices', torch.cuda.device_count())
-print('Current cuda device', torch.cuda.current_device())
-print(torch.cuda.get_device_name(device))
-
-GPU_NUM = 0
-torch.cuda.set_device(GPU_NUM)
-
-transform = transforms.Compose([transforms.ToTensor()])
-dataset = bvpdataset.bvpdataset(
-    data_path="subject_test.npz",
-    transform=transform)
-test_loader = DataLoader(dataset, batch_size=1, shuffle=False)
+from inference_preprocess import detrend
 
 
-model = model.DeepPhys(in_channels=3, out_channels=32, kernel_size=3).cuda()
-checkpoint = torch.load("checkpoint.pth")
-model.load_state_dict(checkpoint['state_dict'])
+def test(model, test_loader, check_model, device):
+    writer = SummaryWriter()
+    model = model.to(device)
+    checkpoint = torch.load(check_model + "/checkpoint_9d_9h_48m.pth")
+    model.load_state_dict(checkpoint['state_dict'])
+    model.eval()
+    for i in range(0, 1):
+        with torch.no_grad():
+            val_output = np.zeros(len(test_loader))
+            target = np.zeros(len(test_loader))
+            for k, (avg, mot, lab) in enumerate(test_loader):
+                avg, mot, lab = avg.to(device), mot.to(device), lab.to(device)
+                output = model(avg, mot)
+                val_output[k] = output[0]
+                target[k] = lab[0][0]
+            writer.close()
+            print("End : Inference")
+    print(val_output)
+    print(target)
 
-with torch.no_grad():
-    val_output = []
-    for k, (avg, mot, lab) in enumerate(test_loader):
-        avg, mot, lab = avg.to(device), mot.to(device), lab.to(device)
-        val_output.append(model(avg, mot).cpu().clone().numpy()[0][0])
+    fs = 30
+    low = 0.75 / (0.5 * fs)
+    high = 2.5 / (0.5 * fs)
+    pulse_pred = detrend(np.cumsum(val_output), 100)
+    [b_pulse, a_pulse] = butter(1, [low, high], btype='bandpass')
+    pulse_pred = scipy.signal.filtfilt(b_pulse, a_pulse, np.double(pulse_pred))
+    pulse_pred = pulse_pred / max(abs(pulse_pred))
+    # pulse_pred = (pulse_pred - np.mean(pulse_pred)) / np.std(pulse_pred)
+    target = target / max(abs(target))
+    # target = (target - np.mean(target)) / np.std(target)
 
-print(val_output)
+    #matplot---------------------------------------------------------------------
+    plt.rcParams["figure.figsize"] = (14, 5)
+    plt.plot(range(len(pulse_pred[0:300])), pulse_pred[0:300], label='inference')
+    plt.plot(range(len(target[0:300])), target[0:300], label='target')
+    plt.legend(fontsize='x-large')
+    plt.show()
+
