@@ -1,4 +1,5 @@
 import argparse
+import os 
 
 import torch
 import torchsummary
@@ -13,6 +14,7 @@ from torch.utils.data import DataLoader
 from train import train
 from test import test
 
+from PulseGAN import data_preprocess, 
 dir_path = "/home/js/Desktop/Data/Pytorch_rppgs_save"
 
 if __name__ == '__main__':
@@ -32,7 +34,9 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint', type=str, default=dir_path + "/model_checkpoint",
                         help=dir_path + "/model_checkpoint")
     # test mode
-    parser.add_argument('--test_data', type=str, default=dir_path + "/preprocessing/test/UBFC_test_49.hdf5")
+    #parser.add_argument('--test_data', type=str, default=dir_path + "/preprocessing/test/UBFC_test_49.hdf5")
+    parser.add_argument('--test_data', type=str, default=dir_path + "/preprocessing/test/test/")
+    parser.add_argument('--result_data', type=str, default=dir_path + "/preprocessing/test/result/")
     parser.add_argument('--check_model', type=str, default=dir_path + "/model_checkpoint")
 
     args = parser.parse_args()
@@ -88,12 +92,22 @@ if __name__ == '__main__':
         if args.mode == 0:
             dataset = h5py.File(dir_path + '/preprocessing/train/UBFC_train_Data.hdf5', 'r')
             print("Load : " + dir_path + "/preprocessing/train/UBFC_train_Data.hdf5")
+            motion_data = dataset['output_video'][:, :, :, :3]
+            appearance_data = dataset['output_video'][:, :, :, -3:]
+            label = dataset['output_label'][:]
+
         elif args.mode == 1:
-            dataset = h5py.File(args.test_data, 'r')
-            print("Load : " + args.test_data)
-        motion_data = dataset['output_video'][:, :, :, :3]
-        appearance_data = dataset['output_video'][:, :, :, -3:]
-        label = dataset['output_label'][:]
+            for i in os.listdir(args.test_data):
+                dataset = h5py.File(args.test_data + i, 'r')
+                print("Load : " + i)
+                motion_data = dataset['output_video'][:, :, :, :3]
+                appearance_data = dataset['output_video'][:, :, :, -3:]
+                label = dataset['output_label'][:]
+
+                dataset = bp.dataset(A=appearance_data, M=motion_data, T=label)
+                test_loader = DataLoader(dataset, batch_size=1, shuffle=False)
+                test(model=model, test_loader=test_loader, check_model=args.check_model, device=device, result_data = args.result_data, name = i.split('.')[0])
+
     elif args.preprocessing == 1:
         dataset = DatasetDeepPhysUBFC()
         dataset = dataset()
@@ -120,10 +134,27 @@ if __name__ == '__main__':
               model_path=args.checkpoint, epochs=args.epoch, device=device)
     elif args.mode == 1:
         # Change Tensor & Split Data
-        dataset = bp.dataset(A=appearance_data, M=motion_data, T=label)
-        test_loader = DataLoader(dataset, batch_size=1, shuffle=False)
-        test(model=model, test_loader=test_loader, check_model=args.check_model, device=device)
+        pass
+
     else:
         print('\nError! No such Data. Choose from preprocessing : 0.Train 1.Test')
+
+
+
+    # PulseGAN Preprocessing------------------------------------------------------------------------
+    data_preprocess.process_and_serialize('train',args.result_data, stride = 0.2, window_size = 256)
+    data_preprocess.data_verify('train', args.result_data, window_size = 256)
+    data_preprocess.process_and_serialize('test', args.result_data,stride = 0.2, window_size = 256)
+    data_preprocess.data_verify('test', args.result_data, window_size = 256)
+
+
+    # PulseGAN -------------------------------------------------------------------------------------
+    
+
+
+
+
+
+
 
 

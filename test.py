@@ -1,6 +1,7 @@
 import scipy.signal
 import torch
 import numpy as np
+import csv
 
 from matplotlib import pyplot as plt
 from scipy.signal import butter
@@ -9,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from inference_preprocess import detrend
 
 
-def test(model, test_loader, check_model, device):
+def test(model, test_loader, check_model, device, result_data, name):
     writer = SummaryWriter()
     model = model.to(device)
     checkpoint = torch.load(check_model + "/checkpoint_9d_9h_48m.pth")
@@ -39,11 +40,23 @@ def test(model, test_loader, check_model, device):
     # pulse_pred = (pulse_pred - np.mean(pulse_pred)) / np.std(pulse_pred)
     target = target / max(abs(target))
     # target = (target - np.mean(target)) / np.std(target)
-
+    
+    '''
     #matplot---------------------------------------------------------------------
     plt.rcParams["figure.figsize"] = (14, 5)
     plt.plot(range(len(pulse_pred[0:300])), pulse_pred[0:300], label='inference')
     plt.plot(range(len(target[0:300])), target[0:300], label='target')
     plt.legend(fontsize='x-large')
     plt.show()
+    '''
+
+    #save_can_result------------------------------------------------------------------
+    print("save CAN results", name)
+    with open('{}/pred_result/{}.csv'.format(result_data, name),'w',newline='') as f:
+        wr = csv.writer(f)
+        wr.writerow(pulse_pred)
+    with open('{}/infer_result/{}.csv'.format(result_data, name),'w',newline='') as f:
+        wr = csv.writer(f)
+        wr.writerow(target)
+
 
