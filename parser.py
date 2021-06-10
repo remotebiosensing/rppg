@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from train import train
 from test import test
 
-from PulseGAN import data_preprocess, 
+from PulseGAN import data_preprocess
 dir_path = "/home/js/Desktop/Data/Pytorch_rppgs_save"
 
 if __name__ == '__main__':
@@ -146,15 +146,6 @@ if __name__ == '__main__':
     data_preprocess.data_verify('train', args.result_data, window_size = 256)
     data_preprocess.process_and_serialize('test', args.result_data,stride = 0.2, window_size = 256)
     data_preprocess.data_verify('test', args.result_data, window_size = 256)
-
-
-    # PulseGAN -------------------------------------------------------------------------------------
-    
-
-
-
-
-
 
 
 

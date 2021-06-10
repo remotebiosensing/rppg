@@ -3,6 +3,10 @@ import csv
 import numpy as np
 from tqdm import tqdm
 
+serialized_train_folder ='./data/serialized_train_data'
+serialized_test_folder ='./data/serialized_test_data'
+
+
 def slice_signal(file, window_size, stride):
     """
     Helper function for slicing the audio file
@@ -27,11 +31,11 @@ def process_and_serialize(data_type, folder, stride = 0.2, window_size = 256):
     if data_type == 'train':
         clean_folder = folder + 'infer_result'
         noisy_folder = folder + 'pred_result'
-        serialized_folder = folder + 'serialized_train_data'
+        serialized_folder = serialized_train_folder
     else:
         clean_folder = folder + 'infer_result_test'
         noisy_folder = folder + 'pred_result_test'
-        serialized_folder = folder + 'serialized_test_data'
+        serialized_folder = serialized_test_folder
     if not os.path.exists(serialized_folder):
         os.makedirs(serialized_folder)
 
