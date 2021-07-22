@@ -3,6 +3,7 @@ import datetime
 import json
 
 from loss import loss_fn
+from optim import optimizer
 from dataset.dataset_loader import dataset_loader
 from torch.utils.data import DataLoader, random_split
 from utils.dataset_preprocess import preprocessing
@@ -14,7 +15,7 @@ with open('params.json') as f:
     hyper_params = jsonObject.get("hyper_params")
 
 '''
-    Generate preprocessed data hpy file 
+Generate preprocessed data hpy file 
 '''
 if False:
     if __TIME__:
@@ -27,7 +28,7 @@ if False:
         print("preprocessing time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
-    load dataset before using Torch DataLoader
+Load dataset before using Torch DataLoader
 '''
 if False:
     if __TIME__:
@@ -68,8 +69,19 @@ if False:
     if __TIME__:
         print("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
+'''
+Setting Loss Function
+'''
 criterion = loss_fn(hyper_params["loss_fn"])
 if criterion is None:
     print("use implemented loss functions")
     print(hyper_params["loss_fn_comment"])
     raise NotImplementedError("implement a custom function(%s) in loss.py" % hyper_params["loss_fn"])
+'''
+Setting Optimizer
+'''
+optimizer = optimizer(model.parameters(), hyper_params["learning_rate"],hyper_params["optimizer"])
+if criterion is None:
+    print("use implemented optimizer")
+    print(hyper_params["optimizer_comment"])
+    raise NotImplementedError("implement a custom optimizer(%s) in optimizer.py" % hyper_params["optimizer"])

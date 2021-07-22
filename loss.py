@@ -4,6 +4,10 @@ import torch.nn.modules.loss as loss
 
 
 def loss_fn(loss_fn: str = "mse"):
+    """
+    :param loss_fn: implement loss function for training
+    :return: loss function module(class)
+    """
     if loss_fn == "mse":
         return loss.MSELoss()
     elif loss_fn == "L1":
