@@ -18,11 +18,20 @@
     {
         "loss_fn": "mse",
         "loss_fn_comment":
-               ["mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
+               [
+                   "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
                    "cross_entropy","ctc","bce_with_logits","gaussian_nll","hinge_embedding",
                    "KLDiv","margin_ranking","multi_label_margin","multi_label_soft_margin",
                    "nll","nll2d","pairwise","poisson_nll","smooth_l1","soft_margin",
-                   "triplet_margin","triplet_margin_distance"]
+                   "triplet_margin","triplet_margin_distance"
+               ],
+        "optimizer": "ada_delta",
+        "optimizer_comment":
+                [
+                    "adam","sgd","rms_prop","ada_delta","ada_grad","ada_max",
+                    "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam"
+                ],
+        "learning_rate": 0.1
 
     }
 }
