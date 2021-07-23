@@ -2,7 +2,7 @@ import torch
 import torch.optim as opt
 
 
-def optimizer(model_params: torch.model.parameters(), learning_rate: float = 1, optim: str = "mse"):
+def optimizer(model_params, learning_rate: float = 1, optim: str = "mse"):
     '''
     call optimizer
     :param model_params: learning target's parameter

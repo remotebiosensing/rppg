@@ -1,8 +1,8 @@
 import torch
 
-from AppearanceModel import AppearanceModel_2D, AppearanceModel_DA
-from MotionModel import MotionModel
-from LinearModel import LinearModel
+from nets.AppearanceModel import AppearanceModel_2D, AppearanceModel_DA
+from nets.MotionModel import MotionModel
+from nets.LinearModel import LinearModel
 
 class Deepphys(torch.nn.Module):
     def __init__(self):

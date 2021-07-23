@@ -1,8 +1,8 @@
 import torch
 from torch.nn import Module
-from modules.modules import DAModule
-from blocks.AttentionBlocks import AttentionBlock
-from blocks.blocks import EncoderBlock,DecoderBlock
+from nets.modules.modules import DAModule
+from nets.blocks.AttentionBlocks import AttentionBlock
+from nets.blocks.blocks import EncoderBlock,DecoderBlock
 
 
 class AppearanceModel_2D(Module):

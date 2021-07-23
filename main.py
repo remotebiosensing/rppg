@@ -2,6 +2,10 @@ import time
 import datetime
 import json
 
+import torch.cuda
+
+from parallel import DataParallel, DataParallelCriterion
+from nets.Models import Deepphys
 from loss import loss_fn
 from optim import optimizer
 from dataset.dataset_loader import dataset_loader
@@ -68,6 +72,19 @@ if False:
                              shuffle=params["test_shuffle"])
     if __TIME__:
         print("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+'''
+Setting Learning Model
+'''
+if __TIME__:
+    start_time = time.time()
+model = Deepphys()
+if torch.cuda.is_available():
+    model = DataParallel(model)
+    model.cuda()
+else:
+    model = model.to('cpu')
+if __TIME__:
+    print("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Setting Loss Function
@@ -79,6 +96,9 @@ if criterion is None:
     print("use implemented loss functions")
     print(hyper_params["loss_fn_comment"])
     raise NotImplementedError("implement a custom function(%s) in loss.py" % hyper_params["loss_fn"])
+if torch.cuda.is_available():
+    criterion = DataParallelCriterion(criterion)
+
 if __TIME__:
     print("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
