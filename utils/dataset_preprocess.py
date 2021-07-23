@@ -27,6 +27,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
 
     process = []
 
+    #multiprocessing
     for index, data_path in enumerate(data_list):
         proc = multiprocessing.Process(target=preprocess_Dataset,
                                        args=(dataset_root_path + "/" + data_path, True, return_dict))
