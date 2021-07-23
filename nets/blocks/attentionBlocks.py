@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
-from ..
+
+from ..modules.modules import DAModule
 
 
-class attention_block(nn.Module):
+class AttentionBlock(nn.Module):
     def __init__(self, in_channels):
         super().__init__()
         self.attention = DAModule(in_channels)
@@ -18,5 +19,3 @@ class attention_block(nn.Module):
         mask = torch.div(mask * H * W, norm)
         mask = self.conv1x1(mask)
         return mask
-
-
