@@ -5,12 +5,12 @@ from skimage.util import img_as_float
 import time
 
 
-def preprocess_Video(path,flag):
+def preprocess_Video(path, flag):
     '''
     :param path: dataset path
     :param flag: face detect flag
     :return: [:,:,:0-2] : motion diff frame
-             [:,:,:,3-5 : normalized frame
+             [:,:,:,3-5] : normalized frame
     '''
     cap = cv2.VideoCapture(path)
     frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -41,18 +41,20 @@ def preprocess_Video(path,flag):
     cap.release()
     return True, raw_video
 
+
 def faceDetection(frame):
     '''
     :param frame: one frame
     :return: cropped face image
     '''
-    resized_frame = cv2.resize(frame,(0,0), fx=0.5,fy=0.5)
+    resized_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
     face_location = face_locations(resized_frame)
     if len(face_location) == 0:  # can't detect face
         return False, None
-    top,right,bottom,left = face_location[0]
-    dst = frame[top:bottom,left:right]
+    top, right, bottom, left = face_location[0]
+    dst = frame[top:bottom, left:right]
     return True, dst
+
 
 def generate_Floatimage(frame):
     '''
@@ -67,6 +69,7 @@ def generate_Floatimage(frame):
     dst[dst < 0] = 0
     return dst
 
+
 def generate_MotionDifference(prev_frame, crop_frame):
     '''
     :param prev_frame: previous frame
@@ -78,6 +81,7 @@ def generate_MotionDifference(prev_frame, crop_frame):
     motion_input = motion_input / np.std(motion_input)
     return motion_input
 
+
 def normalize_Image(frame):
     '''
     :param frame: image
@@ -85,10 +89,11 @@ def normalize_Image(frame):
     '''
     return frame / np.std(frame)
 
+
 def preprocess_Image(prev_frame, crop_frame):
     '''
     :param prev_frame: previous frame
     :param crop_frame: current frame
     :return: motion_differnceframe, normalized_frame
     '''
-    return generate_MotionDifference(prev_frame,crop_frame), normalize_Image(crop_frame)
+    return generate_MotionDifference(prev_frame, crop_frame), normalize_Image(crop_frame)

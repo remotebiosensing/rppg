@@ -72,16 +72,24 @@ if False:
 '''
 Setting Loss Function
 '''
+if __TIME__:
+    start_time = time.time()
 criterion = loss_fn(hyper_params["loss_fn"])
 if criterion is None:
     print("use implemented loss functions")
     print(hyper_params["loss_fn_comment"])
     raise NotImplementedError("implement a custom function(%s) in loss.py" % hyper_params["loss_fn"])
+if __TIME__:
+    print("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
 Setting Optimizer
 '''
+if __TIME__:
+    start_time = time.time()
 optimizer = optimizer(model.parameters(), hyper_params["learning_rate"],hyper_params["optimizer"])
 if criterion is None:
     print("use implemented optimizer")
     print(hyper_params["optimizer_comment"])
     raise NotImplementedError("implement a custom optimizer(%s) in optimizer.py" % hyper_params["optimizer"])
+if __TIME__:
+    print("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
