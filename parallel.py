@@ -124,6 +124,7 @@ class DataParallelCriterion(DataParallel):
 
 
 def _criterion_parallel_apply(modules, inputs, targets, kwargs_tup=None, devices=None):
+    print(len(modules),len(inputs))
     assert len(modules) == len(inputs)
     assert len(targets) == len(inputs)
     if kwargs_tup:

@@ -1,5 +1,9 @@
 {
     "__TIME__":1,
+    "options":{
+        "parallel_criterion" : 1,
+        "parallel_criterion_comment" : "TODO need to verification"
+    },
     "params":
     {
         "save_root_path": "/media/hdd1/dy_dataset/",
@@ -9,7 +13,7 @@
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
-        "train_batch_size" : 32,
+        "train_batch_size" : 10,
         "train_shuffle" : 0,
         "test_batch_size" : 1,
         "test_shuffle" : 0
