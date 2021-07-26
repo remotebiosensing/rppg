@@ -10,6 +10,8 @@ class Deepphys(torch.nn.Module):
         self.in_channels = 3
         self.out_channels = 32
         self.kernel_size = 3
+        self.attention_mask1 = None
+        self.attention_mask2 = None
 
         self.appearance_model = AppearanceModel_2D(in_channels=self.in_channels, out_channels=self.out_channels * 4,
                                                    kernel_size=self.kernel_size)
@@ -25,11 +27,14 @@ class Deepphys(torch.nn.Module):
         :return:
         original 2d model
         """
-        attention_mask1, attention_mask2 = self.appearance_model(appearance_input)
-        motion_output = self.motion_model(motion_input, attention_mask1, attention_mask2)
+        self.attention_mask1, self.attention_mask2 = self.appearance_model(appearance_input)
+        motion_output = self.motion_model(motion_input, self.attention_mask1, self.attention_mask2)
         out = self.linear_model(motion_output)
 
-        return out, attention_mask1, attention_mask2
+        return out
+
+    def get_attention_mask(self):
+        return self.attention_mask1, self.attention_mask2
 
 
 class Deepphys_DA(torch.nn.Module):

@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import os
 
-
+from tqdm import tqdm
 from parallel import DataParallelModel, DataParallelCriterion
 from nets.Models import Deepphys
 from loss import loss_fn
@@ -21,6 +21,8 @@ with open('params.json') as f:
     options = jsonObject.get("options")
     params = jsonObject.get("params")
     hyper_params = jsonObject.get("hyper_params")
+
+#
 
 '''
 Generate preprocessed data hpy file 
@@ -106,10 +108,10 @@ if criterion is None:
     print(hyper_params["loss_fn_comment"])
     raise NotImplementedError("implement a custom function(%s) in loss.py" % hyper_params["loss_fn"])
 # if torch.cuda.is_available():
-    # TODO: implement parallel training
-    # if options["parallel_criterion"] :
-    #     print(options["parallel_criterion_comment"])
-    #     criterion = DataParallelCriterion(criterion,device_ids=[0, 1, 2])
+# TODO: implement parallel training
+# if options["parallel_criterion"] :
+#     print(options["parallel_criterion_comment"])
+#     criterion = DataParallelCriterion(criterion,device_ids=[0, 1, 2])
 
 if __TIME__:
     print("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
@@ -118,7 +120,7 @@ Setting Optimizer
 '''
 if __TIME__:
     start_time = time.time()
-optimizer = optimizer(model.parameters(), hyper_params["learning_rate"],hyper_params["optimizer"])
+optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
 if criterion is None:
     print("use implemented optimizer")
     print(hyper_params["optimizer_comment"])
@@ -126,11 +128,40 @@ if criterion is None:
 if __TIME__:
     print("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
-for i,(appearance_data, motion_data, target) in enumerate(train_loader):
-    print(i)
-    outputs = model(appearance_data,motion_data)
-    loss = criterion(outputs,target)
+for epoch in range(hyper_params["epochs"]):
+    running_loss = 0.0
+    with tqdm(train_loader, desc="Train ", total=len(train_loader)) as tepoch:
+        model.train()
+        running_loss = 0.0
+        for appearance_data, motion_data, target in tepoch:
+            tepoch.set_description(f"Train Epoch {epoch}")
+            outputs = model(appearance_data, motion_data)
+            loss = criterion(outputs, target)
 
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            running_loss += loss.item()
+            optimizer.step()
+            tepoch.set_postfix(loss=running_loss/params["train_batch_size"])
+
+    with tqdm(validation_loader, desc="Validation ", total=len(validation_loader)) as tepoch:
+        model.eval()
+        running_loss = 0.0
+        with torch.no_grad():
+            for appearance_data, motion_data, target in tepoch:
+                tepoch.set_description(f"Validation")
+                outputs = model(appearance_data, motion_data)
+                loss = criterion(outputs, target)
+                running_loss += loss.item()
+                tepoch.set_postfix(loss=running_loss/params["train_batch_size"])
+
+    if epoch + 1 == hyper_params["epochs"]:
+        with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
+            model.eval()
+            with torch.no_grad():
+                for appearance_data, motion_data, target in tepoch:
+                    tepoch.set_description(f"test")
+                    outputs = model(appearance_data, motion_data)
+                    loss = criterion(outputs, target)
+                    running_loss += loss.item()
+                    tepoch.set_postfix(loss=running_loss/(params["train_batch_size"]/params["test_batch_size"]))
