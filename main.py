@@ -1,19 +1,21 @@
-import time
 import datetime
 import json
+import time
+
 import numpy as np
 import torch
-import os
-
-from tqdm import tqdm
-from parallel import DataParallelModel, DataParallelCriterion
-from nets.Models import Deepphys
-from loss import loss_fn
-from optim import optimizer
-from dataset.dataset_loader import dataset_loader
 from torch.utils.data import DataLoader, random_split
-from torch.nn import DataParallel
-from utils.dataset_preprocess import preprocessing
+from tqdm import tqdm
+
+from dataset.dataset_loader import dataset_loader
+from loss import loss_fn
+from nets.Models import Deepphys
+from optim import optimizer
+from colorama import Fore, Style
+
+
+def log_info(message, time):
+    print(Fore.LIGHTYELLOW_EX + Style.BRIGHT + message + Style.RESET_ALL, time)
 
 with open('params.json') as f:
     jsonObject = json.load(f)
@@ -21,9 +23,7 @@ with open('params.json') as f:
     options = jsonObject.get("options")
     params = jsonObject.get("params")
     hyper_params = jsonObject.get("hyper_params")
-
 #
-
 '''
 Generate preprocessed data hpy file 
 '''
@@ -35,7 +35,7 @@ if False:
                   dataset_name=params["dataset_name"],
                   train_ratio=params["train_ratio"])
     if __TIME__:
-        print("preprocessing time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+        log_info("preprocessing time \t:",datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Load dataset before using Torch DataLoader
@@ -54,7 +54,8 @@ train_dataset, validation_dataset = random_split(dataset,
                                                          len(dataset) * (1 - params["validation_ratio"])))]
                                                  )
 if __TIME__:
-    print("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+
 
 if __TIME__:
     start_time = time.time()
@@ -62,7 +63,7 @@ test_dataset = dataset_loader(save_root_path=params["save_root_path"],
                               dataset_name=params["dataset_name"],
                               option="test")
 if __TIME__:
-    print("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
     Call dataloader for iterate dataset
@@ -76,7 +77,7 @@ validation_loader = DataLoader(validation_dataset, batch_size=params["train_batc
 test_loader = DataLoader(test_dataset, batch_size=params["test_batch_size"],
                          shuffle=params["test_shuffle"])
 if __TIME__:
-    print("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
 Setting Learning Model
 '''
@@ -95,7 +96,7 @@ if torch.cuda.is_available():
 else:
     model = model.to('cpu')
 if __TIME__:
-    print("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Setting Loss Function
@@ -114,7 +115,7 @@ if criterion is None:
 #     criterion = DataParallelCriterion(criterion,device_ids=[0, 1, 2])
 
 if __TIME__:
-    print("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
 Setting Optimizer
 '''
@@ -126,10 +127,11 @@ if criterion is None:
     print(hyper_params["optimizer_comment"])
     raise NotImplementedError("implement a custom optimizer(%s) in optimizer.py" % hyper_params["optimizer"])
 if __TIME__:
-    print("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 for epoch in range(hyper_params["epochs"]):
-    running_loss = 0.0
+    if __TIME__ and epoch == 0:
+        start_time = time.time()
     with tqdm(train_loader, desc="Train ", total=len(train_loader)) as tepoch:
         model.train()
         running_loss = 0.0
@@ -142,7 +144,9 @@ for epoch in range(hyper_params["epochs"]):
             loss.backward()
             running_loss += loss.item()
             optimizer.step()
-            tepoch.set_postfix(loss=running_loss/params["train_batch_size"])
+            tepoch.set_postfix(loss=running_loss / params["train_batch_size"])
+    if __TIME__ and epoch == 0:
+        log_info("1 epoch training time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
     with tqdm(validation_loader, desc="Validation ", total=len(validation_loader)) as tepoch:
         model.eval()
@@ -153,9 +157,11 @@ for epoch in range(hyper_params["epochs"]):
                 outputs = model(appearance_data, motion_data)
                 loss = criterion(outputs, target)
                 running_loss += loss.item()
-                tepoch.set_postfix(loss=running_loss/params["train_batch_size"])
+                tepoch.set_postfix(loss=running_loss / params["train_batch_size"])
 
     if epoch + 1 == hyper_params["epochs"]:
+        if __TIME__ and epoch == 0:
+            start_time = time.time()
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
             model.eval()
             with torch.no_grad():
@@ -164,4 +170,6 @@ for epoch in range(hyper_params["epochs"]):
                     outputs = model(appearance_data, motion_data)
                     loss = criterion(outputs, target)
                     running_loss += loss.item()
-                    tepoch.set_postfix(loss=running_loss/(params["train_batch_size"]/params["test_batch_size"]))
+                    tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
+        if __TIME__:
+            log_info("inference time \t: ", datetime.timedelta(seconds=time.time() - start_time))
