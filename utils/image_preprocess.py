@@ -5,7 +5,7 @@ from skimage.util import img_as_float
 import time
 
 
-def preprocess_Video(path, flag):
+def Deepphys_preprocess_Video(path, flag):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -30,6 +30,7 @@ def preprocess_Video(path, flag):
         else:
             crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
+        crop_frame = cv2.resize(crop_frame, dsize=(36, 36), interpolation=cv2.INTER_AREA)
         crop_frame = generate_Floatimage(crop_frame)
 
         if prev_frame is None:
@@ -40,6 +41,46 @@ def preprocess_Video(path, flag):
         j += 1
     cap.release()
     return True, raw_video
+
+
+def PhysNet_preprocess_Video(path, flag):
+    '''
+    :param path: dataset path
+    :param flag: face detect flag
+    :return:
+    '''
+    cap = cv2.VideoCapture(path)
+    frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    raw_video = np.empty((frame_total, 128, 128, 3))
+    prev_frame = None
+    j = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if frame is None:
+            break
+        if flag:
+            rst, crop_frame = faceDetection(frame)
+            if not rst:  # can't detect face
+                return False, None
+        else:
+            crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+
+        crop_frame = cv2.resize(crop_frame, dsize=(128, 128), interpolation=cv2.INTER_AREA)
+        crop_frame = generate_Floatimage(crop_frame)
+
+        raw_video[j] = crop_frame
+        j += 1
+    cap.release()
+
+    split_raw_video = np.zeros(((frame_total // 32), 32, 128, 128, 3))
+    index = 0
+    for x in range(frame_total // 32):
+        split_raw_video[x] = raw_video[index:index + 32]
+        index = index + 32
+
+    return True, split_raw_video
 
 
 def faceDetection(frame):
@@ -62,7 +103,6 @@ def generate_Floatimage(frame):
     :return: float value frame [0 ~ 1.0]
     '''
     dst = img_as_float(frame)
-    dst = cv2.resize(dst, dsize=(36, 36), interpolation=cv2.INTER_AREA)
     # 왜 있지??
     dst = cv2.cvtColor(dst.astype('float32'), cv2.COLOR_BGR2RGB)
     dst[dst > 1] = 1

@@ -4,7 +4,7 @@ import torchvision.transforms as transforms
 import numpy as np
 
 
-class DeltaDataset(Dataset):
+class DeepPhysDataset(Dataset):
     def __init__(self, appearance_data, motion_data, target):
         self.transform = transforms.Compose([transforms.ToTensor()])
         self.a = appearance_data
