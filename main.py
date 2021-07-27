@@ -142,9 +142,9 @@ for epoch in range(hyper_params["epochs"]):
     with tqdm(train_loader, desc="Train ", total=len(train_loader)) as tepoch:
         model.train()
         running_loss = 0.0
-        for appearance_data, motion_data, target in tepoch:
+        for inputs, target in tepoch:
             tepoch.set_description(f"Train Epoch {epoch}")
-            outputs = model(appearance_data, motion_data)
+            outputs = model(inputs)
             loss = criterion(outputs, target)
 
             optimizer.zero_grad()
@@ -159,9 +159,9 @@ for epoch in range(hyper_params["epochs"]):
         model.eval()
         running_loss = 0.0
         with torch.no_grad():
-            for appearance_data, motion_data, target in tepoch:
+            for inputs, target in tepoch:
                 tepoch.set_description(f"Validation")
-                outputs = model(appearance_data, motion_data)
+                outputs = model(inputs)
                 loss = criterion(outputs, target)
                 running_loss += loss.item()
                 tepoch.set_postfix(loss=running_loss / params["train_batch_size"])
@@ -172,9 +172,9 @@ for epoch in range(hyper_params["epochs"]):
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
             model.eval()
             with torch.no_grad():
-                for appearance_data, motion_data, target in tepoch:
+                for inputs, target in tepoch:
                     tepoch.set_description(f"test")
-                    outputs = model(appearance_data, motion_data)
+                    outputs = model(inputs)
                     loss = criterion(outputs, target)
                     running_loss += loss.item()
                     tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
