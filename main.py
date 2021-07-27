@@ -51,6 +51,7 @@ if __TIME__:
     start_time = time.time()
 
 dataset = dataset_loader(save_root_path=params["save_root_path"],
+                         model_name=model_params["name"],
                          dataset_name=params["dataset_name"],
                          option="train")
 
@@ -111,7 +112,7 @@ if __TIME__:
     start_time = time.time()
 criterion = loss_fn(hyper_params["loss_fn"])
 if criterion is None:
-    print("use implemented loss functions")
+    log_warning("use implemented loss functions")
     print(hyper_params["loss_fn_comment"])
     raise NotImplementedError("implement a custom function(%s) in loss.py" % hyper_params["loss_fn"])
 # if torch.cuda.is_available():
@@ -129,7 +130,7 @@ if __TIME__:
     start_time = time.time()
 optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
 if criterion is None:
-    print("use implemented optimizer")
+    log_warning("use implemented optimizer")
     print(hyper_params["optimizer_comment"])
     raise NotImplementedError("implement a custom optimizer(%s) in optimizer.py" % hyper_params["optimizer"])
 if __TIME__:

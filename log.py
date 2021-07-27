@@ -6,4 +6,4 @@ def log_info_time(message, time):
 
 
 def log_warning(message):
-    print(Fore.LIGHTRED_EX + Style.BRIGHT + message + Style.RESET_ALL)(base)
+    print(Fore.LIGHTRED_EX + Style.BRIGHT + message + Style.RESET_ALL)

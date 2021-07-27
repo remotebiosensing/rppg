@@ -68,6 +68,13 @@ def neg_Pearson_Loss(predictions, targets):
     :return: negative pearson loss
     '''
     rst = 0
+
+    if torch.mean(predictions) != 0:
+        predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
+
+    if torch.mean(targets) != 0:
+        targets = (targets - torch.mean(targets)) / torch.std(targets)
+
     for i in range(predictions.shape[0]):
         sum_x = torch.sum(predictions[i])  # x
         sum_y = torch.sum(targets[i])  # y

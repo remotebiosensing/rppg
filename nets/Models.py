@@ -20,15 +20,16 @@ class Deepphys(torch.nn.Module):
 
         self.linear_model = LinearModel()
 
-    def forward(self, appearance_input, motion_input):
+    def forward(self, inputs):
         """
-        :param appearance_input:
-        :param motion_input:
+        :param inputs:
+        inputs[0] : appearance_input
+        inputs[1] : motion_input
         :return:
         original 2d model
         """
-        self.attention_mask1, self.attention_mask2 = self.appearance_model(appearance_input)
-        motion_output = self.motion_model(motion_input, self.attention_mask1, self.attention_mask2)
+        self.attention_mask1, self.attention_mask2 = self.appearance_model(inputs[0])
+        motion_output = self.motion_model(inputs[1], self.attention_mask1, self.attention_mask2)
         out = self.linear_model(motion_output)
 
         return out
