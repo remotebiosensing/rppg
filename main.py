@@ -8,14 +8,13 @@ from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
 from dataset.dataset_loader import dataset_loader
+from log import log_info_time,log_warning
 from loss import loss_fn
 from nets.Models import Deepphys
 from optim import optimizer
-from colorama import Fore, Style
 
+from utils.dataset_preprocess import preprocessing
 
-def log_info(message, time):
-    print(Fore.LIGHTYELLOW_EX + Style.BRIGHT + message + Style.RESET_ALL, time)
 
 with open('params.json') as f:
     jsonObject = json.load(f)
@@ -23,19 +22,26 @@ with open('params.json') as f:
     options = jsonObject.get("options")
     params = jsonObject.get("params")
     hyper_params = jsonObject.get("hyper_params")
+    model_params = jsonObject.get("model_params")
 #
 '''
 Generate preprocessed data hpy file 
 '''
-if False:
-    if __TIME__:
-        start_time = time.time()
-    preprocessing(save_root_path=params["save_root_path"],
-                  data_root_path=params["data_root_path"],
-                  dataset_name=params["dataset_name"],
-                  train_ratio=params["train_ratio"])
-    if __TIME__:
-        log_info("preprocessing time \t:",datetime.timedelta(seconds=time.time() - start_time))
+if __TIME__:
+    start_time = time.time()
+
+if model_params["name"] not in model_params["name_comment"]:
+    log_warning("not supported model")
+    print(model_params["name_comment"])
+    exit(666)
+
+preprocessing(save_root_path=params["save_root_path"],
+              model_name=model_params["name"],
+              data_root_path=params["data_root_path"],
+              dataset_name=params["dataset_name"],
+              train_ratio=params["train_ratio"])
+if __TIME__:
+    log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Load dataset before using Torch DataLoader
@@ -54,8 +60,7 @@ train_dataset, validation_dataset = random_split(dataset,
                                                          len(dataset) * (1 - params["validation_ratio"])))]
                                                  )
 if __TIME__:
-    log_info("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
-
+    log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 if __TIME__:
     start_time = time.time()
@@ -63,7 +68,7 @@ test_dataset = dataset_loader(save_root_path=params["save_root_path"],
                               dataset_name=params["dataset_name"],
                               option="test")
 if __TIME__:
-    log_info("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info_time("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
     Call dataloader for iterate dataset
@@ -77,7 +82,7 @@ validation_loader = DataLoader(validation_dataset, batch_size=params["train_batc
 test_loader = DataLoader(test_dataset, batch_size=params["test_batch_size"],
                          shuffle=params["test_shuffle"])
 if __TIME__:
-    log_info("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
 Setting Learning Model
 '''
@@ -96,7 +101,7 @@ if torch.cuda.is_available():
 else:
     model = model.to('cpu')
 if __TIME__:
-    log_info("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Setting Loss Function
@@ -115,7 +120,7 @@ if criterion is None:
 #     criterion = DataParallelCriterion(criterion,device_ids=[0, 1, 2])
 
 if __TIME__:
-    log_info("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info_time("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
 Setting Optimizer
 '''
@@ -127,7 +132,7 @@ if criterion is None:
     print(hyper_params["optimizer_comment"])
     raise NotImplementedError("implement a custom optimizer(%s) in optimizer.py" % hyper_params["optimizer"])
 if __TIME__:
-    log_info("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+    log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 for epoch in range(hyper_params["epochs"]):
     if __TIME__ and epoch == 0:
@@ -146,7 +151,7 @@ for epoch in range(hyper_params["epochs"]):
             optimizer.step()
             tepoch.set_postfix(loss=running_loss / params["train_batch_size"])
     if __TIME__ and epoch == 0:
-        log_info("1 epoch training time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+        log_info_time("1 epoch training time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
     with tqdm(validation_loader, desc="Validation ", total=len(validation_loader)) as tepoch:
         model.eval()
@@ -172,4 +177,4 @@ for epoch in range(hyper_params["epochs"]):
                     running_loss += loss.item()
                     tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
         if __TIME__:
-            log_info("inference time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+            log_info_time("inference time \t: ", datetime.timedelta(seconds=time.time() - start_time))

@@ -37,6 +37,13 @@
                 ],
         "learning_rate": 1,
         "epochs" : 1
-
+    },
+    "model_params":
+    {
+        "name": "PhysNet",
+        "name_comment":
+                [
+                    "DeepPhys, PhysNet"
+                ]
     }
 }
