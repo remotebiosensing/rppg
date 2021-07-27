@@ -8,16 +8,16 @@ from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
 from dataset.dataset_loader import dataset_loader
-from log import log_info_time,log_warning
+from log import log_info_time, log_warning
 from loss import loss_fn
 from nets.Models import Deepphys
 from optim import optimizer
 
 from utils.dataset_preprocess import preprocessing
 
-
 with open('params.json') as f:
     jsonObject = json.load(f)
+    __PREPROCESSING__ = jsonObject.get("__PREPROCESSING__")
     __TIME__ = jsonObject.get("__TIME__")
     options = jsonObject.get("options")
     params = jsonObject.get("params")
@@ -27,21 +27,22 @@ with open('params.json') as f:
 '''
 Generate preprocessed data hpy file 
 '''
-if __TIME__:
-    start_time = time.time()
+if __PREPROCESSING__:
+    if __TIME__:
+        start_time = time.time()
 
-if model_params["name"] not in model_params["name_comment"]:
-    log_warning("not supported model")
-    print(model_params["name_comment"])
-    exit(666)
+    if model_params["name"] not in model_params["name_comment"]:
+        log_warning("not supported model")
+        print(model_params["name_comment"])
+        exit(666)
 
-preprocessing(save_root_path=params["save_root_path"],
-              model_name=model_params["name"],
-              data_root_path=params["data_root_path"],
-              dataset_name=params["dataset_name"],
-              train_ratio=params["train_ratio"])
-if __TIME__:
-    log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
+    preprocessing(save_root_path=params["save_root_path"],
+                  model_name=model_params["name"],
+                  data_root_path=params["data_root_path"],
+                  dataset_name=params["dataset_name"],
+                  train_ratio=params["train_ratio"])
+    if __TIME__:
+        log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Load dataset before using Torch DataLoader

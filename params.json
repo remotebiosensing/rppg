@@ -1,5 +1,6 @@
 {
-    "__TIME__":1,
+    "__TIME__" : 1,
+    "__PREPROCESSING__" : 0,
     "options":{
         "parallel_criterion" : 1,
         "parallel_criterion_comment" : "TODO need to verification"
