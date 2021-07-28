@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def Deepphys_preprocess_Label(path):
     '''
     :param path: label file path
@@ -17,7 +18,7 @@ def Deepphys_preprocess_Label(path):
     delta_label -= np.mean(delta_label)
     delta_label /= np.std(delta_label)
     delta_label = np.array(delta_label).astype('float32')
-    delta_pulse = delta_label.copy() # 이거 왜 있지?
+    delta_pulse = delta_label.copy()  # 이거 왜 있지?
     f.close()
 
     # Normalize
@@ -32,6 +33,7 @@ def Deepphys_preprocess_Label(path):
     #     delta_pulse[part * window:] /= np.std(delta_pulse[part * window:])
 
     return delta_pulse
+
 
 def PhysNet_preprocess_Label(path):
     '''
@@ -52,4 +54,3 @@ def PhysNet_preprocess_Label(path):
     f.close()
 
     return split_raw_label
-

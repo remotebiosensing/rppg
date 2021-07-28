@@ -1,4 +1,3 @@
-import torch
 import torch.optim as opt
 
 from log import log_warning

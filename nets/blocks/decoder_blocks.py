@@ -11,5 +11,5 @@ class decoder_block(torch.nn.Module):
             DeConvBlock3D(64, 64, [4, 1, 1], [2, 1, 1], [1, 0, 0])
         )
 
-    def forward(self,x):
+    def forward(self, x):
         return self.decoder_block(x)

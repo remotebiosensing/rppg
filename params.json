@@ -1,6 +1,7 @@
 {
     "__TIME__" : 1,
     "__PREPROCESSING__" : 0,
+    "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
         "parallel_criterion_comment" : "TODO need to verification"
@@ -38,6 +39,10 @@
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam"
                 ],
         "learning_rate": 1,
+        "learning_rate_comment": [
+            "DeepPhys : lr = 1",
+            "PhysNet : lr = 0.001"
+        ],
         "epochs" : 1
     },
     "model_params":
@@ -45,7 +50,8 @@
         "name": "PhysNet",
         "name_comment":
                 [
-                    "DeepPhys, PhysNet"
+                    "DeepPhys",
+                    "PhysNet"
                 ]
     }
 }

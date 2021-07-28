@@ -7,12 +7,13 @@ Based on https://openreview.net/forum?id=H1T2hmZAb
 """
 
 import torch
-from torch.nn import Module, Parameter, init
 from torch.nn import Conv2d, Linear, BatchNorm1d, BatchNorm2d
 from torch.nn import ConvTranspose2d
-from nets.funcs.complexFunctions import complex_relu, complex_max_pool2d, complex_avg_pool2d, complex_sigmoid
+from torch.nn import Module, Parameter, init
+
 from nets.funcs.complexFunctions import complex_dropout, complex_dropout2d, complex_adaptive_avg_pool2d, \
     complex_adaptive_max_pool2d
+from nets.funcs.complexFunctions import complex_relu, complex_max_pool2d, complex_avg_pool2d, complex_sigmoid
 
 
 def apply_complex(fr, fi, input, dtype=torch.complex64):

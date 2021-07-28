@@ -1,7 +1,7 @@
-import torch
-from torch.utils.data import Dataset
-import torchvision.transforms as transforms
 import numpy as np
+import torch
+import torchvision.transforms as transforms
+from torch.utils.data import Dataset
 
 
 class DeepPhysDataset(Dataset):
@@ -19,7 +19,7 @@ class DeepPhysDataset(Dataset):
         motion_data = torch.tensor(np.transpose(self.m[index], (2, 0, 1)), dtype=torch.float32)
         target = torch.tensor(self.label[index], dtype=torch.float32)
 
-        inputs = [appearance_data,motion_data]
+        inputs = [appearance_data, motion_data]
 
         if torch.cuda.is_available():
             inputs.to('cuda')

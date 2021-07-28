@@ -1,8 +1,8 @@
 import numpy as np
 import scipy.signal
-from scipy.sparse import spdiags
-from scipy.signal import butter
 from matplotlib import pyplot as plt
+from scipy.signal import butter
+from scipy.sparse import spdiags
 
 
 def detrend(signal, Lambda):
@@ -53,4 +53,4 @@ def plot_graph(start_point, length, target, inference):
 
 
 def normalize(input_val):
-    return (input_val - np.mean(input_val))/np.std(input_val)
+    return (input_val - np.mean(input_val)) / np.std(input_val)

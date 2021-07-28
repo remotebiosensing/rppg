@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 from face_recognition import face_locations
 from skimage.util import img_as_float
-import time
 
 
 def Deepphys_preprocess_Video(path, flag):

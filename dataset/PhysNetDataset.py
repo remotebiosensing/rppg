@@ -1,11 +1,11 @@
-import torch
-from torch.utils.data import Dataset
-import torchvision.transforms as transforms
 import numpy as np
+import torch
+import torchvision.transforms as transforms
+from torch.utils.data import Dataset
 
 
 class PhysNetDataset(Dataset):
-    def __init__(self,video_data, label_data):
+    def __init__(self, video_data, label_data):
         self.transform = transforms.Compose([transforms.ToTensor()])
         self.video_data = video_data
         self.label = label_data

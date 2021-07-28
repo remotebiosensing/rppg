@@ -1,5 +1,7 @@
 import torch
+
 from ..funcs.complexFunctions import complex_matmul
+
 
 class DAModule(torch.nn.Module):
     def __init__(self, in_channels):

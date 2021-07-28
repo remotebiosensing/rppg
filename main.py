@@ -8,9 +8,9 @@ from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
 from dataset.dataset_loader import dataset_loader
-from log import log_info_time, log_warning
+from log import log_info_time
 from loss import loss_fn
-from models import is_model_support, get_model
+from models import is_model_support, get_model, summary
 from optim import optimizer
 from utils.dataset_preprocess import preprocessing
 from utils.funcs import normalize, plot_graph
@@ -19,6 +19,7 @@ with open('params.json') as f:
     jsonObject = json.load(f)
     __PREPROCESSING__ = jsonObject.get("__PREPROCESSING__")
     __TIME__ = jsonObject.get("__TIME__")
+    __MODEL_SUMMARY__ = jsonObject.get("__MODEL_SUMMARY__")
     options = jsonObject.get("options")
     params = jsonObject.get("params")
     hyper_params = jsonObject.get("hyper_params")
@@ -27,7 +28,7 @@ with open('params.json') as f:
 """
 Check Model Support
 """
-is_model_support(model_params["name"],model_params["name_comment"])
+is_model_support(model_params["name"], model_params["name_comment"])
 '''
 Generate preprocessed data hpy file 
 '''
@@ -101,6 +102,10 @@ if torch.cuda.is_available():
     model.cuda()
 else:
     model = model.to('cpu')
+
+if __MODEL_SUMMARY__:
+    summary(model)
+
 if __TIME__:
     log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
@@ -191,6 +196,6 @@ for epoch in range(hyper_params["epochs"]):
                     else:
                         inference_array.extend(outputs.numpy())
                         target_array.extend(target.numpy())
-            plot_graph(0, len(inference_array),target_array,inference_array)
+            plot_graph(0, len(inference_array), target_array, inference_array)
         if __TIME__:
             log_info_time("inference time \t: ", datetime.timedelta(seconds=time.time() - start_time))
