@@ -6,6 +6,8 @@ def Deepphys_preprocess_Label(path):
     :param path: label file path
     :return: delta pulse
     '''
+    # TODO : need to check length with video frames
+    # TODO : need to implement piecewise cubic Hermite interpolation
     # Load input
     f = open(path, 'r')
     f_read = f.read().split('\n')
@@ -20,17 +22,6 @@ def Deepphys_preprocess_Label(path):
     delta_label = np.array(delta_label).astype('float32')
     delta_pulse = delta_label.copy()  # 이거 왜 있지?
     f.close()
-
-    # Normalize
-    # part = 0
-    # window = 32
-    # while part < (len(delta_pulse) // window) - 1:
-    #     delta_pulse[part * window:(part + 1) * window] -= np.mean(delta_pulse[part * window:(part + 1) * window])
-    #     delta_pulse[part * window:(part + 1) * window] /= np.std(delta_pulse[part * window:(part + 1) * window])
-    #     part += 1
-    # if len(delta_pulse) % window != 0:
-    #     delta_pulse[part * window:] -= np.mean(delta_pulse[part * window:])
-    #     delta_pulse[part * window:] /= np.std(delta_pulse[part * window:])
 
     return delta_pulse
 

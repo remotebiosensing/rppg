@@ -1,6 +1,6 @@
 import torchsummary
 
-from log import log_warning
+from log import log_warning, log_info
 from nets.models.DeepPhys import DeepPhys
 from nets.models.DeepPhys_DA import DeepPhys_DA
 from nets.models.PhysNet import PhysNet
@@ -39,6 +39,9 @@ def summary(model, model_name):
     :param model_name: implemented model name
     :return: model
     """
+    log_info("=========================================")
+    log_info(model_name)
+    log_info("=========================================")
     if model_name == "DeepPhys" or model_name == DeepPhys_DA:
         torchsummary.summary(model, (2, 3, 36, 36))
     elif model_name == "PhsNet":

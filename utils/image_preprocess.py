@@ -117,7 +117,9 @@ def generate_MotionDifference(prev_frame, crop_frame):
     '''
     # motion input
     motion_input = (crop_frame - prev_frame) / (crop_frame + prev_frame)
+    # TODO : need to diminish outliers [ clipping ]
     motion_input = motion_input / np.std(motion_input)
+    # TODO : do not divide each D frame, modify divide whole video's unit standard deviataion
     return motion_input
 
 
