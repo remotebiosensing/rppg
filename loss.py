@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
 
+from log import log_warning
+
 
 def loss_fn(loss_fn: str = "mse"):
     """
@@ -57,8 +59,8 @@ def loss_fn(loss_fn: str = "mse"):
     elif loss_fn == "triplet_margin_distance":
         return loss.TripletMarginWithDistanceLoss()
     else:
-        return None
-
+        log_warning("use implemented loss functions")
+        raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
 
 
 def neg_Pearson_Loss(predictions, targets):
@@ -68,7 +70,7 @@ def neg_Pearson_Loss(predictions, targets):
     :return: negative pearson loss
     '''
     rst = 0
-    #Pearson correlation can be performed on the premise of normalization of input data
+    # Pearson correlation can be performed on the premise of normalization of input data
     predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
     targets = (targets - torch.mean(targets)) / torch.std(targets)
 

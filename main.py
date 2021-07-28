@@ -10,7 +10,7 @@ from tqdm import tqdm
 from dataset.dataset_loader import dataset_loader
 from log import log_info_time, log_warning
 from loss import loss_fn
-from nets.Models import Deepphys
+from models import is_model_support, get_model
 from optim import optimizer
 from utils.dataset_preprocess import preprocessing
 from utils.funcs import normalize, plot_graph
@@ -24,17 +24,16 @@ with open('params.json') as f:
     hyper_params = jsonObject.get("hyper_params")
     model_params = jsonObject.get("model_params")
 #
+"""
+Check Model Support
+"""
+is_model_support(model_params["name"],model_params["name_comment"])
 '''
 Generate preprocessed data hpy file 
 '''
 if __PREPROCESSING__:
     if __TIME__:
         start_time = time.time()
-
-    if model_params["name"] not in model_params["name_comment"]:
-        log_warning("not supported model")
-        print(model_params["name_comment"])
-        exit(666)
 
     preprocessing(save_root_path=params["save_root_path"],
                   model_name=model_params["name"],
@@ -90,7 +89,7 @@ Setting Learning Model
 '''
 if __TIME__:
     start_time = time.time()
-model = Deepphys()
+model = get_model(model_params["name"])
 if torch.cuda.is_available():
     # os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3, 4, 5, 6, 7, 8, 9'
     # TODO: implement parallel training
@@ -111,10 +110,7 @@ Setting Loss Function
 if __TIME__:
     start_time = time.time()
 criterion = loss_fn(hyper_params["loss_fn"])
-if criterion is None:
-    log_warning("use implemented loss functions")
-    print(hyper_params["loss_fn_comment"])
-    raise NotImplementedError("implement a custom function(%s) in loss.py" % hyper_params["loss_fn"])
+
 # if torch.cuda.is_available():
 # TODO: implement parallel training
 # if options["parallel_criterion"] :
@@ -129,10 +125,6 @@ Setting Optimizer
 if __TIME__:
     start_time = time.time()
 optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
-if criterion is None:
-    log_warning("use implemented optimizer")
-    print(hyper_params["optimizer_comment"])
-    raise NotImplementedError("implement a custom optimizer(%s) in optimizer.py" % hyper_params["optimizer"])
 if __TIME__:
     log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 

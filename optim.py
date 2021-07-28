@@ -1,6 +1,8 @@
 import torch
 import torch.optim as opt
 
+from log import log_warning
+
 
 def optimizer(model_params, learning_rate: float = 1, optim: str = "mse"):
     '''
@@ -37,4 +39,5 @@ def optimizer(model_params, learning_rate: float = 1, optim: str = "mse"):
     elif optim == "sparse_adam":
         return opt.SparseAdam(model_params, learning_rate)
     else:
-        return None
+        log_warning("use implemented optimizer")
+        raise NotImplementedError("implement a custom optimizer(%s) in optimizer.py" % optim)

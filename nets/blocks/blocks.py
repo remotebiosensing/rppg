@@ -1,6 +1,32 @@
 import torch
 
 
+class DeConvBlock3D(torch.nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
+        super(DeConvBlock3D, self).__init__()
+        self.deconv_block_3d = torch.nn.Sequential(
+            torch.nn.ConvTranspose3d(in_channel, out_channel, kernel_size, stride, padding),
+            torch.nn.BatchNorm3d(out_channel),
+            torch.nn.ELU()
+        )
+
+    def forward(self, x):
+        return self.deconv_block_3d(x)
+
+
+class ConvBlock3D(torch.nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
+        super(ConvBlock3D, self).__init__()
+        self.conv_block_3d = torch.nn.Sequential(
+            torch.nn.Conv3d(in_channel, out_channel, kernel_size, stride, padding),
+            torch.nn.BatchNorm3d(out_channel),
+            torch.nn.ReLu(inplace=True)
+        )
+
+    def forward(self, x):
+        return self.conv_block_3d(x)
+
+
 class EncoderBlock(torch.nn.Module):
     def __init__(self, in_channel, out_channel):
         super(EncoderBlock, self).__init__()
@@ -18,10 +44,10 @@ class EncoderBlock(torch.nn.Module):
 
 
 class DecoderBlock(torch.nn.Module):
-    def __init__(self, in_channel, out_channel, scale_facotr):
+    def __init__(self, in_channel, out_channel, scale_factor):
         super(DecoderBlock, self).__init__()
         self.conv_db = torch.nn.Sequential(
-            torch.nn.Upsample(scale_factor=scale_facotr),
+            torch.nn.Upsample(scale_factor=scale_factor),
             torch.nn.ConvTranspose2d(in_channels=in_channel, out_channels=out_channel, kernel_size=3, stride=1,
                                      padding=1),
             torch.nn.BatchNorm2d(out_channel),
