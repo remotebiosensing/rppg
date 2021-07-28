@@ -13,6 +13,7 @@ from loss import loss_fn
 from nets.Models import Deepphys
 from optim import optimizer
 from utils.dataset_preprocess import preprocessing
+from utils.funcs import normalize, plot_graph
 
 with open('params.json') as f:
     jsonObject = json.load(f)
@@ -183,6 +184,8 @@ for epoch in range(hyper_params["epochs"]):
             start_time = time.time()
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
             model.eval()
+            inference_array = []
+            target_array = []
             with torch.no_grad():
                 for inputs, target in tepoch:
                     tepoch.set_description(f"test")
@@ -190,5 +193,12 @@ for epoch in range(hyper_params["epochs"]):
                     loss = criterion(outputs, target)
                     running_loss += loss.item()
                     tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
+                    if model_params["name"] == "PhysNet":
+                        inference_array.extend(normalize(outputs.numpy()))
+                        target_array.extend(normalize(target.numpy()))
+                    else:
+                        inference_array.extend(outputs.numpy())
+                        target_array.extend(target.numpy())
+            plot_graph(0, len(inference_array),target_array,inference_array)
         if __TIME__:
             log_info_time("inference time \t: ", datetime.timedelta(seconds=time.time() - start_time))
