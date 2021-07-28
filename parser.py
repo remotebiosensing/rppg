@@ -1,14 +1,12 @@
 import argparse
 from test import test_model
-from train import train
+from unused.train import train
 import torch
 from preprocessing import DatasetDeepPhysUBFC
 from torch.utils.data import DataLoader
 import torchsummary
 import os
-from model_functional import model as M
 # from metalearning import meta_train_model
-import numpy as np
 from model import model
 from pynvml.smi import nvidia_smi
 nvsmi = nvidia_smi.getInstance()

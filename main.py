@@ -12,7 +12,6 @@ from log import log_info_time, log_warning
 from loss import loss_fn
 from nets.Models import Deepphys
 from optim import optimizer
-
 from utils.dataset_preprocess import preprocessing
 
 with open('params.json') as f:
@@ -136,6 +135,11 @@ if criterion is None:
 if __TIME__:
     log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
+'''
+Model Training Step
+'''
+min_val_loss = 100.0
+
 for epoch in range(hyper_params["epochs"]):
     if __TIME__ and epoch == 0:
         start_time = time.time()
@@ -165,8 +169,16 @@ for epoch in range(hyper_params["epochs"]):
                 loss = criterion(outputs, target)
                 running_loss += loss.item()
                 tepoch.set_postfix(loss=running_loss / params["train_batch_size"])
+            if min_val_loss > running_loss:  # save the train model
+                min_val_loss = running_loss
+                checkpoint = {'Epoch': epoch,
+                              'state_dict': model.state_dict(),
+                              'optimizer': optimizer.state_dict()}
+                torch.save(checkpoint, params["checkpoint_path"] + model_params["name"] + "/"
+                           + params["dataset_name"] + "_" + str(epoch) + "_"
+                           + str(min_val_loss) + '.pth')
 
-    if epoch + 1 == hyper_params["epochs"]:
+    if epoch + 1 == hyper_params["epochs"] or epoch % 10 == 0:
         if __TIME__ and epoch == 0:
             start_time = time.time()
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
