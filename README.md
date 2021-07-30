@@ -1,17 +1,12 @@
 # Implement Deep Learning based Rppg Model using pytorch
 
 ### model list
-- [x] DeepPhys : DeepPhys: Video-Based Physiological Measurement Using Convolutional Attention Networks
-  </br>Weixuan Chen, Daniel McDuff
-  </br><a>https://arxiv.org/abs/1805.07888
-- [ ] MTTS  :Multi-Task Temporal Shift Attention Networks for
-On-Device Contactless Vitals Measurement
-  </br> Xin Liu, Josh Fromm, Shwetak Patel, Daniel McDuff
-  </br><a>https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf
+- [x] [DeepPhys : DeepPhys: Video-Based Physiological Measurement Using Convolutional Attention Networks](https://arxiv.org/abs/1805.07888)
+- [ ] [MTTS  :Multi-Task Temporal Shift Attention Networks for
+On-Device Contactless Vitals Measurement](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf)
 - [ ] DeepPhys + LSTM
-- [x] 3D physNet :  Remote Photoplethysmograph Signal Measurement from Facial Videos Using Spatio-Temporal Networks
-</br>Zitong Yu, Xiaobai Li, Guoying Zhao
-</br><a>https://arxiv.org/abs/1905.02419
+- [x] [3D physNet :  Remote Photoplethysmograph Signal Measurement from Facial Videos Using Spatio-Temporal Networks](https://arxiv.org/abs/1905.02419)
+
 
 ## file list
 
@@ -76,4 +71,4 @@ wagon0004@tvstorm.com &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;wlst
  This work was supported by the ICT R&D program of MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
 ##reference
-1. ZitongYu/PhysNet <a>https://github.com/ZitongYu/PhysNet
+1. [ZitongYu/PhysNet](https://github.com/ZitongYu/PhysNet)
