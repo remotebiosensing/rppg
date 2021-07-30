@@ -144,7 +144,7 @@ for epoch in range(hyper_params["epochs"]):
     if __TIME__ and epoch == 0:
         start_time = time.time()
     with tqdm(train_loader, desc="Train ", total=len(train_loader)) as tepoch:
-        # model.train()
+        model.train()
         running_loss = 0.0
         for inputs, target in tepoch:
             tepoch.set_description(f"Train Epoch {epoch}")
@@ -160,7 +160,7 @@ for epoch in range(hyper_params["epochs"]):
         log_info_time("1 epoch training time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
     with tqdm(validation_loader, desc="Validation ", total=len(validation_loader)) as tepoch:
-        # model.eval()
+        model.eval()
         running_loss = 0.0
         with torch.no_grad():
             for inputs, target in tepoch:
@@ -182,7 +182,7 @@ for epoch in range(hyper_params["epochs"]):
         if __TIME__ and epoch == 0:
             start_time = time.time()
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
-            # model.eval()
+            model.eval()
             inference_array = []
             target_array = []
             with torch.no_grad():
@@ -193,8 +193,8 @@ for epoch in range(hyper_params["epochs"]):
                     running_loss += loss.item()
                     tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
                     if model_params["name"] == "PhysNet":
-                        inference_array.extend(normalize(outputs.cpu().numpy()))
-                        target_array.extend(normalize(target.cpu().numpy()))
+                        inference_array.extend(normalize(outputs.cpu().numpy()[0]))
+                        target_array.extend(normalize(target.cpu().numpy()[0]))
                     else:
                         inference_array.extend(outputs.cpu().numpy())
                         target_array.extend(target.cpu().numpy())

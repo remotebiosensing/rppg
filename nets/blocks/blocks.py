@@ -20,7 +20,7 @@ class ConvBlock3D(torch.nn.Module):
         self.conv_block_3d = torch.nn.Sequential(
             torch.nn.Conv3d(in_channel, out_channel, kernel_size, stride, padding),
             torch.nn.BatchNorm3d(out_channel),
-            torch.nn.ReLu(inplace=True)
+            torch.nn.ReLU(inplace=True)
         )
 
     def forward(self, x):

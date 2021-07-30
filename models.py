@@ -15,7 +15,7 @@ def get_model(model_name: str = "DeepPhys"):
         return DeepPhys()
     elif model_name == "DeepPhys_DA":
         return DeepPhys_DA()
-    elif model_name == "PhsNet":
+    elif model_name == "PhysNet":
         return PhysNet()
     else:
         log_warning("use implemented model")
@@ -44,7 +44,7 @@ def summary(model, model_name):
     log_info("=========================================")
     if model_name == "DeepPhys" or model_name == DeepPhys_DA:
         torchsummary.summary(model, (2, 3, 36, 36))
-    elif model_name == "PhsNet":
+    elif model_name == "PhysNet":
         torchsummary.summary(model, (3, 32, 128, 128))
     else:
         log_warning("use implemented model")
