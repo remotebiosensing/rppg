@@ -1,11 +1,18 @@
 # Pytorch_rppgs
 implement rppg model  using pytorch
-## model list
-~~~
-1. DeepPhys(CAN) - Implemented
-2. MTTS - in Implement
-3. TEST 
-~~~
+### model list
+- [x] DeepPhys
+- [ ] MTTS
+- [ ] DeepPhys + LSTM
+- [x] 3D physNet
+
+### preprocessor list
+- \_\_TIME__ : check features running time
+  + preprocessing time
+  + model init time
+  + setting loss func time
+  + setting optimizer time
+  + training time per 1epoch
 
 ## file list
 ~~~
