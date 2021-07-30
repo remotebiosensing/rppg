@@ -198,10 +198,14 @@ for epoch in range(hyper_params["epochs"]):
                     else:
                         inference_array.extend(outputs.cpu().numpy())
                         target_array.extend(target.cpu().numpy())
+                    if tepoch.n == 0 and __TIME__:
+                        save_time = time.time()
+
             if model_params["name"] == "DeepPhys":
                 inference_array = scipy.signal.detrend(np.cumsum(inference_array))
                 target_array = scipy.signal.detrend(np.cumsum(target_array))
 
+            if __TIME__ and epoch == 0:
+                log_info_time("inference time \t: ", datetime.timedelta(seconds=save_time - start_time))
+
             plot_graph(0, 300, target_array, inference_array)
-        if __TIME__ and epoch == 0:
-            log_info_time("inference time \t: ", datetime.timedelta(seconds=time.time() - start_time))

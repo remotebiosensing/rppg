@@ -1,7 +1,7 @@
 {
     "__TIME__" : 1,
     "__PREPROCESSING__" : 0,
-    "__MODEL_SUMMARY__" : 0,
+    "__MODEL_SUMMARY__" : 1,
     "options":{
         "parallel_criterion" : 1,
         "parallel_criterion_comment" : "TODO need to verification"
@@ -18,7 +18,7 @@
         "validation_ratio_comment" : "split train dataset using validation_ratio",
         "train_batch_size" : 32,
         "train_shuffle" : 0,
-        "test_batch_size" : 1,
+        "test_batch_size" : 32,
         "test_shuffle" : 0
     },
     "hyper_params":
@@ -38,16 +38,16 @@
                     "adam","sgd","rms_prop","ada_delta","ada_grad","ada_max",
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam"
                 ],
-        "learning_rate": 1,
+        "learning_rate": 0.001,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001"
         ],
-        "epochs" : 1
+        "epochs" : 30
     },
     "model_params":
     {
-        "name": "PhysNet",
+        "name": "DeepPhys",
         "name_comment":
                 [
                     "DeepPhys",

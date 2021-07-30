@@ -14,7 +14,7 @@ class DeepPhys(torch.nn.Module):
         self.attention_mask1 = None
         self.attention_mask2 = None
 
-        self.appearance_model = AppearanceModel_2D(in_channels=self.in_channels, out_channels=self.out_channels * 4,
+        self.appearance_model = AppearanceModel_2D(in_channels=self.in_channels, out_channels=self.out_channels,
                                                    kernel_size=self.kernel_size)
         self.motion_model = MotionModel(in_channels=self.in_channels, out_channels=self.out_channels,
                                         kernel_size=self.kernel_size)
