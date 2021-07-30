@@ -28,7 +28,8 @@ class MotionModel(torch.nn.Module):
         M1 = torch.tanh(self.m_batch_Normalization1(self.m_conv1(inputs)))
         M2 = self.m_batch_Normalization2(self.m_conv2(M1))
         # element wise multiplication Mask1
-        g1 = torch.tanh(torch.mul(torch.ones(size= mask1.shape).to('cuda')@mask1, M2))
+        ones = torch.ones(size=M2.shape).to('cuda')
+        g1 = torch.tanh(torch.mul(ones@mask1, M2))
         M3 = self.m_dropout1(g1)
         # pooling
         M4 = self.m_avg1(M3)
