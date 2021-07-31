@@ -39,6 +39,11 @@ def Deepphys_preprocess_Video(path, flag):
         prev_frame = crop_frame
         j += 1
     cap.release()
+
+    raw_video[:, :, :, :3] = ci99(raw_video[:, :, :, :3])
+    raw_video[:, :, :, 0] = channel_normalize(raw_video[:, :, :, 0])
+    raw_video[:, :, :, 1] = channel_normalize(raw_video[:, :, :, 1])
+    raw_video[:, :, :, 2] = channel_normalize(raw_video[:, :, :, 2])
     return True, raw_video
 
 
@@ -92,7 +97,7 @@ def faceDetection(frame):
     if len(face_location) == 0:  # can't detect face
         return False, None
     top, right, bottom, left = face_location[0]
-    dst = frame[top:bottom, left:right]
+    dst = resized_frame[top:bottom, left:right]
     return True, dst
 
 
@@ -118,7 +123,7 @@ def generate_MotionDifference(prev_frame, crop_frame):
     # motion input
     motion_input = (crop_frame - prev_frame) / (crop_frame + prev_frame)
     # TODO : need to diminish outliers [ clipping ]
-    motion_input = motion_input / np.std(motion_input)
+    # motion_input = motion_input / np.std(motion_input)
     # TODO : do not divide each D frame, modify divide whole video's unit standard deviation
     return motion_input
 
@@ -137,4 +142,18 @@ def preprocess_Image(prev_frame, crop_frame):
     :param crop_frame: current frame
     :return: motion_differnceframe, normalized_frame
     '''
-    return generate_MotionDifference(prev_frame, crop_frame), normalize_Image(crop_frame)
+    return generate_MotionDifference(prev_frame, crop_frame), normalize_Image(prev_frame)
+
+
+def ci99(motion_diff):
+    max99 = np.mean(motion_diff) + (2.58 * (np.std(motion_diff) / np.sqrt(len(motion_diff))))
+    min99 = np.mean(motion_diff) - (2.58 * (np.std(motion_diff) / np.sqrt(len(motion_diff))))
+    motion_diff[motion_diff > max99] = max99
+    motion_diff[motion_diff < min99] = min99
+    return motion_diff
+
+
+def channel_normalize(channel):
+    channel -= np.mean(channel)
+    channel /= np.std(channel)
+    return channel
