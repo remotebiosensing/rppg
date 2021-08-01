@@ -3,7 +3,6 @@ import json
 import time
 
 import numpy as np
-import scipy.signal
 import torch
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
@@ -13,6 +12,7 @@ from log import log_info_time
 from loss import loss_fn
 from models import is_model_support, get_model, summary
 from optim import optimizer
+from torch.optim import lr_scheduler
 from utils.dataset_preprocess import preprocessing
 from utils.funcs import normalize, plot_graph, detrend
 
@@ -132,6 +132,7 @@ Setting Optimizer
 if __TIME__:
     start_time = time.time()
 optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
+scheduler = lr_scheduler.ExponentialLR(optimizer,gamma=0.99)
 if __TIME__:
     log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
@@ -201,9 +202,10 @@ for epoch in range(hyper_params["epochs"]):
                     if tepoch.n == 0 and __TIME__:
                         save_time = time.time()
 
+            # postprocessing
             if model_params["name"] == "DeepPhys":
-                inference_array = scipy.signal.detrend(np.cumsum(inference_array))
-                target_array = scipy.signal.detrend(np.cumsum(target_array))
+                inference_array = detrend(np.cumsum(inference_array),100)
+                target_array = detrend(np.cumsum(target_array),100)
 
             if __TIME__ and epoch == 0:
                 log_info_time("inference time \t: ", datetime.timedelta(seconds=save_time - start_time))
