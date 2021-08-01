@@ -38,12 +38,9 @@ def Deepphys_preprocess_Video(path, flag):
         raw_video[j, :, :, :3], raw_video[j, :, :, -3:] = preprocess_Image(prev_frame, crop_frame)
         prev_frame = crop_frame
         j += 1
+    raw_video[:,:,:,3] = video_normalize(raw_video[:,:,:,3])
     cap.release()
 
-    raw_video[:, :, :, :3] = ci99(raw_video[:, :, :, :3])
-    raw_video[:, :, :, 0] = channel_normalize(raw_video[:, :, :, 0])
-    raw_video[:, :, :, 1] = channel_normalize(raw_video[:, :, :, 1])
-    raw_video[:, :, :, 2] = channel_normalize(raw_video[:, :, :, 2])
     return True, raw_video
 
 
@@ -153,7 +150,6 @@ def ci99(motion_diff):
     return motion_diff
 
 
-def channel_normalize(channel):
-    channel -= np.mean(channel)
+def video_normalize(channel):
     channel /= np.std(channel)
     return channel
