@@ -92,11 +92,11 @@ class TSM(torch.nn.Module):
 
 
 class TSM_Block(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size):
+    def __init__(self, in_channels, out_channels, kernel_size,padding):
         super().__init__()
         self.tsm1 = TSM()
         self.t_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                       padding=1)
+                                       padding=padding)
 
     def forward(self, input, n_frame=2, fold_div=3):
         t = self.tsm1(input, n_frame, fold_div)
