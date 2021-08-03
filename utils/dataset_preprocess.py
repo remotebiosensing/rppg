@@ -25,7 +25,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
 
-    data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+    # data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+    data_list = ['subject42']
 
     process = []
 

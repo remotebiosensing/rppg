@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from tqdm import tqdm
 from face_recognition import face_locations
 from skimage.util import img_as_float
 
@@ -55,24 +56,26 @@ def PhysNet_preprocess_Video(path, flag):
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     raw_video = np.empty((frame_total, 128, 128, 3))
-    prev_frame = None
+    pbar = tqdm(range(frame_total))
     j = 0
     while cap.isOpened():
-        ret, frame = cap.read()
-        if frame is None:
-            break
-        if flag:
-            rst, crop_frame = faceDetection(frame)
-            if not rst:  # can't detect face
-                return False, None
-        else:
-            crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+        for char in pbar:
+            ret, frame = cap.read()
+            if frame is None:
+                break
+            if flag:
+                rst, crop_frame = faceDetection(frame)
+                if not rst:  # can't detect face
+                    return False, None
+            else:
+                crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
-        crop_frame = cv2.resize(crop_frame, dsize=(128, 128), interpolation=cv2.INTER_AREA)
-        crop_frame = generate_Floatimage(crop_frame)
+            crop_frame = cv2.resize(crop_frame, dsize=(128, 128), interpolation=cv2.INTER_AREA)
+            crop_frame = generate_Floatimage(crop_frame)
 
-        raw_video[j] = crop_frame
-        j += 1
+            raw_video[j] = crop_frame
+            j += 1
+        pbar.set_description("Processing %s" % char)
     cap.release()
 
     split_raw_video = np.zeros(((frame_total // 32), 32, 128, 128, 3))
