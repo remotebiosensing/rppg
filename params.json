@@ -1,6 +1,6 @@
 {
     "__TIME__" : 1,
-    "__PREPROCESSING__" : 0,
+    "__PREPROCESSING__" : 1,
     "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
@@ -8,7 +8,7 @@
     },
     "params":
     {
-        "save_root_path": "/media/hdd1/dy/dataset/",
+        "save_root_path": "/media/hdd1/js_dataset/",
         "data_root_path": "/media/hdd1/",
         "dataset_name": "UBFC",
         "checkpoint_path" : "/media/hdd1/dy/checkpoint/",
@@ -47,7 +47,7 @@
     },
     "model_params":
     {
-        "name": "DeepPhys",
+        "name": "PhysNet",
         "name_comment":
                 [
                     "DeepPhys",
