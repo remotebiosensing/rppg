@@ -179,7 +179,7 @@ for epoch in range(hyper_params["epochs"]):
                            + params["dataset_name"] + "_" + str(epoch) + "_"
                            + str(min_val_loss) + '.pth')
 
-    if epoch + 1 == hyper_params["epochs"] or epoch % 10 == 0:
+    if epoch + 1 == hyper_params["epochs"] or epoch % 5 == 0:
         if __TIME__ and epoch == 0:
             start_time = time.time()
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:

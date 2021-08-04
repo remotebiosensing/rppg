@@ -1,6 +1,6 @@
 {
     "__TIME__" : 1,
-    "__PREPROCESSING__" : 1,
+    "__PREPROCESSING__" : 0,
     "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
@@ -11,8 +11,8 @@
         "save_root_path": "/media/hdd1/js_dataset/",
         "data_root_path": "/media/hdd1/",
         "dataset_name": "UBFC",
-        "checkpoint_path" : "/media/hdd1/dy/checkpoint/",
-        "train_ratio": 0.8,
+        "checkpoint_path" : "/home/js/Desktop/tmp_local/checkpoint/",
+        "train_ratio": 0.7,
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
@@ -23,7 +23,7 @@
     },
     "hyper_params":
     {
-        "loss_fn": "mse",
+        "loss_fn": "neg_pearson",
         "loss_fn_comment":
                [
                    "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
@@ -32,18 +32,18 @@
                    "nll","nll2d","pairwise","poisson_nll","smooth_l1","soft_margin",
                    "triplet_margin","triplet_margin_distance"
                ],
-        "optimizer": "ada_delta",
+        "optimizer": "adam",
         "optimizer_comment":
                 [
                     "adam","sgd","rms_prop","ada_delta","ada_grad","ada_max",
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam"
                 ],
-        "learning_rate": 1,
+        "learning_rate": 0.001,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001"
         ],
-        "epochs" : 30
+        "epochs" : 20
     },
     "model_params":
     {
