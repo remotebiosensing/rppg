@@ -2,6 +2,7 @@ import torch
 
 from nets.blocks.decoder_blocks import decoder_block
 from nets.blocks.encoder_blocks import encoder_block
+from nets.blocks.cnn_blocks import cnn_blocks
 
 
 class PhysNet(torch.nn.Module):
@@ -17,3 +18,20 @@ class PhysNet(torch.nn.Module):
     def forward(self, x):
         [batch, channel, length, width, height] = x.shape
         return self.physnet(x).view(-1, length)
+
+class PhysNet_2DCNN_LSTM(torch.nn.Module):
+    def __init__(self, frame=32):
+        super(PhysNet_2DCNN_LSTM, self).__init__()
+        self.physnet_lstm = torch.nn.ModuleDict({
+            'cnn_blocks' : cnn_blocks(),
+            'lstm' : torch.nn.LSTM(input_size=64, hidden_size=64, num_layers=2, batch_first=True),
+            'cnn_flatten' : torch.nn.Conv1d(64, 1, 1, stride=1, padding=0)
+        })
+
+    def forward(self, x):
+        [batch, channel, length, width, height] = x.shape
+        x = self.physnet_lstm['cnn_blocks'](x)
+        x,(_,_) = self.physnet_lstm['lstm'](x)
+        x = x.reshape(batch, -1, length)
+        x = self.physnet_lstm['cnn_flatten'](x)
+        return x.reshape(-1, length)

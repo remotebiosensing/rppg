@@ -32,7 +32,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name == "PhysNet":
+    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         video_data = []
         label_data = []
         for key in hpy_file.keys():
