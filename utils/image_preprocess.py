@@ -56,10 +56,9 @@ def PhysNet_preprocess_Video(path, flag):
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     raw_video = np.empty((frame_total, 128, 128, 3))
-    pbar = tqdm(range(frame_total))
     j = 0
-    while cap.isOpened():
-        for char in pbar:
+    with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+        while cap.isOpened():
             ret, frame = cap.read()
             if frame is None:
                 break
@@ -75,8 +74,8 @@ def PhysNet_preprocess_Video(path, flag):
 
             raw_video[j] = crop_frame
             j += 1
-        pbar.set_description("Processing %s" % char)
-    cap.release()
+            pbar.update(1)
+        cap.release()
 
     split_raw_video = np.zeros(((frame_total // 32), 32, 128, 128, 3))
     index = 0
