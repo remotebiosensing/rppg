@@ -7,7 +7,7 @@ On-Device Contactless Vitals Measurement](https://papers.nips.cc/paper/2020/file
   + need to verification
 - [ ] DeepPhys + LSTM
 - [x] [3D physNet :  Remote Photoplethysmograph Signal Measurement from Facial Videos Using Spatio-Temporal Networks](https://arxiv.org/abs/1905.02419)
-
+- [x] [2D phsyNet + LSTM](https://arxiv.org/abs/1905.02419)
 
 ## file list
 
@@ -71,5 +71,5 @@ wagon0004@tvstorm.com &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;wlst
 ## Funding
  This work was supported by the ICT R&D program of MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
-##reference
+## reference
 1. [ZitongYu/PhysNet](https://github.com/ZitongYu/PhysNet)
