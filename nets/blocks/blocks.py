@@ -1,5 +1,17 @@
 import torch
 
+class ConvBlock2D(torch.nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
+        super(ConvBlock2D, self).__init__()
+        self.conv_block_2d = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channel, out_channel, kernel_size, stride, padding),
+            torch.nn.BatchNorm2d(out_channel),
+            torch.nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        return self.conv_block_2d(x)
+
 
 class DeConvBlock3D(torch.nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
