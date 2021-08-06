@@ -16,13 +16,13 @@
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
-        "train_batch_size" : 8,
+        "train_batch_size" : 16,
         "train_batch_size_comment" :
                 [
                     "PhysNet_LSTM : 8"
                 ],
         "train_shuffle" : 0,
-        "test_batch_size" : 8,
+        "test_batch_size" : 16,
         "test_shuffle" : 0
     },
     "hyper_params":
@@ -47,7 +47,7 @@
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001"
         ],
-        "epochs" : 20
+        "epochs" : 30
     },
     "model_params":
     {

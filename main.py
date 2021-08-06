@@ -1,6 +1,7 @@
 import datetime
 import json
 import time
+import os
 
 import numpy as np
 import torch
@@ -15,6 +16,8 @@ from optim import optimizer
 from torch.optim import lr_scheduler
 from utils.dataset_preprocess import preprocessing
 from utils.funcs import normalize, plot_graph, detrend
+
+torch.cuda.set_device(4)
 
 with open('params.json') as f:
     jsonObject = json.load(f)
