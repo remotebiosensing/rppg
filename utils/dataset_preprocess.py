@@ -59,7 +59,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
 def Meta_preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                   model_name: str = "DeepPhys",
                   data_root_path: str = "/media/hdd1/",
-                  dataset_name: str = "UBFC"):
+                  dataset_name: str = "UBFC",
+                  train_ratio: float = 0.8):
     """
     :param save_root_path: save file destination path
     :param model_name: select preprocessing method
@@ -79,6 +80,8 @@ def Meta_preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
 
     # multiprocessing
     for index, data_path in enumerate(data_list):
+        print('datapreprocessing..',data_path)
+
         proc = multiprocessing.Process(target=preprocess_Dataset,
                                        args=(dataset_root_path + "/" + data_path, True, model_name, return_dict))
         process.append(proc)
@@ -103,19 +106,9 @@ def Meta_preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             train_file = h5py.File(dir+"/{}_{}.hdf5".format(data_path, i), "w")
             train_file.create_dataset('preprocessed_video', data=n_video)
             train_file.create_dataset('preprocessed_label', data=n_label)
-
+            #print(train_file["preprocessed_video"])
+            #print(train_file["preprocessed_label"])
             train_file.close()
-
-    #make_meta_filelist
-    folderlist = save_root_path + model_name + '/'+dataset_name +'/'
-    filelist = save_root_path + model_name + '/'+dataset_name+'_filelist/'
-    if not os.path.exists(filelist):
-        os.makedirs(filelist)
-    for i in sorted(os.listdir(folderlist)):
-        for j in sorted(os.listdir(folderlist + i)):
-            file = open(filelist + '{}.txt'.format(i), 'a')
-            file.write(folderlist + i + '/' + j + '\n')  # +''/ground_truth.txt
-            file.close()
 
 
 def preprocess_Dataset(path, flag, model_name, return_dict):
