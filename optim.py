@@ -3,7 +3,7 @@ import torch.optim as opt
 from log import log_warning
 
 
-def optimizer(model_params, learning_rate: float = 1, optim: str = "mse"):
+def optimizers(model_params, learning_rate: float = 1, optim: str = "mse"):
     '''
     call optimizer
     :param model_params: learning target's parameter

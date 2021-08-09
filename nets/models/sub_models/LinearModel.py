@@ -5,10 +5,10 @@ from nets.layers.complexLayers import ComplexDropout, ComplexLinear
 
 
 class LinearModel(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, in_channel=5184):
         super().__init__()
         self.f_drop1 = torch.nn.Dropout(0.25)
-        self.f_linear1 = torch.nn.Linear(5184, 256, bias=True)
+        self.f_linear1 = torch.nn.Linear(in_channel, 256, bias=True)
         self.f_linear2 = torch.nn.Linear(256, 1, bias=True)
 
     def forward(self, input):

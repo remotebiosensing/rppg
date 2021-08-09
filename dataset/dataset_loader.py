@@ -16,7 +16,8 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                    num_shots: int = 6,
                    num_test_shots:int = 6,
                    fs: int = 30,
-                   unsupervised: int = 0):
+                   unsupervised: int = 0,
+                   batch_size = 1):
     '''
     :param save_root_path: save file destination path
     :param model_name : model_name
@@ -57,27 +58,27 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         test_path = []
 
         hpy_filelist = save_root_path + model_name + "/" + dataset_name+'/'
-        for i in sorted(os.listdir(hpy_filelist)[:20]):
+        for i in sorted(os.listdir(hpy_filelist)[:35]):
             path = []
             for j in sorted(os.listdir(hpy_filelist + i)):
                 path.append(hpy_filelist + i + '/' + j)
             train_path.append(path)
-        for i in sorted(os.listdir(hpy_filelist)[20:]):
+        for i in sorted(os.listdir(hpy_filelist)[35:]):
             path = []
             for j in sorted(os.listdir(hpy_filelist + i)):
                 path.append(hpy_filelist + i + '/' + j)
             test_path.append(path)
 
-        #print(train_path,test_path)
-
         dataset = MetaPhysDataset(num_shots,
                                   num_test_shots,
                                   train_path,
                                   option,
-                                  # transform=transform,
+                                  fs,
+                                  unsupervised,
+                                  batch_size,
+                                  frame_depth=10
+                                  #transform=transform,
                                   # target_transform=transform,
-                                  frame_depth=10,
-                                  fs=fs,
-                                  unsupervised=unsupervised)
+                                  )
 
     return dataset

@@ -12,34 +12,13 @@
         "data_root_path": "/media/hdd1/",
         "dataset_name": "UBFC",
         "checkpoint_path" : "/media/hdd1/yj/checkpoint/",
-
-        "task_type" : "person",
-        "num_shots" : 6,
-        "num_test_shots" : 6,
-        "inner_step_size" : 0.01,
-        "train_batch_size" : 1,
-        "test_batch_size" : 20,
-
-        "num_adapt_size" : 5,
-        "num_workers" : 1,
-
-        "pre_trained" : 0,
-        "pre_trained_comment" : "pretrained or not",
-        "tr_fs" : 30,
-        "tr_fs_comment" : "sampling rate of dataset",
-        "ts_fs" : 30,
-        "ts_fs_comment" : "sampling rate of dataset",
-
-        "window_size" : 360,
-        "signal" : "pulse",
-        "unsupervised" : 0,
-
-
         "train_ratio": 0.8,
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
+        "train_batch_size" : 1,
         "train_shuffle" : 0,
+        "test_batch_size" : 20,
         "test_shuffle" : 0
     },
     "hyper_params":
@@ -54,18 +33,33 @@
                    "triplet_margin","triplet_margin_distance"
                ],
         "optimizer": "adam",
+        "inner_optimizer" : "sgd",
         "optimizer_comment":
                 [
                     "adam","sgd","rms_prop","ada_delta","ada_grad","ada_max",
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam"
                 ],
         "learning_rate": 0.001,
+        "inner_learning_rate" : 0.01,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001",
             "MetaPhys : lr = 0.001"
         ],
         "epochs" : 30
+    },
+    "meta_params":
+    {
+        "num_shots" : 6,
+        "num_test_shots" : 6,
+        "fs" : 30,
+        "fs_comment" : "sampling rate of dataset",
+        "unsupervised" : 0,
+        "pre_trained" : 0,
+        "pre_trained_comment" : "pretrained or not",
+        "inner_loss" : "mse",
+        "outer_loss" : "mse",
+        "num_adapt_steps" : 5
     },
     "model_params":
     {

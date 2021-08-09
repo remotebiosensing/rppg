@@ -36,23 +36,20 @@ class MetaPhysDataset(MetaDataset):
         A function/transform that takes a dataset (ie. a task), and returns a
         transformed version of it. E.g. `torchmeta.transforms.ClassSplitter()`.
     """
-    def __init__(self, num_shots_tr, num_shots_ts, person_data_path, state='train',transform=None,
-                 target_transform= None, random_seed=10, frame_depth=10, fs=30, unsupervised=0):
+
+    def __init__(self, num_shots_tr, num_shots_ts, person_data_path, option='train',
+                 fs=30, unsupervised=0,batch_size = 1,frame_depth=10,random_seed =10):
         super(MetaPhysDataset, self).__init__(meta_split='train', target_transform=ToTensor1D())
         self.transform = ToTensor1D()
         self.num_samples_per_task = num_shots_tr + num_shots_ts
         self.person_data_path = person_data_path
         self.frame_depth = frame_depth
         self.fs = fs
-        self.state = state
+        self.option = option
         self.num_shots_tr = num_shots_tr
         self.unsupervised = unsupervised
-
-        self.target_transform = target_transform
-        self.transform = transform
-
         np.random.seed(random_seed)
-        if self.state == 'train':
+        if self.option == 'train':
             self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=num_shots_tr,
                                                    num_test_per_class=num_shots_ts)
 
@@ -61,15 +58,15 @@ class MetaPhysDataset(MetaDataset):
 
 
     def __getitem__(self, index):
-        per_task_data = self.person_data_path[index][:-1]
+        per_task_data = self.person_data_path[index]
 
-        if self.state == 'test':
+        if self.option == 'test':
             self.num_shots_ts = len(per_task_data) - self.num_shots_tr
             self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=self.num_shots_tr,
                                                    num_test_per_class=self.num_shots_ts)
             self.num_samples_per_task = self.num_shots_tr + self.num_shots_ts
 
-        if self.state == 'train':
+        if self.option == 'train':
             random.shuffle(per_task_data)
 
             self.num_shots_ts = len(per_task_data) - self.num_shots_tr
@@ -80,7 +77,7 @@ class MetaPhysDataset(MetaDataset):
             self.num_samples_per_task = self.num_shots_tr + self.num_shots_ts
 
         task_path = per_task_data[:self.num_samples_per_task]
-        task = PersonTask(self.num_samples_per_task, task_path, self.num_shots_tr, frame_depth=self.frame_depth, fs=self.fs, state=self.state, unsupervised=self.unsupervised)
+        task = PersonTask(self.num_samples_per_task, task_path, self.num_shots_tr, frame_depth=self.frame_depth, fs=self.fs, option=self.option, unsupervised=self.unsupervised)
 
         if self.dataset_transform is not None:
             task = self.dataset_transform(task)
@@ -90,7 +87,7 @@ class MetaPhysDataset(MetaDataset):
 
 class PersonTask(Task):
     def __init__(self, num_samples, task_data_path, num_shots_tr, frame_depth=10,
-                 fs=30, state='train', unsupervised=0):
+                 fs=30, option='train', unsupervised=0):
         super(PersonTask, self).__init__(None, None) # Regression task
         self.num_shots_tr = num_shots_tr
         self.num_samples = num_samples
@@ -99,7 +96,7 @@ class PersonTask(Task):
         self.task_data_path = task_data_path
         self.frame_depth = frame_depth
         self.fs = fs
-        self.state = state
+        self.option = option
         self.unsupervised = unsupervised
         self.len_data = 0
 

@@ -4,7 +4,7 @@ from log import log_warning, log_info
 from nets.models.DeepPhys import DeepPhys
 from nets.models.DeepPhys_DA import DeepPhys_DA
 from nets.models.PhysNet import PhysNet
-
+from nets.models.MetaPhys import TSCAN
 
 def get_model(model_name: str = "DeepPhys"):
     """
@@ -17,6 +17,8 @@ def get_model(model_name: str = "DeepPhys"):
         return DeepPhys_DA()
     elif model_name == "PhysNet":
         return PhysNet()
+    elif model_name == "MetaPhys":
+        return TSCAN()
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
@@ -46,6 +48,8 @@ def summary(model, model_name):
         torchsummary.summary(model, (2, 3, 36, 36))
     elif model_name == "PhysNet":
         torchsummary.summary(model, (3, 32, 128, 128))
+    elif model_name == "MetaPhys":
+        print('rrrr')
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
