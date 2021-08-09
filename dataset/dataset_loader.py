@@ -1,6 +1,3 @@
-import glob
-import os
-
 import h5py
 import numpy as np
 
@@ -41,7 +38,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name == "PhysNet":
+    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
         video_data = []
         label_data = []

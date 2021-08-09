@@ -120,7 +120,7 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
     """
     if model_name == "DeepPhys":
         rst, preprocessed_video = Deepphys_preprocess_Video(path + "/vid.avi", flag)
-    elif model_name == "PhysNet":
+    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         rst, preprocessed_video = PhysNet_preprocess_Video(path + "/vid.avi", flag)
     elif model_name == "MetaPhys":
         rst, preprocessed_video = Deepphys_preprocess_Video(path + "/vid.avi", flag)
@@ -129,7 +129,7 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
 
     if model_name == "DeepPhys":
         preprocessed_label = Deepphys_preprocess_Label(path + "/ground_truth.txt")
-    elif model_name == "PhysNet":
+    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         preprocessed_label = PhysNet_preprocess_Label(path + "/ground_truth.txt")
     elif model_name == "MetaPhys":
         preprocessed_label = Deepphys_preprocess_Label(path + "/ground_truth.txt")

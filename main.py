@@ -179,7 +179,7 @@ for epoch in range(hyper_params["epochs"]):
                            + params["dataset_name"] + "_" + str(epoch) + "_"
                            + str(min_val_loss) + '.pth')
 
-    if epoch + 1 == hyper_params["epochs"] or epoch % 10 == 0:
+    if epoch + 1 == hyper_params["epochs"] or epoch % 3 == 0:
         if __TIME__ and epoch == 0:
             start_time = time.time()
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
@@ -193,7 +193,7 @@ for epoch in range(hyper_params["epochs"]):
                     loss = criterion(outputs, target)
                     running_loss += loss.item()
                     tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
-                    if model_params["name"] == "PhysNet":
+                    if model_params["name"] == "PhysNet" or model_params["name"] == "PhysNet_LSTM":
                         inference_array.extend(normalize(outputs.cpu().numpy()[0]))
                         target_array.extend(normalize(target.cpu().numpy()[0]))
                     else:
