@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import os
 
 from dataset.DeepPhysDataset import DeepPhysDataset
 from dataset.PhysNetDataset import PhysNetDataset
