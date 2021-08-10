@@ -17,8 +17,6 @@ from torch.optim import lr_scheduler
 from utils.dataset_preprocess import preprocessing
 from utils.funcs import normalize, plot_graph, detrend
 
-torch.cuda.set_device(4)
-
 with open('params.json') as f:
     jsonObject = json.load(f)
     __PREPROCESSING__ = jsonObject.get("__PREPROCESSING__")
@@ -104,6 +102,7 @@ if torch.cuda.is_available():
     #     model = DataParallelModel(model, device_ids=[0, 1, 2])
     # else:
     #     model = DataParallel(model, output_device=0)
+    torch.cuda.set_device(int(options["set_gpu_device"]))
     model.cuda()
 else:
     model = model.to('cpu')

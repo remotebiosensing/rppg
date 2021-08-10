@@ -4,7 +4,8 @@
     "__MODEL_SUMMARY__" : 1,
     "options":{
         "parallel_criterion" : 1,
-        "parallel_criterion_comment" : "TODO need to verification"
+        "parallel_criterion_comment" : "TODO need to verification",
+        "set_gpu_device" : "4"
     },
     "params":
     {
