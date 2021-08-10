@@ -1,3 +1,4 @@
+import copy
 import datetime
 import json
 import time
@@ -180,10 +181,13 @@ for epoch in range(hyper_params["epochs"]):
                 torch.save(checkpoint, params["checkpoint_path"] + model_params["name"] + "/"
                            + params["dataset_name"] + "_" + str(epoch) + "_"
                            + str(min_val_loss) + '.pth')
+                min_val_loss_model = copy.deepcopy(model)
 
     if epoch + 1 == hyper_params["epochs"] or epoch % 3 == 0:
         if __TIME__ and epoch == 0:
             start_time = time.time()
+        if epoch + 1 == hyper_params["epochs"]:
+            model = min_val_loss_model
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
             model.eval()
             inference_array = []

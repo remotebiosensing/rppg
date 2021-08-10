@@ -48,7 +48,7 @@
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001"
         ],
-        "epochs" : 30
+        "epochs" : 20
     },
     "model_params":
     {
