@@ -143,6 +143,7 @@ if __TIME__:
 Model Training Step
 '''
 min_val_loss = 100.0
+min_val_loss_model = None
 
 for epoch in range(hyper_params["epochs"]):
     if __TIME__ and epoch == 0:

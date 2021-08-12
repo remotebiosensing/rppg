@@ -20,7 +20,7 @@
         "train_batch_size" : 32,
         "train_batch_size_comment" :
                 [
-                    "PhysNet_LSTM : 8"
+                    "PhysNet_LSTM : 32"
                 ],
         "train_shuffle" : 0,
         "test_batch_size" : 32,
