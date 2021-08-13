@@ -1,136 +1,75 @@
-import random
-
-import h5py
+import torch
 import numpy as np
-import scipy.io
-from scipy.signal import butter
 from torchmeta.utils.data import Task, MetaDataset
 import torchvision.transforms as transforms
-
-from utils.Meta_class_splitters import ClassSplitter
-from utils.funcs import ToTensor1D
-
-np.random.seed(100)
+from torchmeta.transforms import ClassSplitter
 
 class MetaPhysDataset(MetaDataset):
-    """
-    Simple regression task, based on sinusoids, as introduced in [1].
+    def __init__(self, num_shots_tr, num_shots_ts, option='train',
+                 fs=30, unsupervised=0,frame_depth=10,
+                 appearance_data=None, motion_data=None, target=None):
 
-    Parameters
-    ----------
-    num_samples_per_task : int
-        Number of examples per task.
-
-    num_tasks : int (default: 1,000,000)
-        Overall number of tasks to sample.
-
-    transform : callable, optional
-        A function/transform that takes a numpy array of size (1,) and returns a
-        transformed version of the input.
-
-    target_transform : callable, optional
-        A function/transform that takes a numpy array of size (1,) and returns a
-        transformed version of the target.
-
-    dataset_transform : callable, optional
-        A function/transform that takes a dataset (ie. a task), and returns a
-        transformed version of it. E.g. `torchmeta.transforms.ClassSplitter()`.
-    """
-
-    def __init__(self, num_shots_tr, num_shots_ts, person_data_path, option='train',
-                 fs=30, unsupervised=0,batch_size = 1,frame_depth=10,random_seed =10):
-        super(MetaPhysDataset, self).__init__(meta_split='train', target_transform=ToTensor1D())
-        self.transform = ToTensor1D()
+        self.transform = transforms.Compose([transforms.ToTensor()])
         self.num_samples_per_task = num_shots_tr + num_shots_ts
-        self.person_data_path = person_data_path
         self.frame_depth = frame_depth
         self.fs = fs
         self.option = option
         self.num_shots_tr = num_shots_tr
+        self.num_shots_ts = num_shots_ts
         self.unsupervised = unsupervised
-        np.random.seed(random_seed)
-        if self.option == 'train':
-            self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=num_shots_tr,
+        self.a = appearance_data
+        self.m = motion_data
+        self.label = target
+        self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=num_shots_tr,
                                                    num_test_per_class=num_shots_ts)
 
-    def __len__(self):
-        return len(self.person_data_path)
-
-
     def __getitem__(self, index):
-        per_task_data = self.person_data_path[index]
+        if torch.is_tensor(index):
+            index = index.tolist()
 
-        if self.option == 'test':
-            self.num_shots_ts = len(per_task_data) - self.num_shots_tr
-            self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=self.num_shots_tr,
-                                                   num_test_per_class=self.num_shots_ts)
-            self.num_samples_per_task = self.num_shots_tr + self.num_shots_ts
+        self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=self.num_shots_tr,
+                                               num_test_per_class=self.num_shots_ts)
+        ap = []
+        mo = []
+        la = []
+        data_len = len(self.label[index]) // self.num_samples_per_task  # 1개의 데이터를 8개로
+        for i in range(self.num_samples_per_task):
+            ap.append(self.a[index][data_len * i:data_len * (i + 1)])
+            mo.append(self.m[index][data_len * i:data_len * (i + 1)])
+            la.append(self.label[index][data_len * i:data_len * (i + 1)])
 
-        if self.option == 'train':
-            random.shuffle(per_task_data)
-
-            self.num_shots_ts = len(per_task_data) - self.num_shots_tr
-            if self.num_shots_ts > 8:
-                self.num_shots_ts = 8
-            self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=self.num_shots_tr,
-                                                                       num_test_per_class=self.num_shots_ts)
-            self.num_samples_per_task = self.num_shots_tr + self.num_shots_ts
-
-        task_path = per_task_data[:self.num_samples_per_task]
-        task = PersonTask(self.num_samples_per_task, task_path, self.num_shots_tr, frame_depth=self.frame_depth, fs=self.fs, option=self.option, unsupervised=self.unsupervised)
+        task = PersonTask(ap, mo, la)
 
         if self.dataset_transform is not None:
             task = self.dataset_transform(task)
+
         return task
 
+    def __len__(self):
+        return len(self.label)
 
 
 class PersonTask(Task):
-    def __init__(self, num_samples, task_data_path, num_shots_tr, frame_depth=10,
-                 fs=30, option='train', unsupervised=0):
+    def __init__(self, a, m ,label):
         super(PersonTask, self).__init__(None, None) # Regression task
-        self.num_shots_tr = num_shots_tr
-        self.num_samples = num_samples
-        self.transform = ToTensor1D()
-        self.target_transform = ToTensor1D()
-        self.task_data_path = task_data_path
-        self.frame_depth = frame_depth
-        self.fs = fs
-        self.option = option
-        self.unsupervised = unsupervised
+        self.a = a
+        self.m = m
+        self.label = label
         self.len_data = 0
 
     def __len__(self):
-        return self.num_samples
+        return len(self.label)
 
     def __getitem__(self, index):
-        temp_path = self.task_data_path[index]
-        f1 = h5py.File(temp_path, 'r')
+        self.len_data = len(self.label[index]) // 10
+        appearance_data = torch.tensor(np.transpose(self.a[index], (0, 3, 2, 1)), dtype=torch.float32)[:self.len_data*10]
+        motion_data = torch.tensor(np.transpose(self.m[index], (0, 3, 2, 1)), dtype=torch.float32)[:self.len_data*10]
 
-        self.len_data = len(f1["preprocessed_video"]) // 10
-        output = np.transpose(np.array(f1["preprocessed_video"]), [0, 3, 2, 1])[:self.len_data*10]
-        label = np.array(f1["preprocessed_label"])[: self.len_data * 10]
+        target = torch.tensor(self.label[index], dtype=torch.float32)[:self.len_data*10]
+        input = torch.cat([appearance_data, motion_data], dim=1)
 
-        [b, a] = butter(1, [0.75 / self.fs * 2, 2.5 / self.fs * 2], btype='bandpass')
-        label = scipy.signal.filtfilt(b, a, np.squeeze(label))
-        label = np.expand_dims(label, axis=1)
+        if torch.cuda.is_available():
+            input = input.to('cuda:9')
+            target = target.to('cuda:9')
 
-        # Average the frame
-        motion_data = output[:, :3, :, :]
-        apperance_data = output[:, 3:, :, :]
-        apperance_data = np.reshape(apperance_data, (self.len_data, self.frame_depth, 3, 36, 36))
-        apperance_data = np.average(apperance_data, axis=1)
-        apperance_data = np.repeat(apperance_data[:, np.newaxis, :, :, :], self.frame_depth, axis=1)
-        apperance_data = np.reshape(apperance_data, (apperance_data.shape[0] * apperance_data.shape[1],
-                                                     apperance_data.shape[2], apperance_data.shape[3],
-                                                     apperance_data.shape[4]))
-        output = np.concatenate((motion_data, apperance_data), axis=1)
-
-        if self.transform is not None:
-            output = self.transform(output)
-
-        if self.target_transform is not None:
-            label = self.target_transform(label)
-
-        return output, label
-
+        return input, target

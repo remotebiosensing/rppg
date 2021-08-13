@@ -12,10 +12,10 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                    option: str = "train",
 
                    num_shots: int = 6,
-                   num_test_shots:int = 6,
+                   num_test_shots:int =2,
                    fs: int = 30,
-                   unsupervised: int = 0,
-                   batch_size = 1):
+                   unsupervised: int = 0
+                   ):
     '''
     :param save_root_path: save file destination path
     :param model_name : model_name
@@ -23,9 +23,9 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     :param option:[train, test]
     :return: dataset
     '''
+    hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
 
     if model_name == "DeepPhys":
-        hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
         appearance_data = []
         motion_data = []
         target_data = []
@@ -35,12 +35,10 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
             motion_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, :3])
             target_data.extend(hpy_file[key]['preprocessed_label'])
         hpy_file.close()
-
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
-        hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
         video_data = []
         label_data = []
         for key in hpy_file.keys():
@@ -52,31 +50,26 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                                  label_data=np.asarray(label_data))
 
     if model_name == "MetaPhys":
-        train_path = []
-        test_path = []
+        appearance_data = []
+        motion_data = []
+        target_data = []
 
-        hpy_filelist = save_root_path + model_name + "/" + dataset_name+'/'
-        for i in sorted(os.listdir(hpy_filelist)[:35]):
-            path = []
-            for j in sorted(os.listdir(hpy_filelist + i)):
-                path.append(hpy_filelist + i + '/' + j)
-            train_path.append(path)
-        for i in sorted(os.listdir(hpy_filelist)[35:]):
-            path = []
-            for j in sorted(os.listdir(hpy_filelist + i)):
-                path.append(hpy_filelist + i + '/' + j)
-            test_path.append(path)
+        for key in hpy_file.keys(): #subject1, subject10, ...
+            appearance_data.append(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
+            motion_data.append(hpy_file[key]['preprocessed_video'][:, :, :, :3])
+            target_data.append(hpy_file[key]['preprocessed_label'][:])
+        hpy_file.close()
 
         dataset = MetaPhysDataset(num_shots,
                                   num_test_shots,
-                                  train_path,
                                   option,
                                   fs,
                                   unsupervised,
-                                  batch_size,
-                                  frame_depth=10
-                                  #transform=transform,
-                                  # target_transform=transform,
+                                  frame_depth=10,
+
+                                  appearance_data=np.asarray(appearance_data),
+                                  motion_data=np.asarray(motion_data),
+                                  target=np.asarray(target_data)
                                   )
 
     return dataset
