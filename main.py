@@ -17,7 +17,7 @@ from torch.optim import lr_scheduler
 from utils.dataset_preprocess import preprocessing
 from utils.funcs import normalize, plot_graph, detrend
 
-from nets.models.MetaPhys import maml_train, maml_val
+from nets.models.MetaPhys import maml_train, maml_val, maml_test
 
 with open('meta_params.json') as f:
     jsonObject = json.load(f)
@@ -62,7 +62,6 @@ dataset = dataset_loader(save_root_path=params["save_root_path"],
 
                          num_shots=meta_params["num_shots"],
                          num_test_shots=meta_params["num_test_shots"],
-                         fs=meta_params["fs"],
                          unsupervised=meta_params["unsupervised"]
                          )
 
@@ -80,7 +79,12 @@ if __TIME__:
 test_dataset = dataset_loader(save_root_path=params["save_root_path"],
                               model_name=model_params["name"],
                               dataset_name=params["dataset_name"],
-                              option="test")
+                              option="test",
+
+                              num_shots=meta_params["num_shots"],
+                              num_test_shots=meta_params["num_test_shots"],
+                              unsupervised=meta_params["unsupervised"]
+                              )
 if __TIME__:
     log_info_time("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
@@ -174,7 +178,7 @@ for epoch in range(hyper_params["epochs"]):
         start_time = time.time()
     with tqdm(train_loader, desc="Train ", total=len(train_loader)) as tepoch:
         if model_params["name"] == 'MetaPhys':
-            maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer,optimizer,  meta_params["num_adapt_steps"])
+            maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, optimizer, meta_params["num_adapt_steps"])
         else:
             model.train()
             running_loss = 0.0
@@ -192,7 +196,7 @@ for epoch in range(hyper_params["epochs"]):
 
     with tqdm(validation_loader, desc="Validation ", total=len(validation_loader)) as tepoch:
         if model_params["name"] == 'MetaPhys':
-            maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer,optimizer,  meta_params["num_adapt_steps"])
+            maml_val(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, meta_params["num_adapt_steps"])
         else:
             model.eval()
             running_loss = 0.0
@@ -216,31 +220,34 @@ for epoch in range(hyper_params["epochs"]):
         if __TIME__ and epoch == 0:
             start_time = time.time()
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
-            model.eval()
-            inference_array = []
-            target_array = []
-            with torch.no_grad():
-                for inputs, target in tepoch:
-                    tepoch.set_description(f"test")
-                    outputs = model(inputs)
-                    loss = criterion(outputs, target)
-                    running_loss += loss.item()
-                    tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
-                    if model_params["name"] == "PhysNet" or model_params["name"] == "PhysNet_LSTM":
-                        inference_array.extend(normalize(outputs.cpu().numpy()[0]))
-                        target_array.extend(normalize(target.cpu().numpy()[0]))
-                    else:
-                        inference_array.extend(outputs.cpu().numpy())
-                        target_array.extend(target.cpu().numpy())
-                    if tepoch.n == 0 and __TIME__:
-                        save_time = time.time()
+            if model_params["name"] == 'MetaPhys':
+                maml_test(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, meta_params["num_adapt_steps"])
+            else:
+                model.eval()
+                inference_array = []
+                target_array = []
+                with torch.no_grad():
+                    for inputs, target in tepoch:
+                        tepoch.set_description(f"test")
+                        outputs = model(inputs)
+                        loss = criterion(outputs, target)
+                        running_loss += loss.item()
+                        tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
+                        if model_params["name"] == "PhysNet" or model_params["name"] == "PhysNet_LSTM":
+                            inference_array.extend(normalize(outputs.cpu().numpy()[0]))
+                            target_array.extend(normalize(target.cpu().numpy()[0]))
+                        else:
+                            inference_array.extend(outputs.cpu().numpy())
+                            target_array.extend(target.cpu().numpy())
+                        if tepoch.n == 0 and __TIME__:
+                            save_time = time.time()
 
-            # postprocessing
-            if model_params["name"] == "DeepPhys":
-                inference_array = detrend(np.cumsum(inference_array),100)
-                target_array = detrend(np.cumsum(target_array),100)
+                # postprocessing
+                if model_params["name"] == "DeepPhys":
+                    inference_array = detrend(np.cumsum(inference_array),100)
+                    target_array = detrend(np.cumsum(target_array),100)
 
-            if __TIME__ and epoch == 0:
-                log_info_time("inference time \t: ", datetime.timedelta(seconds=save_time - start_time))
+                if __TIME__ and epoch == 0:
+                    log_info_time("inference time \t: ", datetime.timedelta(seconds=save_time - start_time))
 
-            plot_graph(0, 300, target_array, inference_array)
+                plot_graph(0, 300, target_array, inference_array)

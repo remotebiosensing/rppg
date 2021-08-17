@@ -54,16 +54,3 @@ def plot_graph(start_point, length, target, inference):
 
 def normalize(input_val):
     return (input_val - np.mean(input_val)) / np.std(input_val)
-
-
-class ToTensor1D(object):
-    """Convert a `numpy.ndarray` to tensor. Unlike `ToTensor` from torchvision,
-    this converts numpy arrays regardless of the number of dimensions.
-
-    Converts automatically the array to `float32`.
-    """
-    def __call__(self, array):
-        return torch.from_numpy(array.astype('float32'))
-
-    def __repr__(self):
-        return self.__class__.__name__ + '()'

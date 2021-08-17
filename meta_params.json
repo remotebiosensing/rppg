@@ -12,13 +12,13 @@
         "data_root_path": "/media/hdd1/",
         "dataset_name": "UBFC",
         "checkpoint_path" : "/media/hdd1/yj/checkpoint/",
-        "train_ratio": 0.8,
+        "train_ratio": 0.95,
         "train_ratio_comment" : "generate train dataset using train_ratio",
-        "validation_ratio": 0.9,
+        "validation_ratio": 0.5,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
         "train_batch_size" : 1,
-        "train_shuffle" : 0,
-        "test_batch_size" : 20,
+        "train_shuffle" : 1,
+        "test_batch_size" : 1,
         "test_shuffle" : 0
     },
     "hyper_params":
@@ -59,7 +59,7 @@
         "pre_trained_comment" : "pretrained or not",
         "inner_loss" : "mse",
         "outer_loss" : "mse",
-        "num_adapt_steps" : 5
+        "num_adapt_steps" : 1
     },
     "model_params":
     {

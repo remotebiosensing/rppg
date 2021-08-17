@@ -4,6 +4,8 @@ from nets.models.sub_models.AppearanceModel import AppearanceModel_2D
 from nets.models.sub_models.LinearModel import LinearModel
 from nets.models.sub_models.MotionModel import MotionModel_TS
 
+from utils.funcs import normalize, plot_graph, detrend
+import numpy as np
 import higher
 
 class TSCAN(torch.nn.Module):
@@ -54,7 +56,7 @@ def maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer,
         inputs, targets = batch['train']
         test_inputs, test_targets = batch['test']
 
-        test_losses = []
+        test_losses = 0.0
         optimizer.zero_grad()
         for task_idx, (input, target, test_input, test_target) in enumerate(
                 zip(inputs, targets, test_inputs, test_targets)):
@@ -64,16 +66,15 @@ def maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer,
                     diffopt.step(inner_loss)
                 test_logit = fmodel(test_input)
                 test_loss = outer_criterion(test_logit, test_target)
-                test_losses.append(test_loss.detach())
+                test_losses +=test_loss.item()
                 test_loss.backward()
-
         optimizer.step()
-        losses = sum(test_losses) / len(tepoch)
+        losses = test_losses / len(tepoch)
         tepoch.set_postfix(loss=losses)
 
 def maml_val(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, num_adapt_steps):
     model.train()
-    test_losses = []
+    test_losses = 0.0
     for batch in tepoch:
         tepoch.set_description(f"Validation")
 
@@ -93,9 +94,8 @@ def maml_val(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, n
                     diffopt.step(inner_loss)
                 test_logit = fmodel(test_input).detach()
                 test_loss = outer_criterion(test_logit, test_target)
-                test_losses.append(test_loss.detach())
-
-        losses = sum(test_losses) / len(tepoch)
+                test_losses +=test_loss.item()
+        losses = test_losses / len(tepoch)
         tepoch.set_postfix(loss=losses)
     '''
     if min_val_loss > test_losses:  # save the train model
@@ -109,3 +109,37 @@ def maml_val(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, n
                    + str(min_val_loss) + '.pth')
         
     '''
+
+
+def maml_test(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, num_adapt_steps):
+    model.train()
+    test_losses = 0.0
+    inference_array = []
+    target_array = []
+    for batch in tepoch:
+        tepoch.set_description(f"test")
+
+        batch['train'][0] = batch['train'][0].view(1, -1, 6, 36, 36)
+        batch['test'][0] = batch['test'][0].view(1, -1, 6, 36, 36)
+        batch['train'][1] = batch['train'][1].view(1, -1, 1)
+        batch['test'][1] = batch['test'][1].view(1, -1, 1)
+
+        inputs, targets = batch['train']
+        test_inputs, test_targets = batch['test']
+
+        for task_idx, (input, target, test_input, test_target) in enumerate(
+                zip(inputs, targets, test_inputs, test_targets)):
+            with higher.innerloop_ctx(model, inner_optimizer, copy_initial_weights=False) as (fmodel, diffopt):
+                for step in range(num_adapt_steps):
+                    inner_loss = inner_criterion(fmodel(input), target)
+                    diffopt.step(inner_loss)
+                test_logit = fmodel(test_input).detach()
+                test_loss = outer_criterion(test_logit, test_target)
+                test_losses += test_loss.item()
+
+                inference_array.extend(test_logit.cpu().numpy())
+                target_array.extend(test_target.cpu().numpy())
+
+    inference_array = detrend(np.cumsum(inference_array), 100)
+    target_array = detrend(np.cumsum(target_array), 100)
+    plot_graph(0, 300, target_array, inference_array)

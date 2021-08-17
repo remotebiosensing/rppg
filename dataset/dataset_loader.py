@@ -13,7 +13,6 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
 
                    num_shots: int = 6,
                    num_test_shots:int =2,
-                   fs: int = 30,
                    unsupervised: int = 0
                    ):
     '''
@@ -63,7 +62,6 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = MetaPhysDataset(num_shots,
                                   num_test_shots,
                                   option,
-                                  fs,
                                   unsupervised,
                                   frame_depth=10,
 

@@ -6,13 +6,12 @@ from torchmeta.transforms import ClassSplitter
 
 class MetaPhysDataset(MetaDataset):
     def __init__(self, num_shots_tr, num_shots_ts, option='train',
-                 fs=30, unsupervised=0,frame_depth=10,
+                 unsupervised=0,frame_depth=10,
                  appearance_data=None, motion_data=None, target=None):
 
         self.transform = transforms.Compose([transforms.ToTensor()])
         self.num_samples_per_task = num_shots_tr + num_shots_ts
         self.frame_depth = frame_depth
-        self.fs = fs
         self.option = option
         self.num_shots_tr = num_shots_tr
         self.num_shots_ts = num_shots_ts
