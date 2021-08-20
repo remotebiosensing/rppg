@@ -70,4 +70,26 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                                   target=np.asarray(target_data)
                                   )
 
+    if model_name == "MetaPhys_task":
+        appearance_data = []
+        motion_data = []
+        target_data = []
+        print(hpy_file.keys())
+        for key in hpy_file.keys(): #subject1, subject10, ...
+            appearance_data.append(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
+            motion_data.append(hpy_file[key]['preprocessed_video'][:, :, :, :3])
+            target_data.append(hpy_file[key]['preprocessed_label'][:])
+        hpy_file.close()
+
+        dataset = MetaPhysDataset(num_shots,
+                                  num_test_shots,
+                                  option,
+                                  unsupervised,
+                                  frame_depth=10,
+
+                                  appearance_data=np.asarray(appearance_data),
+                                  motion_data=np.asarray(motion_data),
+                                  target=np.asarray(target_data)
+                                  )
+
     return dataset

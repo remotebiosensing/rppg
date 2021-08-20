@@ -109,7 +109,7 @@ def generate_Floatimage(frame):
     # 왜 있지??
     dst = cv2.cvtColor(dst.astype('float32'), cv2.COLOR_BGR2RGB)
     dst[dst > 1] = 1
-    dst[dst < 0] = 0
+    dst[dst < 1e-6] = 1e-6
     return dst
 
 

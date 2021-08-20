@@ -8,11 +8,11 @@
     },
     "params":
     {
-        "save_root_path": "/media/hdd1/yj/dataset1/",
+        "save_root_path": "/media/hdd1/yj/dataset/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "UBFC",
+        "dataset_name": "cohface",
         "checkpoint_path" : "/media/hdd1/yj/checkpoint/",
-        "train_ratio": 0.95,
+        "train_ratio": 0.9,
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.5,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
@@ -63,12 +63,13 @@
     },
     "model_params":
     {
-        "name": "MetaPhys",
+        "name": "MetaPhys_task",
         "name_comment":
                 [
                     "DeepPhys",
                     "PhysNet",
-                    "MetaPhys"
+                    "MetaPhys",
+                    "MetaPhys_task"
                 ]
     }
 }
