@@ -1,5 +1,5 @@
 import numpy as np
-
+import h5py
 
 def Deepphys_preprocess_Label(path):
     '''
@@ -45,3 +45,20 @@ def PhysNet_preprocess_Label(path):
     f.close()
 
     return split_raw_label
+
+def cohface_Label(path, frame_total):
+    f = h5py.File(path, "r")
+    label = list(f['pulse'])
+    f.close()
+    label = np.interp(np.arange(0, len(frame_total)+1),
+                      np.linspace(0, len(frame_total)+1, num=len(label)),
+                      label)
+    delta_label = []
+    for i in range(len(label) - 1):
+        delta_label.append(label[i + 1] - label[i])
+    delta_label -= np.mean(delta_label)
+    delta_label /= np.std(delta_label)
+    delta_label = np.array(delta_label).astype('float32')
+    delta_pulse = delta_label.copy()  # 이거 왜 있지?
+
+    return delta_pulse

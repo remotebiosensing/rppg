@@ -56,7 +56,7 @@ def maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer,
         inputs, targets = batch['train']
         test_inputs, test_targets = batch['test']
 
-        test_losses = 0.0
+        test_losses = []
         optimizer.zero_grad()
         for task_idx, (input, target, test_input, test_target) in enumerate(
                 zip(inputs, targets, test_inputs, test_targets)):
@@ -66,15 +66,16 @@ def maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer,
                     diffopt.step(inner_loss)
                 test_logit = fmodel(test_input)
                 test_loss = outer_criterion(test_logit, test_target)
-                test_losses +=test_loss.item()
+                test_losses.append(test_loss.detach())
                 test_loss.backward()
+
         optimizer.step()
-        losses = test_losses / len(tepoch)
+        losses = sum(test_losses) / len(tepoch)
         tepoch.set_postfix(loss=losses)
 
 def maml_val(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, num_adapt_steps):
     model.train()
-    test_losses = 0.0
+    test_losses = []
     for batch in tepoch:
         tepoch.set_description(f"Validation")
 
@@ -94,8 +95,9 @@ def maml_val(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, n
                     diffopt.step(inner_loss)
                 test_logit = fmodel(test_input).detach()
                 test_loss = outer_criterion(test_logit, test_target)
-                test_losses +=test_loss.item()
-        losses = test_losses / len(tepoch)
+                test_losses.append(test_loss.detach())
+
+        losses = sum(test_losses) / len(tepoch)
         tepoch.set_postfix(loss=losses)
     '''
     if min_val_loss > test_losses:  # save the train model
@@ -113,7 +115,7 @@ def maml_val(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, n
 
 def maml_test(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, num_adapt_steps):
     model.train()
-    test_losses = 0.0
+    mean_test_loss = torch.tensor(0., device='cuda:9')
     inference_array = []
     target_array = []
     for batch in tepoch:
@@ -135,7 +137,7 @@ def maml_test(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, 
                     diffopt.step(inner_loss)
                 test_logit = fmodel(test_input).detach()
                 test_loss = outer_criterion(test_logit, test_target)
-                test_losses += test_loss.item()
+                mean_test_loss += test_loss.item()
 
                 inference_array.extend(test_logit.cpu().numpy())
                 target_array.extend(test_target.cpu().numpy())

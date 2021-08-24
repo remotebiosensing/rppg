@@ -4,7 +4,7 @@ import os
 
 from dataset.DeepPhysDataset import DeepPhysDataset
 from dataset.PhysNetDataset import PhysNetDataset
-from dataset.MetaPhysDataset import MetaPhysDataset
+from dataset.MetaPhysDataset import MetaPhysDataset, MetaPhys_task_Dataset
 
 def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                    model_name: str = "DeepPhys",
@@ -71,25 +71,32 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                                   )
 
     if model_name == "MetaPhys_task":
-        appearance_data = []
-        motion_data = []
-        target_data = []
-        print(hpy_file.keys())
-        for key in hpy_file.keys(): #subject1, subject10, ...
-            appearance_data.append(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
-            motion_data.append(hpy_file[key]['preprocessed_video'][:, :, :, :3])
-            target_data.append(hpy_file[key]['preprocessed_label'][:])
+        appearance_data_all = []
+        motion_data_all = []
+        target_data_all = []
+
+        for key in hpy_file.keys(): #1, 2, ...
+            appearance_data = []
+            motion_data = []
+            target_data = []
+            for data in hpy_file[key]: #1/1, 1/2, ...
+                appearance_data.append(hpy_file[key][data]['preprocessed_video'][:, :, :, -3:])
+                motion_data.append(hpy_file[key][data]['preprocessed_video'][:, :, :, :3])
+                target_data.append(hpy_file[key][data]['preprocessed_label'][:])
+            appearance_data_all.append(appearance_data) #np.asarray(
+            motion_data_all.append(motion_data)
+            target_data_all.append(target_data)
         hpy_file.close()
 
-        dataset = MetaPhysDataset(num_shots,
+        dataset = MetaPhys_task_Dataset(num_shots,
                                   num_test_shots,
                                   option,
                                   unsupervised,
                                   frame_depth=10,
 
-                                  appearance_data=np.asarray(appearance_data),
-                                  motion_data=np.asarray(motion_data),
-                                  target=np.asarray(target_data)
+                                  appearance_data=np.asarray(appearance_data_all),
+                                  motion_data=np.asarray(motion_data_all),
+                                  target=np.asarray(target_data_all)
                                   )
 
     return dataset

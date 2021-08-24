@@ -50,7 +50,7 @@
     },
     "meta_params":
     {
-        "num_shots" : 6,
+        "num_shots" : 2,
         "num_test_shots" : 2,
         "fs" : 30,
         "fs_comment" : "sampling rate of dataset",

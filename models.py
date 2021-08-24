@@ -20,7 +20,7 @@ def get_model(model_name: str = "DeepPhys"):
         return DeepPhys_DA()
     elif model_name == "PhysNet":
         return PhysNet()
-    elif model_name == "MetaPhys":
+    elif model_name == "MetaPhys" or "MetaPhys_task":
         return TSCAN()
     #elif model_name == "PhysNet_LSTM":
         #return PhysNet_2DCNN_LSTM()
@@ -54,7 +54,7 @@ def summary(model, model_name):
     #elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         # torchsummary.summary(model, (3, 32, 128, 128))
        # torchinfo.summary(model,(1, 3, 32, 128, 128))
-    elif model_name == "MetaPhys":
+    elif model_name == "MetaPhys" or "MetaPhys_task":
         print('rrrr')
     else:
         log_warning("use implemented model")
