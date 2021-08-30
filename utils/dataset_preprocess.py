@@ -46,18 +46,40 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     train = int(len(return_dict.keys()) * train_ratio)  # split dataset
 
     train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
-    for index, data_path in enumerate(return_dict.keys()[:train]):
-        dset = train_file.create_group(data_path)
-        dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-        dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-    train_file.close()
 
-    test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
-    for index, data_path in enumerate(return_dict.keys()[train:]):
-        dset = test_file.create_group(data_path)
-        dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-        dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-    test_file.close()
+    if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
+
+        for index, data_path in enumerate(return_dict.keys()[:train]):
+            dset = train_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        train_file.close()
+
+        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[train:]):
+            dset = test_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        test_file.close()
+
+    elif model_name in ["PPNet"]:
+
+        for index, data_path in enumerate(return_dict.keys()[:train]):
+            dset = train_file.create_group(data_path)
+            dset['ppg'] = return_dict[data_path]['ppg']
+            dset['sbp'] = return_dict[data_path]['sbp']
+            dset['dbp'] = return_dict[data_path]['dbp']
+            dset['hr'] = return_dict[data_path]['hr']
+        train_file.close()
+
+        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[train:]):
+            dset = test_file.create_group(data_path)
+            dset['ppg'] = return_dict[data_path]['ppg']
+            dset['sbp'] = return_dict[data_path]['sbp']
+            dset['dbp'] = return_dict[data_path]['dbp']
+            dset['hr'] = return_dict[data_path]['hr']
+        test_file.close()
 
 
 def preprocess_Dataset(path, flag, model_name, return_dict):

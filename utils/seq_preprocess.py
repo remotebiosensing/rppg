@@ -17,6 +17,9 @@ def PPNet_preprocess_Mat(path):
     time = 2
     fs = 125
     interval = time * fs
+
+    down_sample = 4
+
     ppg = []
     sbp = []  # Systolic Blood Pressure
     dbp = []  # Diastolic Blood Pressue
@@ -34,10 +37,7 @@ def PPNet_preprocess_Mat(path):
 
             wd, m = hp.process(temp_ppg, sample_rate=fs)
 
-            #ppg.append(temp_ppg[0:temp_ppg.size:4])
-            # ppg.append(np.resize(temp_ppg,(temp_ppg.size/4)))
-            # ppg.append(np.interp(np.arrange(0)))
-            ppg.append(temp_ppg.reshape(-1, (temp_ppg.size/4)).mean(axis=1))
+            ppg.append(temp_ppg.reshape(-1, down_sample).mean(axis=1))
             sbp.append(max(temp_bp))
             dbp.append(min(temp_bp))
             hr.append(m['bpm'])

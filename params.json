@@ -1,6 +1,6 @@
 {
     "__TIME__" : 1,
-    "__PREPROCESSING__" : 0,
+    "__PREPROCESSING__" : 1,
     "__MODEL_SUMMARY__" : 1,
     "options":{
         "parallel_criterion" : 1,
@@ -8,9 +8,14 @@
     },
     "params":
     {
-        "save_root_path": "/media/hdd1/js_dataset/",
+        "save_root_path": "/media/hdd1/dy/dataset/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "UBFC",
+        "dataset_name": "cuff_less_blood_pressure",
+        "dataset_comment" :
+                [
+                    "UBFC",
+                    "cuff_less_blood_pressure"
+                ],
         "checkpoint_path" : "/home/js/Desktop/tmp_local/checkpoint/",
         "train_ratio": 0.7,
         "train_ratio_comment" : "generate train dataset using train_ratio",
@@ -51,12 +56,13 @@
     },
     "model_params":
     {
-        "name": "PhysNet_LSTM",
+        "name": "PPNet",
         "name_comment":
                 [
                     "DeepPhys",
                     "PhysNet",
-                    "PhysNet_LSTM"
+                    "PhysNet_LSTM",
+                    "PPNet"
                 ]
     }
 }
