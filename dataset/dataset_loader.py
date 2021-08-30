@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 
 from dataset.DeepPhysDataset import DeepPhysDataset
+from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
 
 
@@ -18,7 +19,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     '''
     hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
 
-    if model_name == "DeepPhys":
+    if model_name in ["DeepPhys", "MTTS"]:
         appearance_data = []
         motion_data = []
         target_data = []
@@ -32,7 +33,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
+    elif model_name in ["PhysNet", "PhysNet_LSTM"]:
         video_data = []
         label_data = []
         for key in hpy_file.keys():
@@ -42,5 +43,23 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
 
         dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data))
+
+    elif model_name in [""]:
+        ppg = []
+        sbp = []
+        dbp = []
+        hr = []
+
+        for key in hpy_file.keys():
+            ppg.extend(hpy_file[key]['ppg'])
+            sbp.extend(hpy_file[key]['sbp'])
+            dbp.extend(hpy_file[key]['dbp'])
+            hr.extend(hpy_file[key]['hr'])
+        hpy_file.close()
+
+        dataset = PPNetDataset(ppg=np.asarray(ppg),
+                               sbp=np.asarray(sbp),
+                               dbp=np.asarray(dbp),
+                               hr=np.asarray(hr))
 
     return dataset
