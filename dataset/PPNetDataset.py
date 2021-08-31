@@ -22,7 +22,7 @@ class PPNetDataset(Dataset):
         dbp = torch.tensor(self.dbp[index], dtype=torch.float32)
         hr = torch.tensor(self.hr[index], dtype=torch.float32)
 
-        inputs = ppg
+        inputs = ppg.reshape(1,-1)
         targets = torch.stack([sbp,dbp,hr],dim=0)
 
         if torch.cuda.is_available():

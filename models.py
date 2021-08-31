@@ -4,6 +4,7 @@ import torchsummary
 from log import log_warning, log_info
 from nets.models.DeepPhys import DeepPhys
 from nets.models.DeepPhys_DA import DeepPhys_DA
+from nets.models.PPNet import PPNet
 from nets.models.PhysNet import PhysNet
 from nets.models.PhysNet import PhysNet_2DCNN_LSTM
 
@@ -21,6 +22,8 @@ def get_model(model_name: str = "DeepPhys"):
         return PhysNet()
     elif model_name == "PhysNet_LSTM":
         return PhysNet_2DCNN_LSTM()
+    elif model_name == "PPNet":
+        return PPNet()
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
@@ -50,7 +53,9 @@ def summary(model, model_name):
         torchsummary.summary(model, (2, 3, 36, 36))
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         # torchsummary.summary(model, (3, 32, 128, 128))
-        torchinfo.summary(model,(1, 3, 32, 128, 128))
+        torchinfo.summary(model, (1, 3, 32, 128, 128))
+    elif model_name in "PPNet":
+        torchinfo.summary(model, (1, 1, 250))
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)

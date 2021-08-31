@@ -99,8 +99,9 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
         ppg, sbp, dbp, hr  = PPNet_preprocess_Mat(path)
 
 
-    if not rst:  # can't detect face
-        return
+    if model_name.__contains__("Phys"):  # can't detect face
+        if not rst:
+            return
 
     if model_name == "DeepPhys":
         preprocessed_label = Deepphys_preprocess_Label(path + "/ground_truth.txt")

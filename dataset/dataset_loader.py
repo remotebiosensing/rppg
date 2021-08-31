@@ -44,7 +44,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data))
 
-    elif model_name in [""]:
+    elif model_name in ["PPNet"]:
         ppg = []
         sbp = []
         dbp = []
