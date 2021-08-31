@@ -1,6 +1,8 @@
+import copy
 import datetime
 import json
 import time
+import os
 
 import numpy as np
 import torch
@@ -101,6 +103,7 @@ if torch.cuda.is_available():
     #     model = DataParallelModel(model, device_ids=[0, 1, 2])
     # else:
     #     model = DataParallel(model, output_device=0)
+    torch.cuda.set_device(int(options["set_gpu_device"]))
     model.cuda()
 else:
     model = model.to('cpu')
@@ -140,6 +143,7 @@ if __TIME__:
 Model Training Step
 '''
 min_val_loss = 100.0
+min_val_loss_model = None
 
 for epoch in range(hyper_params["epochs"]):
     if __TIME__ and epoch == 0:
@@ -198,11 +202,14 @@ for epoch in range(hyper_params["epochs"]):
                 torch.save(checkpoint, params["checkpoint_path"] + model_params["name"] + "/"
                            + params["dataset_name"] + "_" + str(epoch) + "_"
                            + str(min_val_loss) + '.pth')
+                min_val_loss_model = copy.deepcopy(model)
 
     if epoch + 1 == hyper_params["epochs"] or epoch % 10 == 0:
         if __TIME__ and epoch == 0:
             start_time = time.time()
-        with tqdm(test_loader, desc="test ", total=len(test_loader)/100) as tepoch:
+        if epoch + 1 == hyper_params["epochs"]:
+            model = min_val_loss_model
+        with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
             model.eval()
             inference_array = []
             target_array = []

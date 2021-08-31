@@ -52,7 +52,6 @@ def summary(model, model_name):
     if model_name == "DeepPhys" or model_name == DeepPhys_DA:
         torchsummary.summary(model, (2, 3, 36, 36))
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
-        # torchsummary.summary(model, (3, 32, 128, 128))
         torchinfo.summary(model, (1, 3, 32, 128, 128))
     elif model_name in "PPNet":
         torchinfo.summary(model, (1, 1, 250))
