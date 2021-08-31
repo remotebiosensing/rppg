@@ -1,13 +1,18 @@
 # Implement Deep Learning based Rppg Model using pytorch
 
 ### model list
+
+- #### Facial Image Based ppg measurement algorithm
 - [x] [DeepPhys : DeepPhys: Video-Based Physiological Measurement Using Convolutional Attention Networks](https://arxiv.org/abs/1805.07888)
 - [ ] [MTTS  :Multi-Task Temporal Shift Attention Networks for
 On-Device Contactless Vitals Measurement](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf)
   + need to verification
-- [ ] DeepPhys + LSTM
+- [x] DeepPhys + LSTM
 - [x] [3D physNet :  Remote Photoplethysmograph Signal Measurement from Facial Videos Using Spatio-Temporal Networks](https://arxiv.org/abs/1905.02419)
 - [x] [2D phsyNet + LSTM](https://arxiv.org/abs/1905.02419)
+
+- #### PPG Based Blood Pressure estimation algorithm
+- [x] [PP-Net: A Deep Learning Framework for PPG based Blood Pressure and Heart Rate Estimation](https://ieeexplore.ieee.org/document/9082808)
 
 ## file list
 
