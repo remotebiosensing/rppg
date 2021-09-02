@@ -3,7 +3,7 @@ import os
 
 import h5py
 
-from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video
+from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
 from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label
 
@@ -27,7 +27,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     return_dict = manager.dict()
 
     if dataset_name == "UBFC":
-        data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+        data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject11")]
     elif dataset_name == "cuff_less_blood_pressure":
         data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("part")]
 
@@ -95,11 +95,13 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
         rst, preprocessed_video = Deepphys_preprocess_Video(path + "/vid.avi", flag)
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         rst, preprocessed_video = PhysNet_preprocess_Video(path + "/vid.avi", flag)
+    elif model_name == "RTNet":
+        rst, preprocessed_video = RTNet_preprocess_Video(path + "/vid.avi", flag)
     elif model_name == "PPNet":    # Sequence data based
         ppg, sbp, dbp, hr  = PPNet_preprocess_Mat(path)
 
 
-    if model_name.__contains__("Phys"):  # can't detect face
+    if model_name in ["DeepPhys","MTTS","PhysNet","PhysNet_LSTM"]:  # can't detect face
         if not rst:
             return
 
