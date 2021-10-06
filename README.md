@@ -73,6 +73,9 @@ TVSTORM inc.\
 Kim Dae Yeol &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Kim Jin Soo\
 wagon0004@tvstorm.com &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;wlstn25092303@tvstorm.com
 
+
+Kwangkee Lee, kwangkeelee@gmail.com
+
 ## Funding
  This work was supported by the ICT R&D program of MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
