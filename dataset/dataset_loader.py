@@ -62,4 +62,19 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                                dbp=np.asarray(dbp),
                                hr=np.asarray(hr))
 
+    elif model_name in ["RTNet"]:
+        face_data = []
+        mask_data = []
+        target_data = []
+
+        for key in hpy_file.keys():
+            face_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
+            mask_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, :3])
+            target_data.extend(hpy_file[key]['preprocessed_label'])
+        hpy_file.close()
+
+        dataset = PPNetDataset(face_data=np.asarray(face_data),
+                               mask_data=np.asarray(mask_data),
+                               target=np.asarray(target_data))
+
     return dataset

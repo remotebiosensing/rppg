@@ -1,6 +1,6 @@
 {
     "__TIME__" : 1,
-    "__PREPROCESSING__" : 0,
+    "__PREPROCESSING__" : 1,
     "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
@@ -11,7 +11,7 @@
     {
         "save_root_path": "/media/hdd1/dy/dataset/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "cuff_less_blood_pressure",
+        "dataset_name": "UBFC",
         "dataset_comment" :
                 [
                     "UBFC",
@@ -65,13 +65,14 @@
     },
     "model_params":
     {
-        "name": "PPNet",
+        "name": "RTNet",
         "name_comment":
                 [
                     "DeepPhys",
                     "PhysNet",
                     "PhysNet_LSTM",
-                    "PPNet"
+                    "PPNet",
+                    "RTNet"
                 ]
     }
 }

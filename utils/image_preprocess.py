@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from tqdm import tqdm
-from face_recognition import face_locations
+from face_recognition import face_locations, face_landmarks
 from skimage.util import img_as_float
 
 
@@ -85,6 +85,82 @@ def PhysNet_preprocess_Video(path, flag):
 
     return True, split_raw_video
 
+def RTNet_preprocess_Video(path, flag):
+    '''
+    :param path: dataset path
+    :param flag: face detect flag
+    :return:
+    '''
+    cap = cv2.VideoCapture(path)
+    frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    preprocessed_video = np.empty((frame_total, 36, 36, 6))
+    j = 0
+    with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if frame is None:
+                break
+            if flag: # TODO: make flag == false option
+                rst, crop_frame, mask = faceLandmarks(frame)
+                if not rst:  # can't detect face
+                    return False, None
+            else:
+                crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+
+            crop_frame = cv2.resize(crop_frame, dsize=(128, 128), interpolation=cv2.INTER_AREA)
+            crop_frame = generate_Floatimage(crop_frame)
+
+            mask = cv2.resize(mask, dsize=(128, 128), interpolation=cv2.INTER_AREA)
+            mask = generate_Floatimage(mask)
+
+            preprocessed_video[j:,:,:,3],preprocessed_video[j:,:,:,-3] = crop_frame, mask
+
+            j += 1
+            pbar.update(1)
+        cap.release()
+
+    preprocessed_video[:, :, :, 3] = video_normalize(preprocessed_video[:, :, :, 3])
+
+    return True, preprocessed_video
+
+def faceLandmarks(frame):
+    '''
+    :param frame: one frame
+    :return: landmarks
+    '''
+    resized_frame = cv2.resize(frame, (0, 0), fx=1, fy=1)
+    grayscale_frame = cv2.cvtColor(resized_frame,cv2.COLOR_BGR2GRAY)
+    face_location = face_locations(resized_frame)
+    if len(face_location) == 0:  # can't detect face
+        return False, None, None
+    face_landmark_list = face_landmarks(resized_frame)
+    i = 0
+    center_list = []
+    for face_landmark in face_landmark_list:
+        for facial_feature in face_landmark.keys():
+            for center in face_landmark[facial_feature]:
+                center_list.append(center)
+                i = i+1
+    pt  = np.array([center_list[2],center_list[3],center_list[31]])
+    pt1 = np.array([center_list[13],center_list[14],center_list[35]])
+    pt2 = np.array([center_list[6], center_list[7], center_list[65]])
+    pt3 = np.array([center_list[9], center_list[10], center_list[61]])
+    dst = cv2.fillConvexPoly(grayscale_frame,pt,color=(255,255,255))
+    dst = cv2.fillConvexPoly(dst, pt1, color=(255, 255, 255))
+    dst = cv2.fillConvexPoly(dst, pt2, color=(255, 255, 255))
+    dst = cv2.fillConvexPoly(dst, pt3, color=(255, 255, 255))
+    for i in range(dst.shape[0]):
+        for j in range(dst.shape[1]):
+            if dst[i][j] != 255:
+                dst[i][j] = 0
+    top, right, bottom, left = face_location[0]
+    dst = resized_frame[top:bottom, left:right]
+    mask = grayscale_frame[top:bottom, left:right]
+    # test = cv2.bitwise_and(dst,dst,mask=mask)
+
+    return True, dst, mask
 
 def faceDetection(frame):
     '''
