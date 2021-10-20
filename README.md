@@ -67,6 +67,9 @@ example
 ~~~ 
 2. run main.py
 
+
+## Additional info
+
 ##### *  How to test  (Assessment of ROI selection for facial video based rPPG)
 -  before test modify sample2.cfg(./pyVHR/analysis/sample2.cfg)
 ~~~
