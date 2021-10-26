@@ -1,5 +1,0 @@
-wheel
-pytest
-sphinx
-numpy
-opencv-python
