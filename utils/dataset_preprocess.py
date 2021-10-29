@@ -27,7 +27,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     return_dict = manager.dict()
 
     if dataset_name == "UBFC":
-        data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject11")]
+        data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
     elif dataset_name == "cuff_less_blood_pressure":
         data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("part")]
 
@@ -36,7 +36,10 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     # multiprocessing
     for index, data_path in enumerate(data_list):
         proc = multiprocessing.Process(target=preprocess_Dataset,
-                                       args=(dataset_root_path + "/" + data_path, True, model_name, return_dict))
+                                       args=(dataset_root_path + "/" + data_path, 2, model_name, return_dict))
+        # flag 0 : pass
+        # flag 1 : detect face
+        # flag 2 : remove nose
         process.append(proc)
         proc.start()
 
