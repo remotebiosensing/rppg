@@ -3,6 +3,7 @@ import numpy as np
 import os
 
 from dataset.DeepPhysDataset import DeepPhysDataset
+from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
 from dataset.MetaPhysDataset import MetaPhysDataset, MetaPhys_task_Dataset
 
@@ -10,7 +11,6 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                    model_name: str = "DeepPhys",
                    dataset_name: str = "UBFC",
                    option: str = "train",
-
                    num_shots: int = 6,
                    num_test_shots:int =2,
                    unsupervised: int = 0
@@ -24,7 +24,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     '''
     hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
 
-    if model_name == "DeepPhys":
+    if model_name in ["DeepPhys", "MTTS"]:
         appearance_data = []
         motion_data = []
         target_data = []
@@ -37,7 +37,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
+    elif model_name in ["PhysNet", "PhysNet_LSTM"]:
         video_data = []
         label_data = []
         for key in hpy_file.keys():
@@ -48,7 +48,40 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data))
 
-    if model_name == "MetaPhys":
+    elif model_name in ["PPNet"]:
+        ppg = []
+        sbp = []
+        dbp = []
+        hr = []
+
+        for key in hpy_file.keys():
+            ppg.extend(hpy_file[key]['ppg'])
+            sbp.extend(hpy_file[key]['sbp'])
+            dbp.extend(hpy_file[key]['dbp'])
+            hr.extend(hpy_file[key]['hr'])
+        hpy_file.close()
+
+        dataset = PPNetDataset(ppg=np.asarray(ppg),
+                               sbp=np.asarray(sbp),
+                               dbp=np.asarray(dbp),
+                               hr=np.asarray(hr))
+
+    elif model_name in ["RTNet"]:
+        face_data = []
+        mask_data = []
+        target_data = []
+
+        for key in hpy_file.keys():
+            face_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
+            mask_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, :3])
+            target_data.extend(hpy_file[key]['preprocessed_label'])
+        hpy_file.close()
+
+        dataset = PPNetDataset(face_data=np.asarray(face_data),
+                               mask_data=np.asarray(mask_data),
+                               target=np.asarray(target_data))
+
+    elif model_name == "MetaPhys":
         appearance_data = []
         motion_data = []
         target_data = []
@@ -70,7 +103,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                                   target=np.asarray(target_data)
                                   )
 
-    if model_name == "MetaPhys_task":
+    elif model_name == "MetaPhys_task":
         appearance_data_all = []
         motion_data_all = []
         target_data_all = []

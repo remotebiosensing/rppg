@@ -1,6 +1,8 @@
+import copy
 import datetime
 import json
 import time
+import os
 
 import numpy as np
 import torch
@@ -130,8 +132,8 @@ if torch.cuda.is_available():
     #     model = DataParallelModel(model, device_ids=[0, 1, 2])
     # else:
     #     model = DataParallel(model, output_device=0)
-    device = torch.device('cuda:9')
-    model.to(device=device)
+    torch.cuda.set_device(int(options["set_gpu_device"]))
+    model.cuda()
 else:
     model = model.to('cpu')
 
@@ -172,6 +174,7 @@ if __TIME__:
 Model Training Step
 '''
 min_val_loss = 100.0
+min_val_loss_model = None
 
 for epoch in range(hyper_params["epochs"]):
     if __TIME__ and epoch == 0:
@@ -182,10 +185,22 @@ for epoch in range(hyper_params["epochs"]):
         else:
             model.train()
             running_loss = 0.0
+            i = 0
             for inputs, target in tepoch:
                 tepoch.set_description(f"Train Epoch {epoch}")
                 outputs = model(inputs)
-                loss = criterion(outputs, target)
+
+                if model_params["name"] in ["PhysNet", "PhysNet_LSTM","DeepPhys"]:
+                    loss = criterion(outputs, target)
+                else:
+                    loss_0 = criterion(outputs[:][0], target[:][0])
+                    loss_1 = criterion(outputs[:][1], target[:][1])
+                    loss_2 = criterion(outputs[:][2], target[:][2])
+                    loss = loss_0 + loss_2 + loss_1
+
+                if ~torch.isfinite(loss):
+                    continue
+
                 optimizer.zero_grad()
                 loss.backward()
                 running_loss += loss.item()
@@ -204,7 +219,16 @@ for epoch in range(hyper_params["epochs"]):
                 for inputs, target in tepoch:
                     tepoch.set_description(f"Validation")
                     outputs = model(inputs)
-                    loss = criterion(outputs, target)
+                    if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys"]:
+                        loss = criterion(outputs, target)
+                    else:
+                        loss_0 = criterion(outputs[:][0], target[:][0])
+                        loss_1 = criterion(outputs[:][1], target[:][1])
+                        loss_2 = criterion(outputs[:][2], target[:][2])
+                        loss = loss_0 + loss_2 + loss_1
+
+                    if ~torch.isfinite(loss):
+                        continue
                     running_loss += loss.item()
                     tepoch.set_postfix(loss=running_loss / params["train_batch_size"])
                 if min_val_loss > running_loss:  # save the train model
@@ -215,10 +239,13 @@ for epoch in range(hyper_params["epochs"]):
                     torch.save(checkpoint, params["checkpoint_path"] + model_params["name"] + "/"
                                + params["dataset_name"] + "_" + str(epoch) + "_"
                                + str(min_val_loss) + '.pth')
+                    min_val_loss_model = copy.deepcopy(model)
 
-    if epoch + 1 == hyper_params["epochs"] or epoch % 3 == 0:
+    if epoch + 1 == hyper_params["epochs"] or epoch % 10 == 0:
         if __TIME__ and epoch == 0:
             start_time = time.time()
+        if epoch + 1 == hyper_params["epochs"]:
+            model = min_val_loss_model
         with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
             if model_params["name"] == 'MetaPhys':
                 maml_test(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, meta_params["num_adapt_steps"])
@@ -230,20 +257,29 @@ for epoch in range(hyper_params["epochs"]):
                     for inputs, target in tepoch:
                         tepoch.set_description(f"test")
                         outputs = model(inputs)
-                        loss = criterion(outputs, target)
+                        if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys"]:
+                            loss = criterion(outputs, target)
+                        else:
+                            loss_0 = criterion(outputs[:][0], target[:][0])
+                            loss_1 = criterion(outputs[:][1], target[:][1])
+                            loss_2 = criterion(outputs[:][2], target[:][2])
+                            loss = loss_0 + loss_2 + loss_1
+
+                        if ~torch.isfinite(loss):
+                            continue
                         running_loss += loss.item()
                         tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
-                        if model_params["name"] == "PhysNet" or model_params["name"] == "PhysNet_LSTM":
+                        if model_params["name"] in ["PhysNet","PhysNet_LSTM"]:
                             inference_array.extend(normalize(outputs.cpu().numpy()[0]))
                             target_array.extend(normalize(target.cpu().numpy()[0]))
                         else:
-                            inference_array.extend(outputs.cpu().numpy())
-                            target_array.extend(target.cpu().numpy())
+                            inference_array.extend(outputs[:][0].cpu().numpy())
+                            target_array.extend(target[:][0].cpu().numpy())
                         if tepoch.n == 0 and __TIME__:
                             save_time = time.time()
 
                 # postprocessing
-                if model_params["name"] == "DeepPhys":
+                if model_params["name"] in ["DeepPhys"]:
                     inference_array = detrend(np.cumsum(inference_array),100)
                     target_array = detrend(np.cumsum(target_array),100)
 
