@@ -1,3 +1,4 @@
 checkpoint_train.pth
 runs/*
 __pycache__/*
+.idea/*
