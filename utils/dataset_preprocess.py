@@ -25,14 +25,19 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
 
-    data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject") or data.isdigit()]
+    if dataset_name == "UBFC":
+        data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+    elif dataset_name == "cohface":
+        data_list = [data for data in os.listdir(dataset_root_path) if data.isdigit()]
+
+#    data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject") or data.isdigit()]
 
     process = []
 
     # multiprocessing
     for index, data_path in enumerate(data_list):
         proc = multiprocessing.Process(target=preprocess_Dataset,
-                                       args=(dataset_root_path + "/" + data_path, True, model_name, return_dict))
+                                       args=(dataset_root_path + "/" + data_path, True, model_name, dataset_name, return_dict))
         process.append(proc)
         proc.start()
 
@@ -44,56 +49,53 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
     for index, data_path in enumerate(return_dict.keys()[:train]):
         dset = train_file.create_group(data_path)
-        if model_name =='MetaPhys_task':
-            for i in range(len(os.listdir(dataset_root_path + "/" + data_path))):
-                ddset = dset.create_group(str(i))
-                ddset['preprocessed_video'] = return_dict[data_path]['preprocessed_video'][i]
-                ddset['preprocessed_label'] = return_dict[data_path]['preprocessed_label'][i]
-        else:
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+        dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
     train_file.close()
 
     test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
     for index, data_path in enumerate(return_dict.keys()[train:]):
         dset = test_file.create_group(data_path)
-        if model_name == 'MetaPhys_task':
-            for i in range(len(os.listdir(dataset_root_path + "/" + data_path))):
-                ddset = dset.create_group(str(i))
-                ddset['preprocessed_video'] = return_dict[data_path]['preprocessed_video'][i]
-                ddset['preprocessed_label'] = return_dict[data_path]['preprocessed_label'][i]
-        else:
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+        dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
     test_file.close()
 
 
-def preprocess_Dataset(path, flag, model_name, return_dict):
+def preprocess_Dataset(path, flag, model_name, dataset_name, return_dict):
     """
     :param path: dataset path
     :param flag: face detect flag
     :param model_name: select preprocessing method
     :param return_dict: : preprocessed image, label
     """
-    if model_name == "DeepPhys" or model_name == "MetaPhys":
-        rst, preprocessed_video = Deepphys_preprocess_Video(path + "/vid.avi", flag)
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
-        rst, preprocessed_video = PhysNet_preprocess_Video(path + "/vid.avi", flag)
-    elif model_name == "MetaPhys_task":
-        preprocessed_video = []
-        preprocessed_label = []
+    if dataset_name == 'UBFC':
+        if model_name == "DeepPhys" or model_name == "MetaPhys":
+            rst, preprocessed_video = Deepphys_preprocess_Video(path + "/vid.avi", flag)
+        elif model_name in ["PhysNet", "PhysNet_LSTM", "MetaPhysNet"]:
+            rst, preprocessed_video = PhysNet_preprocess_Video(path + "/vid.avi", flag)
+        if not rst:  # can't detect face
+            return
+
+        if model_name == "DeepPhys" or model_name == "MetaPhys":
+            preprocessed_label = Deepphys_preprocess_Label(path + "/ground_truth.txt")
+        elif model_name in ["PhysNet", "PhysNet_LSTM", "MetaPhysNet"]:
+            preprocessed_label = PhysNet_preprocess_Label(path + "/ground_truth.txt")
+
+        return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
+                                            'preprocessed_label': preprocessed_label}
+
+    elif dataset_name == 'cohface':
         for i in os.listdir(path):
-            rst, video = Deepphys_preprocess_Video(path + '/' + i + '/data.avi', flag=False)
-            label = cohface_Label(path + '/' + i + '/data.hdf5', video)
-            preprocessed_video.append(video)
-            preprocessed_label.append(label)
-    if not rst:  # can't detect face
-        return
+            rst, preprocessed_video = PhysNet_preprocess_Video(path + '/' + i + '/data.avi', flag=True)
+            preprocessed_label = cohface_Label(path + '/' + i + '/data.hdf5', preprocessed_video.shape[0] * preprocessed_video.shape[1])
 
-    if model_name == "DeepPhys" or model_name == "MetaPhys":
-        preprocessed_label = Deepphys_preprocess_Label(path + "/ground_truth.txt")
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
-        preprocessed_label = PhysNet_preprocess_Label(path + "/ground_truth.txt")
+            return_dict[path.split("/")[-1]+'_'+i] = {'preprocessed_video': preprocessed_video,
+                                                'preprocessed_label': preprocessed_label}
 
-    return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
-                                        'preprocessed_label': preprocessed_label}
+
+if __name__ == '__main__':
+    preprocessing(save_root_path="/media/hdd1/yj/dataset2/",
+                  model_name="MetaPhysNet",
+                  data_root_path="/media/hdd1/",
+                  dataset_name="cohface",
+                  train_ratio=0.8)
