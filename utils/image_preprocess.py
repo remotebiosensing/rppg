@@ -174,10 +174,12 @@ def faceLandmarks(frame):
 
     return True, dst, mask
 
+locat = ()
 def faceDetection(frame):
     '''
     :param frame: one frame
     :return: cropped face image
+    '''
     '''
     resized_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
     face_location = face_locations(resized_frame)
@@ -186,7 +188,29 @@ def faceDetection(frame):
     top, right, bottom, left = face_location[0]
     dst = resized_frame[top:bottom, left:right]
     return True, dst
+    '''
+    global locat
 
+    resized_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+    face_location = face_locations(resized_frame)
+
+    if len(face_location) == 0:  # cant detect face
+        print('cant detect face')
+        if locat == ():
+            dst = resized_frame[resized_frame.shape[0] // 4: resized_frame.shape[0] // 4 * 3,
+                  resized_frame.shape[1] // 4:resized_frame.shape[1] // 4 * 3]
+        else:
+            top, right, bottom, left = locat[0]
+            dst = resized_frame[max(0, top - 10):min(resized_frame.shape[0], bottom + 10),
+                  max(0, left - 10):min(resized_frame.shape[1], right + 10)]
+        #return False, dst
+        return True, dst
+
+    top, right, bottom, left = face_location[0]
+    dst = resized_frame[max(0, top - 10):min(resized_frame.shape[0], bottom + 10),
+          max(0, left - 10):min(resized_frame.shape[1], right + 10)]
+    locat = face_location
+    return True, dst
 
 def generate_Floatimage(frame):
     '''
@@ -377,3 +401,6 @@ def generate_maks(src, view,remove):
     rst = cv2.bitwise_and(src,img)
 
     return rst
+
+if __name__ == '__main__':
+    PhysNet_preprocess_Video('/media/hdd1/LGGI/alex/alex_gym/cv_camera_sensor_stream_handler.avi',1)

@@ -3,9 +3,9 @@ import os
 
 import h5py
 
-from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video
+from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video#, RTNet_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
-from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, cohface_Label
+from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, cohface_Label, PhysNet_cohface_Label, LGGI_Label, V4V_Label
 
 
 def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
@@ -32,13 +32,18 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("part")]
     elif dataset_name == "cohface":
         data_list = [data for data in os.listdir(dataset_root_path) if data.isdigit()]
+    elif dataset_name == "LGGI":
+        data_list = ['alex','cpi', 'angelo','felix','harun','david']
+    elif dataset_name == "V4V":
+        dataset_root_path = data_root_path + dataset_name + '/train_val/Videos'
+        data_list = ["train",'valid']
 
     process = []
 
     # multiprocessing
     for index, data_path in enumerate(data_list):
         proc = multiprocessing.Process(target=preprocess_Dataset,
-                                       args=(dataset_root_path + "/" + data_path, 2, model_name, dataset_name, return_dict))
+                                       args=(dataset_root_path + "/" + data_path, 1, model_name, dataset_name, return_dict))
         # flag 0 : pass
         # flag 1 : detect face
         # flag 2 : remove nose
@@ -124,8 +129,34 @@ def preprocess_Dataset(path, flag, model_name, dataset_name, return_dict):
 
     elif dataset_name == 'cohface':
         for i in os.listdir(path):
-            rst, preprocessed_video = PhysNet_preprocess_Video(path + '/' + i + '/data.avi', flag=True)
-            preprocessed_label = cohface_Label(path + '/' + i + '/data.hdf5', preprocessed_video.shape[0] * preprocessed_video.shape[1])
+            rst, preprocessed_video = PhysNet_preprocess_Video(path + '/' + i + '/data.avi', flag=1)
+            preprocessed_label = PhysNet_cohface_Label(path + '/' + i + '/data.hdf5', preprocessed_video.shape[0] * preprocessed_video.shape[1])
 
             return_dict[path.split("/")[-1]+'_'+i] = {'preprocessed_video': preprocessed_video,
                                                 'preprocessed_label': preprocessed_label}
+
+    elif dataset_name == 'LGGI':
+        for i in os.listdir(path):  # alex_gym, alex_resting, alex_rotation, alex_talk
+            rst, preprocessed_video = PhysNet_preprocess_Video(path + '/' + i + '/cv_camera_sensor_stream_handler.avi',
+                                                               flag=1)
+            preprocessed_label = LGGI_Label(path + '/' + i + '/cms50_stream_handler.xml',
+                                            preprocessed_video.shape[0] * preprocessed_video.shape[1])
+
+            return_dict[path.split("/")[-1] + '_' + i] = {'preprocessed_video': preprocessed_video,
+                                                          'preprocessed_label': preprocessed_label}
+
+    elif dataset_name == 'V4V':
+        for i in os.listdir(path):
+            rst, preprocessed_video = PhysNet_preprocess_Video(path + '/' + i, flag=1)
+            if not rst:
+                continue
+            preprocessed_label = V4V_Label(path + '/' + i, framerate=25)
+            return_dict[path.split("/")[-1] + '_' + i[:-4]] = {'preprocessed_video': preprocessed_video,
+                                                               'preprocessed_label': preprocessed_label}
+
+if __name__ == '__main__':
+    preprocessing(save_root_path="/media/hdd1/yj/dataset2/",
+                      model_name="MetaPhysNet",
+                      data_root_path="/media/hdd1/",
+                      dataset_name="cohface",
+                      train_ratio=0.8)

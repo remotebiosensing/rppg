@@ -1,5 +1,8 @@
 import numpy as np
 import h5py
+import POS.pos as pos
+import scipy.signal
+import xml.etree.ElementTree as ET
 
 def Deepphys_preprocess_Label(path):
     '''
@@ -62,3 +65,49 @@ def cohface_Label(path, frame_total):
     delta_pulse = delta_label.copy()  # 이거 왜 있지?
 
     return delta_pulse
+
+def PhysNet_cohface_Label(path, frame_total):
+    f = h5py.File(path, "r")
+    label = list(f['pulse'])
+    f.close()
+    label = np.interp(np.arange(0, frame_total+1),
+                      np.linspace(0, frame_total+1, num=len(label)),
+                      label)
+
+    split_raw_label = np.zeros(((len(label) // 32), 32))
+    index = 0
+    for i in range(len(label) // 32):
+        split_raw_label[i] = label[index:index + 32]
+        index = index + 32
+
+    return split_raw_label
+
+def LGGI_Label(path, frame_total):
+    doc = ET.parse(path)
+    root = doc.getroot()
+    label = []
+
+    for value in root:
+        label.append(int(value.findtext('value2')))
+
+    label = np.array(label).astype('float32')
+    label = scipy.signal.resample(label, frame_total)
+
+    split_raw_label = np.zeros(((len(label) // 32), 32))
+    index = 0
+    for i in range(len(label) // 32):
+        split_raw_label[i] = label[index:index + 32]
+        index = index + 32
+    #print(len(split_raw_label))
+    return split_raw_label
+
+def V4V_Label(video, framerate):
+    label = pos.PPOS(video, framerate)
+
+    split_raw_label = np.zeros(((len(label) // 32), 32))
+    index = 0
+    for i in range(len(label) // 32):
+        split_raw_label[i] = label[index:index + 32]
+        index = index + 32
+
+    return split_raw_label
