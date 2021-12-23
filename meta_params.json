@@ -11,7 +11,7 @@
     {
         "save_root_path": "/media/hdd1/yj/dataset2/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "LGGI",
+        "dataset_name": "V4V",
         "checkpoint_path" : "/media/hdd1/yj/checkpoint/",
         "train_ratio": 0.9,
         "train_ratio_comment" : "generate train dataset using train_ratio",
@@ -64,13 +64,14 @@
     },
     "model_params":
     {
-        "name": "MetaPhysNet",
+        "name": "MMAML_Phys",
         "name_comment":
                 [
                     "DeepPhys",
                     "PhysNet",
                     "MetaPhys",
-                    "MetaPhysNet"
+                    "MetaPhysNet",
+                    "MMAML_Phys"
                 ]
     }
 }

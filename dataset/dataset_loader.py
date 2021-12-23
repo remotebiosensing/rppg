@@ -23,6 +23,9 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     :param option:[train, test]
     :return: dataset
     '''
+    if model_name == "MMAML_Phys":
+        model_name = "MetaPhysNet"
+
     hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
 
     if model_name in ["DeepPhys", "MTTS"]:
@@ -117,8 +120,8 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
 
         dataset = MetaPhysDataset(num_shots,
                                   num_test_shots,
-                                  video_data=np.asarray(video_data[:]), # 너무 많을 때  개수 제한
-                                  label_data=np.asarray(label_data[:]),
+                                  video_data=np.asarray(video_data[:60]), # 너무 많을 때  개수 제한
+                                  label_data=np.asarray(label_data[:60]),
 
                                   option=option,
                                   unsupervised= unsupervised,

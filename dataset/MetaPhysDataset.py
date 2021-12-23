@@ -88,8 +88,8 @@ class PersonTask(Task):
         label_data = torch.tensor(self.label[index], dtype=torch.float32)
 
         if torch.cuda.is_available():
-            video_data = video_data.to('cuda:9')
-            label_data = label_data.to('cuda:9')
+            video_data = video_data.to('cuda')
+            label_data = label_data.to('cuda')
 
         return video_data, label_data
 

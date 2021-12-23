@@ -33,10 +33,51 @@ with open('meta_params.json') as f:
     model_params = jsonObject.get("model_params")
     meta_params = jsonObject.get("meta_params")
 #
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]= "4,9"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print('Device:', device)  # 출력결과: cuda
+print('Count of using GPUs:', torch.cuda.device_count())   #출력결과: 2 (2, 3 두개 사용하므로)
+print('Current cuda device:', torch.cuda.current_device())
 """
 Check Model Support
 """
 is_model_support(model_params["name"], model_params["name_comment"])
+'''
+Setting Learning Model
+'''
+if __TIME__:
+    start_time = time.time()
+model = get_model(model_params["name"])
+if meta_params["pre_trained"] == 1:
+    print('Using pre-trained on all ALL AFRL!')
+    model.load_state_dict(torch.load('./checkpoints/AFRL_pretrained/meta_pretrained_all_AFRL.pth'))
+else:
+    print('Not using any pretrained models')
+
+model = model.cuda()
+model = nn.DataParallel(model).to(device)
+
+'''
+if torch.cuda.is_available():
+    # os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3, 4, 5, 6, 7, 8, 9'
+    # TODO: implement parallel training
+    # if options["parallel_criterion"] :
+    #     print(options["parallel_criterion_comment"])
+    #     model = DataParallelModel(model, device_ids=[0, 1, 2])
+    # else:
+    #     model = DataParallel(model, output_device=0)
+    device = torch.device('cuda:9')
+    model.to(device=device)
+else:
+    model = model.to('cpu')
+'''
+
+if __MODEL_SUMMARY__:
+    summary(model,model_params["name"])
+
+if __TIME__:
+    log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
 Generate preprocessed data hpy file 
 '''
@@ -110,37 +151,6 @@ else:
                              shuffle=params["test_shuffle"])
 if __TIME__:
     log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
-'''
-Setting Learning Model
-'''
-if __TIME__:
-    start_time = time.time()
-model = get_model(model_params["name"])
-
-if meta_params["pre_trained"] == 1:
-    print('Using pre-trained on all ALL AFRL!')
-    model.load_state_dict(torch.load('./checkpoints/AFRL_pretrained/meta_pretrained_all_AFRL.pth'))
-else:
-    print('Not using any pretrained models')
-
-if torch.cuda.is_available():
-    # os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3, 4, 5, 6, 7, 8, 9'
-    # TODO: implement parallel training
-    # if options["parallel_criterion"] :
-    #     print(options["parallel_criterion_comment"])
-    #     model = DataParallelModel(model, device_ids=[0, 1, 2])
-    # else:
-    #     model = DataParallel(model, output_device=0)
-    device = torch.device('cuda:9')
-    model.to(device=device)
-else:
-    model = model.to('cpu')
-
-if __MODEL_SUMMARY__:
-    summary(model,model_params["name"])
-
-if __TIME__:
-    log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Setting Loss Function
@@ -163,8 +173,8 @@ Setting Optimizer
 '''
 if __TIME__:
     start_time = time.time()
-optimizer = optimizers(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
-scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
+#optimizer = optimizers(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
+#scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 if __TIME__:
     log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
