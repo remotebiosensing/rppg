@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from face_recognition import face_locations, face_landmarks
 from skimage.util import img_as_float
-import mediapipe as mp
+#import mediapipe as mp
 
 
 def Deepphys_preprocess_Video(path, flag):
@@ -73,8 +73,7 @@ def PhysNet_preprocess_Video(path, flag):
                 rst, crop_frame = faceDetection(frame)
                 if not rst:  # can't detect face
                     return False, None
-            if flag == 2:
-
+            elif flag == 2:
                 f, dot = crop_mediapipe(detector,frame)
                 view,remove = make_mask(dot)
                 crop_frame = generate_maks(f,view,remove)
@@ -196,7 +195,7 @@ def faceDetection(frame):
 
     if len(face_location) == 0:  # cant detect face
         print('cant detect face')
-        if locat == ():
+        if locat == (): # 기존 frame
             dst = resized_frame[resized_frame.shape[0] // 4: resized_frame.shape[0] // 4 * 3,
                   resized_frame.shape[1] // 4:resized_frame.shape[1] // 4 * 3]
         else:
@@ -403,4 +402,4 @@ def generate_maks(src, view,remove):
     return rst
 
 if __name__ == '__main__':
-    PhysNet_preprocess_Video('/media/hdd1/LGGI/alex/alex_gym/cv_camera_sensor_stream_handler.avi',1)
+    PhysNet_preprocess_Video('/media/hdd1/UBFC/subject20/vid.avi',1)

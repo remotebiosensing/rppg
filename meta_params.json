@@ -4,20 +4,21 @@
     "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
-        "parallel_criterion_comment" : "TODO need to verification"
+        "parallel_criterion_comment" : "TODO need to verification",
+        "set_gpu_device" : "9"
     },
     "params":
     {
-        "save_root_path": "/media/hdd1/yj/dataset/",
+        "save_root_path": "/media/hdd1/yj/dataset2/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "cohface",
+        "dataset_name": "LGGI",
         "checkpoint_path" : "/media/hdd1/yj/checkpoint/",
         "train_ratio": 0.9,
         "train_ratio_comment" : "generate train dataset using train_ratio",
-        "validation_ratio": 0.5,
+        "validation_ratio": 0.6,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
         "train_batch_size" : 1,
-        "train_shuffle" : 1,
+        "train_shuffle" : 0,
         "test_batch_size" : 1,
         "test_shuffle" : 0
     },
@@ -39,8 +40,8 @@
                     "adam","sgd","rms_prop","ada_delta","ada_grad","ada_max",
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam"
                 ],
-        "learning_rate": 0.001,
-        "inner_learning_rate" : 0.01,
+        "learning_rate": 0.003,
+        "inner_learning_rate" : 0.05,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001",
@@ -50,26 +51,26 @@
     },
     "meta_params":
     {
-        "num_shots" : 2,
-        "num_test_shots" : 2,
+        "num_shots" : 1,
+        "num_test_shots" : 1,
         "fs" : 30,
         "fs_comment" : "sampling rate of dataset",
         "unsupervised" : 0,
         "pre_trained" : 0,
         "pre_trained_comment" : "pretrained or not",
-        "inner_loss" : "mse",
-        "outer_loss" : "mse",
+        "inner_loss" : "neg_pearson",
+        "outer_loss" : "neg_pearson",
         "num_adapt_steps" : 1
     },
     "model_params":
     {
-        "name": "MetaPhys_task",
+        "name": "MetaPhysNet",
         "name_comment":
                 [
                     "DeepPhys",
                     "PhysNet",
                     "MetaPhys",
-                    "MetaPhys_task"
+                    "MetaPhysNet"
                 ]
     }
 }

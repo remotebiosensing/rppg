@@ -111,7 +111,7 @@ def preprocess_Dataset(path, flag, model_name, dataset_name, return_dict):
         elif model_name == "PPNet":    # Sequence data based
             ppg, sbp, dbp, hr  = PPNet_preprocess_Mat(path)
 
-        if model_name in ["DeepPhys","MTTS","PhysNet","PhysNet_LSTM","MetaPhys","MetaPhysNet"]:  # can't detect face
+        if model_name in ["DeepPhys","MTTS","PhysNet","PhysNet_LSTM"]:  # can't detect face
             if not rst:
                 return
 
