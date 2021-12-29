@@ -45,7 +45,7 @@ def Deepphys_preprocess_Video(path, flag):
 
     return True, raw_video
 
-
+locat = ()
 def PhysNet_preprocess_Video(path, flag):
     '''
     :param path: dataset path
@@ -58,6 +58,9 @@ def PhysNet_preprocess_Video(path, flag):
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     raw_video = np.empty((frame_total, 128, 128, 3))
     j = 0
+
+    global locat
+    locat = ((),)
 
     detector = None
 
@@ -173,7 +176,6 @@ def faceLandmarks(frame):
 
     return True, dst, mask
 
-locat = ()
 def faceDetection(frame):
     '''
     :param frame: one frame
@@ -195,7 +197,7 @@ def faceDetection(frame):
 
     if len(face_location) == 0:  # cant detect face
         print('cant detect face')
-        if locat == (): # 기존 frame
+        if len(locat[0]) != 4: # 기존 frame
             dst = resized_frame[resized_frame.shape[0] // 4: resized_frame.shape[0] // 4 * 3,
                   resized_frame.shape[1] // 4:resized_frame.shape[1] // 4 * 3]
         else:

@@ -3,6 +3,7 @@ import h5py
 import POS.pos as pos
 import scipy.signal
 import xml.etree.ElementTree as ET
+import pandas as pd
 
 def Deepphys_preprocess_Label(path):
     '''
@@ -110,4 +111,18 @@ def V4V_Label(video, framerate):
         split_raw_label[i] = label[index:index + 32]
         index = index + 32
 
+    return split_raw_label
+
+def VIPL_Label(path, frame_total):
+    f = pd.read_csv(path)
+    label = f['Wave']
+    label = np.array(label).astype('float32')
+    label = scipy.signal.resample(label, frame_total)
+
+    split_raw_label = np.zeros(((len(label) // 32), 32))
+    index = 0
+    for i in range(len(label) // 32):
+        split_raw_label[i] = label[index:index + 32]
+        index = index + 32
+    #print(split_raw_label.shape)
     return split_raw_label

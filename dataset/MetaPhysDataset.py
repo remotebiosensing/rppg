@@ -35,7 +35,7 @@ class MetaPhysDataset(MetaDataset):
         vi = []
         la = []
 
-        data_len = len(self.label[index]) // 2  # 1개의 데이터를 self.num_samples_per_task 로
+        data_len = len(self.label[index]) // 2  # support set 1 + query set 1
         for i in range(2):
             vi.append(self.video_data[index][data_len * i:data_len * (i + 1)])
             la.append(self.label[index][data_len * i:data_len * (i + 1)])

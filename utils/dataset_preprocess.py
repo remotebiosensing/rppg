@@ -4,8 +4,8 @@ import os
 import h5py
 
 from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video#, RTNet_preprocess_Video
-from utils.seq_preprocess import PPNet_preprocess_Mat
-from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, cohface_Label, PhysNet_cohface_Label, LGGI_Label, V4V_Label
+#from utils.seq_preprocess import PPNet_preprocess_Mat
+from utils.text_preprocess import *
 
 
 def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
@@ -37,6 +37,9 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     elif dataset_name == "V4V":
         dataset_root_path = data_root_path + dataset_name + '/train_val/Videos'
         data_list = ["train",'valid']
+    elif dataset_name == "VIPL_HR":
+        dataset_root_path = data_root_path + dataset_name + '/data'
+        data_list = [data for data in os.listdir(dataset_root_path)] #p1-p107
 
     process = []
 
@@ -153,10 +156,20 @@ def preprocess_Dataset(path, flag, model_name, dataset_name, return_dict):
             preprocessed_label = V4V_Label(path + '/' + i, framerate=25)
             return_dict[path.split("/")[-1] + '_' + i[:-4]] = {'preprocessed_video': preprocessed_video,
                                                                'preprocessed_label': preprocessed_label}
+    elif dataset_name == 'VIPL_HR':
+        for v in os.listdir(path):
+            for source in os.listdir(path + '/' + v):
+                if source != 'source4':
+                    rst, preprocessed_video = PhysNet_preprocess_Video(path + '/' + v + '/' + source + '/video.avi', flag=1)
+                    preprocessed_label = VIPL_Label(path + '/' + v + '/' + source + '/wave.csv',
+                                                    preprocessed_video.shape[0] * preprocessed_video.shape[1])
+                    return_dict[path[-3:] + '_' + v + '_' + source] = {'preprocessed_video': preprocessed_video,
+                                                                       'preprocessed_label': preprocessed_label}
+
 
 if __name__ == '__main__':
     preprocessing(save_root_path="/media/hdd1/yj/dataset2/",
                       model_name="MetaPhysNet",
                       data_root_path="/media/hdd1/",
-                      dataset_name="cohface",
+                      dataset_name="VIPL_HR",
                       train_ratio=0.8)
