@@ -34,7 +34,7 @@
     },
     "hyper_params":
     {
-        "loss_fn": "poisson_nll",
+        "loss_fn": "neg_pearson",
         "loss_fn_comment":
                [
                    "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",

@@ -12,7 +12,9 @@ import h5py
 
 import json
 
-print(tf.__version__)
+import os
+
+
 backend.set_image_data_format('channels_first')
 class AdaptivePooling3D(tf.keras.layers.Layer):
     """Parent class for 3D pooling layers with adaptive kernel size.
@@ -107,18 +109,19 @@ def neg_Pearson_Loss(predictions, targets):
     print(predictions,targets)
     rst = 0
     # Pearson correlation can be performed on the premise of normalization of input data
-    predictions = (predictions - tf.math.reduce_mean(predictions)) / tf.math.reduce_std(predictions)
-    targets = (targets - tf.math.reduce_mean(targets)) / tf.math.reduce_std(targets)
 
-    for i in range(1):
-        sum_x = tf.math.reduce_sum(predictions[i])  # x
-        sum_y = tf.math.reduce_sum(targets[i])  # y
-        sum_xy = tf.math.reduce_sum(predictions[i] * targets[i])  # xy
-        sum_x2 = tf.math.reduce_sum(tf.math.pow(predictions[i], 2))  # x^2
-        sum_y2 = tf.math.reduce_sum(tf.math.pow(targets[i], 2))  # y^2
+    predictions = (predictions - tf.math.reduce_mean(predictions)) / tf.math.reduce_std(predictions)
+    targets = (targets -tf.math.reduce_mean(targets)) / tf.math.reduce_std(targets)
+    print(predictions)
+    for i in range(predictions.shape[0]):
+        sum_x = tf.reduce_sum(predictions[i])  # x
+        sum_y = tf.reduce_sum(targets[i])  # y
+        sum_xy = tf.reduce_sum(predictions[i] * targets[i])  # xy
+        sum_x2 = tf.reduce_sum(tf.pow(predictions[i], 2))  # x^2
+        sum_y2 = tf.reduce_sum(tf.pow(targets[i], 2))  # y^2
         N = predictions.shape[1]
         pearson = (N * sum_xy - sum_x * sum_y) / (
-            tf.math.sqrt((N * sum_x2 - tf.math.pow(sum_x, 2)) * (N * sum_y2 - tf.math.pow(sum_y, 2))))
+            tf.sqrt((N * sum_x2 - tf.pow(sum_x, 2)) * (N * sum_y2 - tf.pow(sum_y, 2))))
 
         rst += 1 - pearson
 
@@ -246,23 +249,24 @@ class Model(tf.Module):
             tf.keras.layers.Conv3D(1,kernel_size=(1,1,1),strides=(1,1,1),padding='same')
         ])
 
-        self.model.compile( optimizer='adam', loss=neg_Pearson_Loss )
+        self.model.compile( optimizer='adam', loss=tf.keras.losses.mean_absolute_error )
+
 
         @tf.function(input_signature=[
-            tf.TensorSpec([None, 32, 128, 128, 3], tf.float32),
+            tf.TensorSpec([None, 3, 32, 128, 128], tf.float32),
             tf.TensorSpec([None, 1], tf.float32),
         ])
         def train(self, x, y):
             with tf.GradientTape() as tape:
                 predictions = self.model(x)
-                loss = self.model.loss(y, predictions)
+                loss = self.model.loss(predictions, y)
             gradients = tape.gradient(loss, self.model.trainable_variables)
             self.model.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
             result = {"loss":loss}
             return result
 
         @tf.function(input_signature=[
-            tf.TensorSpec([None,32,128,128,3], tf.float32),
+            tf.TensorSpec([None,3,32,128,128], tf.float32),
         ])
         def infer(self, x):
             output = self.model(x)
@@ -304,10 +308,17 @@ class DataLoader(Sequence):
 
 		# batch 단위로 직접 묶어줘야 함
     def __getitem__(self, idx):
-				# sampler의 역할(index를 batch_size만큼 sampling해줌)
+		# sampler의 역할(index를 batch_size만큼 sampling해줌)
         indices = self.indices[idx*self.batch_size:(idx+1)*self.batch_size]
-
-        batch_x = [self.x[i] for i in indices]
+        # video_data = np.transpose(self.x[idx],(3,0,1,2))
+        # label_data =self.y[idx]
+        # return np.array(video_data), np.array(label_data)
+        #
+        #
+        #
+        #
+        #
+        batch_x = [np.transpose(self.x[i],(3,0,1,2)) for i in indices]
         batch_y = [self.y[i] for i in indices]
 
         return np.array(batch_x), np.array(batch_y)
@@ -332,14 +343,14 @@ for key in hpy_file.keys():
      label_data.extend(hpy_file[key]['preprocessed_label'])
 hpy_file.close()
 
-train_loader = DataLoader(video_data,label_data,128)
-valid_loader = DataLoader(video_data,label_data,128)
-test_loader = DataLoader(video_data,label_data,128)
+train_loader = DataLoader(video_data,label_data,32)
+valid_loader = DataLoader(video_data,label_data,32)
+test_loader = DataLoader(video_data,label_data,32)
 
 # trian
 model = Model()
-# model.model.build(input_shape=(1,32,128,128,3))
-# model.model.summary()
+model.model.build(input_shape=(128,32,128,128,3))
+model.model.summary()
 model.model.fit(train_loader, validation_data=valid_loader, epochs=10,
 					workers=4)# multi로 처리할 개수
 model.evaluate(test_loader)
