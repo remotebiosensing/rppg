@@ -4,8 +4,8 @@ import numpy as np
 from dataset.DeepPhysDataset import DeepPhysDataset
 from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
-
-
+from dataset.GCNDataset import GCNDataset
+from utils.funcs import load_list_of_dicts
 def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                    model_name: str = "DeepPhys",
                    dataset_name: str = "UBFC",
@@ -18,6 +18,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     :return: dataset
     '''
     hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
+    graph_file = save_root_path + model_name + "_" + dataset_name + "_" + option + ".pkl"
 
     if model_name in ["DeepPhys", "MTTS"]:
         appearance_data = []
@@ -76,5 +77,19 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = PPNetDataset(face_data=np.asarray(face_data),
                                mask_data=np.asarray(mask_data),
                                target=np.asarray(target_data))
+    elif model_name in ["GCN"]:
+        # video_data = []
+        label_data = []
+        for key in hpy_file.keys():
+            # video_data.extend(hpy_file[key]['preprocessed_video'])
+            label_data.extend(hpy_file[key]['preprocessed_label'])
+        hpy_file.close()
+        print("load_list_of_dicts")
+        graphs = load_list_of_dicts(graph_file)
+
+        dataset = GCNDataset(
+            # video_data=np.asarray(video_data),
+                                        graph_data=np.asarray(graphs),
+                                         label_data=np.asarray(label_data))
 
     return dataset

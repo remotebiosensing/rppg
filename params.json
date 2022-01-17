@@ -1,11 +1,11 @@
 {
     "__TIME__" : 1,
-    "__PREPROCESSING__" : 1,
-    "__MODEL_SUMMARY__" : 0,
+    "__PREPROCESSING__" : 0,
+    "__MODEL_SUMMARY__" : 1,
     "options":{
         "parallel_criterion" : 1,
         "parallel_criterion_comment" : "TODO need to verification",
-        "set_gpu_device" : "4"
+        "set_gpu_device" : "5"
     },
     "params":
     {
@@ -34,7 +34,7 @@
     },
     "hyper_params":
     {
-        "loss_fn": "mse",
+        "loss_fn": "poisson_nll",
         "loss_fn_comment":
                [
                    "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
@@ -51,7 +51,7 @@
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam",
                     "PPNET : adam"
                 ],
-        "learning_rate": 0.001,
+        "learning_rate": 0.01,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001",
@@ -65,14 +65,15 @@
     },
     "model_params":
     {
-        "name": "RTNet",
+        "name": "PhysNet",
         "name_comment":
                 [
                     "DeepPhys",
                     "PhysNet",
                     "PhysNet_LSTM",
                     "PPNet",
-                    "RTNet"
+                    "RTNet",
+                    "GCN"
                 ]
     }
 }

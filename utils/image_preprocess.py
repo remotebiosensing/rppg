@@ -1,10 +1,18 @@
+import multiprocessing
+
+import networkx as nx
+from networkx.readwrite import json_graph
 import cv2
 import numpy as np
 from tqdm import tqdm
 from face_recognition import face_locations, face_landmarks
 from skimage.util import img_as_float
 import mediapipe as mp
-
+from skimage.segmentation import slic
+from skimage.future import graph
+from skimage import color,segmentation
+from utils.funcs import _weight_mean_color, merge_mean_color,weight_boundary,merge_boundary
+from test import plot_graph_from_image,get_graph_from_image
 
 def Deepphys_preprocess_Video(path, flag):
     '''
@@ -57,6 +65,8 @@ def PhysNet_preprocess_Video(path, flag):
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     raw_video = np.empty((frame_total, 128, 128, 3))
+
+
     j = 0
 
     detector = None
@@ -74,10 +84,15 @@ def PhysNet_preprocess_Video(path, flag):
                 if not rst:  # can't detect face
                     return False, None
             if flag == 2:
-
                 f, dot = crop_mediapipe(detector,frame)
+                #bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
+                bin_mask = '0011000000000000000100000001001'
                 view,remove = make_mask(dot)
                 crop_frame = generate_maks(f,view,remove)
+
+                _, dot = detector.findFaceMesh(f)
+
+
             else:
                 crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
@@ -137,6 +152,73 @@ def RTNet_preprocess_Video(path, flag):
 
     return True, preprocessed_video
 
+
+def GCN_preprocess_Video(path, flag):
+    '''
+       :param path: dataset path
+       :param flag: face detect flag
+       :return:
+       '''
+    cap = cv2.VideoCapture(path)
+    frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    raw_video = np.empty((frame_total, 128, 128, 3))
+    e_count = np.zeros((frame_total),dtype=int)
+    v_count = np.zeros((frame_total),dtype=int)
+
+    j = 0
+
+    detector = None
+
+    if flag == 2:
+        detector = FaceMeshDetector(maxFaces=2)
+
+    graph = []
+
+    with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+        while cap.isOpened():
+            ret, frame = cap.read()
+
+            if frame is None:
+                break
+            if flag == 1:
+                rst, crop_frame = faceDetection(frame)
+                if not rst:  # can't detect face
+                    return False, None
+            if flag == 2:
+                f, dot = crop_mediapipe(detector, frame)
+                # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
+                bin_mask = '0011000000000000000100000001001'
+                view, remove = make_mask(dot)
+                crop_frame = generate_maks(f, view, remove)
+                _, _, G = get_graph_from_image(crop_frame)
+                graph.append(G)
+                _, dot = detector.findFaceMesh(f)
+
+
+            else:
+                crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+
+            crop_frame = cv2.resize(crop_frame, dsize=(128, 128), interpolation=cv2.INTER_AREA)
+            crop_frame = generate_Floatimage(crop_frame)
+
+            raw_video[j] = crop_frame
+            j += 1
+            pbar.update(1)
+        cap.release()
+
+    split_raw_video = np.zeros(((frame_total // 32), 32, 128, 128, 3))
+
+    saved_graph =[]
+
+    index = 0
+    for x in range(frame_total // 32):
+        split_raw_video[x] = raw_video[index:index + 32]
+        saved_graph.append(graph[x:x+32])
+        index = index + 32
+
+    return True, split_raw_video,saved_graph
 def faceLandmarks(frame):
     '''
     :param frame: one frame
@@ -173,7 +255,6 @@ def faceLandmarks(frame):
     # test = cv2.bitwise_and(dst,dst,mask=mask)
 
     return True, dst, mask
-
 def faceDetection(frame):
     '''
     :param frame: one frame
@@ -186,8 +267,6 @@ def faceDetection(frame):
     top, right, bottom, left = face_location[0]
     dst = resized_frame[top:bottom, left:right]
     return True, dst
-
-
 def generate_Floatimage(frame):
     '''
     :param frame: roi frame
@@ -199,8 +278,6 @@ def generate_Floatimage(frame):
     dst[dst > 1] = 1
     dst[dst < 0] = 0
     return dst
-
-
 def generate_MotionDifference(prev_frame, crop_frame):
     '''
     :param prev_frame: previous frame
@@ -213,16 +290,12 @@ def generate_MotionDifference(prev_frame, crop_frame):
     # motion_input = motion_input / np.std(motion_input)
     # TODO : do not divide each D frame, modify divide whole video's unit standard deviation
     return motion_input
-
-
 def normalize_Image(frame):
     '''
     :param frame: image
     :return: normalized_frame
     '''
     return frame / np.std(frame)
-
-
 def preprocess_Image(prev_frame, crop_frame):
     '''
     :param prev_frame: previous frame
@@ -230,21 +303,15 @@ def preprocess_Image(prev_frame, crop_frame):
     :return: motion_differnceframe, normalized_frame
     '''
     return generate_MotionDifference(prev_frame, crop_frame), normalize_Image(prev_frame)
-
-
 def ci99(motion_diff):
     max99 = np.mean(motion_diff) + (2.58 * (np.std(motion_diff) / np.sqrt(len(motion_diff))))
     min99 = np.mean(motion_diff) - (2.58 * (np.std(motion_diff) / np.sqrt(len(motion_diff))))
     motion_diff[motion_diff > max99] = max99
     motion_diff[motion_diff < min99] = min99
     return motion_diff
-
-
 def video_normalize(channel):
     channel /= np.std(channel)
     return channel
-
-
 class FaceMeshDetector:
 
     def __init__(self, staticMode=False, maxFaces=2, minDetectionCon=0.5, minTrackCon=0.5):
@@ -285,11 +352,8 @@ class FaceMeshDetector:
                     face.append([x, y])
                 faces.append(face)
         return img, faces
-
-
 def avg(a, b):
     return [(int)((x + y) / 2) for x, y in zip(a, b)]
-
 def crop_mediapipe(detector,frame):
     _, dot = detector.findFaceMesh(frame)
     if len(dot) > 0:
@@ -306,7 +370,229 @@ def crop_mediapipe(detector,frame):
         f = frame[y_center - w_2 - 10:y_center + w_2 +10, x_center - w_2 -10 :x_center + w_2 + 10]
         _, dot = detector.findFaceMesh(f)
         return f, dot[0]
+def make_specific_mask( bin_mask, dot):
+    '''
+    :param num:
+    0 :  lower_cheek_left,          1 :  lower_cheek_right,          2 :  Malar_left
+    3 :  Malar_right,               4 :  Marionette_Fold_left        5 :  Marionette_Fold_right
+    6 :  chine                      7 :  Nasolabial_Fold_left        8 :  Nasolabial_Fold_right
+    9 :  Lower_NasaL_Sidewall       10:  Upper_Lip_left              11:  Upper_Lip_right
+    12:  Philtrum                   13:  Nasal_Tip                   14:  Lower_Nasal_Dorsum
+    15: Lower_Nasal_Sidewall_left   16:  Lower_Nasal_Sidewall_right  17:  Mid_Nasal_Sidewall_left
+    18: Mid_Nasal_Sidewall_right    19:  Upper_Nasal_Dorsum          20:  Glabella
+    21: Lower_Lateral_Forehead_left 22: Lower_Lateral_Forehead_right 23: temporal_lobe_left
+    24: temporal_lobe_right         25: eye_left                     26: eye_right
+    27: Lower_Medial_Forehead       28: Upper_Lateral_Forehead_left  29: Upper_Lateral_Forehead_right
+    30: Upper_Medial_Forehead
+    :param dot:
+    :return:
+    '''
+    mask_list = []
+    for (idx, bin) in enumerate(bin_mask):
+        if bin == '1':
+            if idx == 0:  # lower_cheek_left
+                mask_list.append(np.array(
+                    [avg(dot[132], dot[123]), dot[132], dot[215], dot[172], dot[136],
+                     dot[169], dot[210], avg(dot[212], dot[202]), dot[57],
+                     avg(dot[61], dot[186]),
+                     dot[92], dot[206], dot[205], avg(dot[50], dot[147])]
+                ))
+            elif idx == 1:
+                mask_list.append(np.array(
+                    [avg(dot[361], dot[352]), dot[361], dot[435], dot[397], dot[365],
+                     dot[394], dot[430], avg(dot[273], dot[287]), dot[287],
+                     avg(dot[391], dot[410]),
+                     dot[322], dot[426], dot[425], avg(dot[411], dot[280])]))
+            elif idx == 2:
+                mask_list.append(np.array(
+                    [avg(dot[116], dot[93]), dot[116], dot[117], dot[118], dot[100],
+                     avg(dot[126], dot[142]),
+                     avg(dot[209], dot[142]), dot[49], dot[203], dot[205], dot[123]]
+                ))
+            elif idx == 3:
+                mask_list.append(
+                    np.array([avg(dot[345], dot[323]), dot[345], dot[346], dot[347], dot[329],
+                              avg(dot[420], dot[371]),
+                              avg(dot[371], dot[360]), dot[429], dot[423], dot[425], dot[352]]))
+            elif idx == 4:
+                mask_list.append(np.array(
+                    [dot[61], dot[43], dot[204], dot[32], dot[171], dot[148], dot[176],
+                     dot[149],
+                     dot[150],
+                     dot[169], dot[210], avg(dot[212], dot[202]),
+                     avg(dot[57], avg(dot[57], dot[43]))]))
+            elif idx == 5:
+                mask_list.append( np.array(
+            [dot[291], dot[273], dot[424], dot[262], dot[396], dot[377], dot[400], dot[378],
+             dot[379],
+             dot[394], dot[430], avg(dot[432], dot[422]),
+             avg(dot[287], avg(dot[287], dot[273]))]))
+            elif idx==6:
+                mask_list.append(np.array(
+            [dot[204], avg(dot[106], dot[91]), avg(dot[182], dot[181]), avg(dot[83], dot[84]),
+             avg(dot[18], dot[17]), avg(dot[314], dot[313]), avg(dot[405], dot[406]),
+             avg(dot[321], dot[335]), dot[424], dot[262], dot[396], dot[377], dot[152],
+             dot[148],
+             dot[171], dot[32]]))
+            elif idx == 7:
+                mask_list.append( np.array(
+            [dot[61],dot[92],avg(dot[206],dot[203]),dot[102],dot[48],dot[64],dot[98],dot[60],dot[165]]))
+            elif idx == 8:
+                mask_list.append(np.array(
+            [dot[291], dot[322], avg(dot[426],dot[423]), dot[331],dot[294],dot[327],dot[290],dot[391]]))
+            elif idx == 9:
+                mask_list.append(np.array(
+            [dot[240], dot[64], dot[48], dot[131], avg(dot[134], avg(dot[134], dot[220])),
+             dot[45], avg(dot[4], avg(dot[4], dot[1])),
+             dot[275], avg(dot[363], avg(dot[363], dot[440])), dot[360], dot[278], dot[294],
+             dot[460], dot[305], dot[309], dot[438],
+             avg(dot[457], dot[275]), avg(dot[274], dot[275]), dot[274],
+             dot[458], dot[461], dot[462], dot[370],
+             dot[94], dot[141],
+             dot[242], dot[241], dot[238], dot[44],
+             avg(dot[45], dot[44]),
+             avg(dot[218], dot[45]), dot[218], dot[79], dot[75]]))
+            elif idx == 10:
+                mask_list.append(np.array(
+            [dot[60], dot[165], dot[61], dot[40], dot[39], dot[37], dot[97], dot[99]]))
+            elif idx == 11:
+                mask_list.append(np.array(
+            [dot[290], dot[391], dot[291], dot[270], dot[269], dot[267], dot[326],
+             dot[328]]))
+            elif idx == 12:
+                mask_list.append(np.array(
+            [dot[2], avg(dot[242], dot[97]), avg(dot[37], avg(dot[242], dot[37])), dot[0],
+             avg(dot[267], avg(dot[267], dot[462])), avg(dot[462], dot[326])]))
+            elif idx == 13:
+                mask_list.append(np.array([dot[4], avg(dot[45], avg(dot[45], dot[51])), dot[134],
+                              dot[51], dot[5], dot[281], dot[363],
+                              avg(dot[275], avg(dot[275], dot[281]))]))
+            elif idx == 14:
+                mask_list.append( np.array(
+            [dot[195], dot[248], dot[456], avg(dot[281], avg(dot[281], dot[248]))
+                , dot[5], avg(dot[51], avg(dot[51], dot[3])), dot[236], dot[3]]))
+            elif idx == 15:
+                mask_list.append(
+                    np.array([dot[236], avg(dot[236], dot[134]),
+                              avg(dot[198], dot[131]), avg(dot[126], dot[209]),
+                              avg(dot[217], dot[198])])
+                )
+            elif idx == 16:
+                mask_list.append(
+                    np.array([dot[456], avg(dot[456], dot[363]),
+                              avg(dot[420], dot[360]), avg(dot[355], dot[429]),
+                              avg(dot[437], dot[420])])
+                )
+            elif idx == 17:
+                mask_list.append(
+                    np.array([dot[196], avg(dot[114], dot[217]), dot[236]])
+                )
+            elif idx == 18:
+                mask_list.append(
+                    np.array([dot[419], avg(dot[343], dot[437]), dot[456]])
+                )
+            elif idx == 19:
+                mask_list.append(
+                    np.array(
+                        [avg(dot[114], dot[196]), dot[197], avg(dot[343], dot[419]), dot[351],
+                         dot[417],
+                         dot[285], dot[8],
+                         dot[55], dot[193], dot[122]])
+                )
+            elif idx == 20:
+                mask_list.append(
+                    np.array(
+                        [avg(dot[55], avg(dot[55], dot[8])), dot[8],
+                         avg(dot[285], avg(dot[8], dot[285])),
+                         dot[336],
+                         avg(dot[337], avg(dot[337], dot[336])),
+                         avg(dot[151], avg(dot[151], dot[9])),
+                         avg(dot[108], avg(dot[108], dot[107])), dot[107]])
+                )
+            elif idx == 21:
+                mask_list.append(
+                    np.array(
+                        [avg(dot[108], avg(dot[109], dot[69])),
+                         avg(dot[104], avg(dot[68], dot[104])),
+                         dot[105], dot[107]])
+                )
+            elif idx == 22:
+                mask_list.append(
+                    np.array(
+                        [avg(dot[337], avg(dot[338], dot[299])),
+                         avg(dot[333], avg(dot[298], dot[333])),
+                         dot[334], dot[336]])
+                )
+            elif idx == 23:
+                mask_list.append(
+                    np.array(
+                        [avg(dot[54], dot[103]), avg(dot[104], dot[68]), avg(dot[63], dot[105]),
+                         dot[70],
+                         dot[156], dot[143], dot[116], dot[234], dot[127],
+                         dot[162], dot[21]])
+                )
+            elif idx == 24:
+                mask_list.append(
+                    np.array(
+                        [avg(dot[332], dot[284]), avg(dot[298], dot[333]),
+                         avg(dot[334], dot[293]),
+                         dot[300], dot[383], dot[372], dot[345], dot[454], dot[356],
+                         dot[389], dot[251]])
+                )
+            elif idx == 25:
+                mask_list.append(
+                    np.array(
+                        [dot[53], dot[46], dot[156], dot[143], dot[111], dot[117], dot[118],
+                         dot[119],
+                         dot[120], dot[121],
+                         dot[128], dot[245], dot[193], avg(dot[221],dot[55]), avg(dot[222],avg(dot[222],dot[65])), dot[52]])
+                )
+            elif idx == 26:
+                mask_list.append(
+                    np.array(
+                        [dot[283], dot[276], dot[383], dot[372], dot[340], dot[346], dot[347],
+                         dot[348], dot[349], dot[350], dot[357], dot[465], dot[417], dot[441], avg(dot[442],avg(dot[442],dot[295])), avg(dot[285],dot[441]), dot[282]  ]))
+            elif idx == 27:
+                mask_list.append(
+                    np.array(
+                        [
+                            avg(dot[108], avg(dot[108], dot[109])),
+                            avg(dot[151], avg(dot[10], avg(dot[151], avg(dot[151], dot[10])))),
+                            avg(dot[337], avg(dot[337], dot[338])),
+                            avg(dot[337], avg(dot[338], dot[299])),
+                            avg(dot[337], avg(dot[337], dot[336])),
+                            avg(dot[151], avg(dot[151], dot[9])),
+                            avg(dot[108], avg(dot[108], dot[107])),
+                            avg(dot[108], avg(dot[109], dot[69]))
+                        ]
+                    )
+                )
+            elif idx == 28:
+                mask_list.append(
+                    np.array(
+                        [dot[103], dot[67], avg(dot[109], avg(dot[109], dot[67])),
+                         avg(dot[108], avg(dot[108], dot[69])), dot[69], dot[104]])
+                )
+            elif idx == 29:
+                mask_list.append(
+                    np.array(
+                        [dot[332], dot[297], avg(dot[338], avg(dot[338], dot[297])),
+                         avg(dot[337], avg(dot[337], dot[299])), dot[299], dot[333]])
+                )
+            elif idx == 30:
+                mask_list.append(
+                    np.array(
+                        [
+                            avg(dot[108], avg(dot[109], dot[69])),
+                            avg(dot[108], avg(dot[108], dot[109])),
+                            avg(dot[151], avg(dot[10], avg(dot[151], avg(dot[151], dot[10])))),
+                            avg(dot[337], avg(dot[337], dot[338])),
+                            avg(dot[337], avg(dot[338], dot[299])), dot[338], dot[10], dot[109]
+                        ]
+                ))
 
+
+    return mask_list
 def make_mask(  dot):
     view_mask = []
     view_mask.append(np.array(
@@ -362,7 +648,6 @@ def make_mask(  dot):
     ))
 
     return view_mask, remove_mask
-
 def generate_maks(src, view,remove):
     shape = src.shape
     view_mask = np.zeros((shape[0], shape[1], 3), np.uint8)
@@ -375,5 +660,19 @@ def generate_maks(src, view,remove):
     img = cv2.subtract(view_mask,remove_mask)
 
     rst = cv2.bitwise_and(src,img)
+
+    return rst
+def divide_array(data_array, count_array,frame_total):
+    interval = max(count_array)
+    rst = np.empty((frame_total,interval))
+    i = 0
+    cum_sum = 0
+    for count in count_array:
+        data = data_array[cum_sum:cum_sum+count]
+        pad = interval - len(data)
+        data = np.pad(data, (0,pad), 'constant',constant_values=0)
+        rst[i] =data
+        cum_sum += count
+        i += 1
 
     return rst

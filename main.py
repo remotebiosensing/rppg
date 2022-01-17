@@ -35,6 +35,7 @@ is_model_support(model_params["name"], model_params["name_comment"])
 '''
 Generate preprocessed data hpy file 
 '''
+print("preprocessing")
 if __PREPROCESSING__:
     if __TIME__:
         start_time = time.time()
@@ -50,6 +51,7 @@ if __PREPROCESSING__:
 '''
 Load dataset before using Torch DataLoader
 '''
+print("Data Loader")
 if __TIME__:
     start_time = time.time()
 
@@ -75,7 +77,7 @@ test_dataset = dataset_loader(save_root_path=params["save_root_path"],
                               option="test")
 if __TIME__:
     log_info_time("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
-
+print("tr/va/te")
 '''
     Call dataloader for iterate dataset
 '''
@@ -89,6 +91,7 @@ test_loader = DataLoader(test_dataset, batch_size=params["test_batch_size"],
                          shuffle=params["test_shuffle"])
 if __TIME__:
     log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+print("Set Model")
 '''
 Setting Learning Model
 '''
@@ -107,13 +110,14 @@ if torch.cuda.is_available():
     model.cuda()
 else:
     model = model.to('cpu')
-
+print("summary")
 if __MODEL_SUMMARY__:
     summary(model,model_params["name"])
 
 if __TIME__:
     log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
+print("set loss")
 '''
 Setting Loss Function
 '''
@@ -132,6 +136,7 @@ if __TIME__:
 '''
 Setting Optimizer
 '''
+print("set optim")
 if __TIME__:
     start_time = time.time()
 optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])

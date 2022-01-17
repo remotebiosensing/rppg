@@ -3,6 +3,10 @@ import scipy.signal
 from matplotlib import pyplot as plt
 from scipy.signal import butter
 from scipy.sparse import spdiags
+import networkx as nx
+import pickle
+
+from test import load_graph, batch_graphs
 
 
 def detrend(signal, Lambda):
@@ -54,3 +58,126 @@ def plot_graph(start_point, length, target, inference):
 
 def normalize(input_val):
     return (input_val - np.mean(input_val)) / np.std(input_val)
+
+def _weight_mean_color(graph, src, dst, n):
+    """Callback to handle merging nodes by recomputing mean color.
+
+    The method expects that the mean color of `dst` is already computed.
+
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    n : int
+        A neighbor of `src` or `dst` or both.
+
+    Returns
+    -------
+    data : dict
+        A dictionary with the `"weight"` attribute set as the absolute
+        difference of the mean color between node `dst` and `n`.
+    """
+
+    diff = graph.nodes[dst]['mean color'] - graph.nodes[n]['mean color']
+    diff = np.linalg.norm(diff)
+    return {'weight': diff}
+
+
+def merge_mean_color(graph, src, dst):
+    """Callback called before merging two nodes of a mean color distance graph.
+
+    This method computes the mean color of `dst`.
+
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    """
+    graph.nodes[dst]['total color'] += graph.nodes[src]['total color']
+    graph.nodes[dst]['pixel count'] += graph.nodes[src]['pixel count']
+    graph.nodes[dst]['mean color'] = (graph.nodes[dst]['total color'] /
+                                      graph.nodes[dst]['pixel count'])
+def weight_boundary(graph, src, dst, n):
+    """
+    Handle merging of nodes of a region boundary region adjacency graph.
+
+    This function computes the `"weight"` and the count `"count"`
+    attributes of the edge between `n` and the node formed after
+    merging `src` and `dst`.
+
+
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    n : int
+        A neighbor of `src` or `dst` or both.
+
+    Returns
+    -------
+    data : dict
+        A dictionary with the "weight" and "count" attributes to be
+        assigned for the merged node.
+
+    """
+    default = {'weight': 0.0, 'count': 0}
+
+    count_src = graph[src].get(n, default)['count']
+    count_dst = graph[dst].get(n, default)['count']
+
+    weight_src = graph[src].get(n, default)['weight']
+    weight_dst = graph[dst].get(n, default)['weight']
+
+    count = count_src + count_dst
+    return {
+        'count': count,
+        'weight': (count_src * weight_src + count_dst * weight_dst)/count
+    }
+
+
+def merge_boundary(graph, src, dst):
+    """Call back called before merging 2 nodes.
+
+    In this case we don't need to do any computation here.
+    """
+    pass
+
+
+def store_as_list_of_dicts(filename, *graphs):
+    list_of_dicts = graphs# [nx.to_dict_of_dicts(graph) for graph in graphs]
+
+    with open(filename, 'wb') as f:
+        pickle.dump(list_of_dicts, f)
+
+
+def load_list_of_dicts(filename, create_using=nx.Graph):
+    with open(filename, 'rb') as f:
+        list_of_dicts = pickle.load(f)
+
+    # graphs_h = []
+    # graphs_edges = []
+
+    graphs = []
+
+    for tup in list_of_dicts:
+
+        for graph_list in tup:
+            print(str(len(graphs))+"/"+str(len(tup)))
+            batches = []
+            for graph in graph_list:
+                h,edges = load_graph(create_using(graph))
+                batches.append((h,edges))
+                del h,edges
+                # print(str(len(batches))+'/'+str(len(graph_list)))
+            h,adj,src, tft, Msrc, Mtgt, Mgraph = batch_graphs(batches)
+            del batches
+            graphs.append((h,adj,src,tft,Msrc, Mtgt,Mgraph))
+
+
+    return graphs

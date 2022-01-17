@@ -2,10 +2,11 @@ import multiprocessing
 import os
 
 import h5py
-
-from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video
+import numpy as np
+from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video,GCN_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
 from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label
+from utils.funcs import store_as_list_of_dicts,load_list_of_dicts
 
 
 def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
@@ -47,7 +48,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         proc.join()
 
     train = int(len(return_dict.keys()) * train_ratio)  # split dataset
-
+    dt = h5py.special_dtype(vlen=np.float32)
     train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
 
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
@@ -83,6 +84,31 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['dbp'] = return_dict[data_path]['dbp']
             dset['hr'] = return_dict[data_path]['hr']
         test_file.close()
+    elif model_name in ["GCN"]:
+        train_graph_file = save_root_path + model_name + "_"+dataset_name + "_train.pkl"
+        test_graph_file = save_root_path + model_name + "_"+dataset_name + "_test.pkl"
+
+        saved_graph = []
+        for index, data_path in enumerate(return_dict.keys()[:train]):
+            dset = train_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+            saved_graph.extend(return_dict[data_path]['preprocessed_graph'])
+        train_file.close()
+
+        store_as_list_of_dicts(train_graph_file,saved_graph)
+
+        saved_graph = []
+        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[train:]):
+            dset = test_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+            saved_graph.extend(return_dict[data_path]['preprocessed_graph'])
+        test_file.close()
+
+        store_as_list_of_dicts(test_graph_file, saved_graph)
+
 
 
 def preprocess_Dataset(path, flag, model_name, return_dict):
@@ -102,7 +128,8 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
         rst, preprocessed_video = RTNet_preprocess_Video(path + "/vid.avi", flag)
     elif model_name == "PPNet":    # Sequence data based
         ppg, sbp, dbp, hr  = PPNet_preprocess_Mat(path)
-
+    elif model_name == "GCN":
+        rst, preprocessed_video, saved_graph = GCN_preprocess_Video(path + "/vid.avi", flag)
 
     if model_name in ["DeepPhys","MTTS","PhysNet","PhysNet_LSTM"]:  # can't detect face
         if not rst:
@@ -110,7 +137,7 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
 
     if model_name == "DeepPhys":
         preprocessed_label = Deepphys_preprocess_Label(path + "/ground_truth.txt")
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
+    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM" or model_name == "GCN":
         preprocessed_label = PhysNet_preprocess_Label(path + "/ground_truth.txt")
 
     # ppg, sbp, dbp, hr
@@ -119,3 +146,7 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
                                             'preprocessed_label': preprocessed_label}
     elif model_name in ["PPNet"]:
         return_dict[path.split("/")[-1]] = {'ppg': ppg,'sbp': sbp,'dbp': dbp,'hr' : hr}
+    elif model_name in["GCN"]:
+        return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
+                                                                         'preprocessed_label': preprocessed_label,
+                                                                        'preprocessed_graph': saved_graph}
