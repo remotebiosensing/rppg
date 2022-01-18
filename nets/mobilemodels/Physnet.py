@@ -13,7 +13,9 @@ import h5py
 import json
 
 import os
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 
+print(tf.__version__)
 
 backend.set_image_data_format('channels_first')
 class AdaptivePooling3D(tf.keras.layers.Layer):
@@ -99,34 +101,6 @@ class AdaptivePooling3D(tf.keras.layers.Layer):
         }
         base_config = super().get_config()
         return {**base_config, **config}
-
-def neg_Pearson_Loss(predictions, targets):
-    '''
-    :param predictions: inference value of trained model
-    :param targets: target label of input data
-    :return: negative pearson loss
-    '''
-    print(predictions,targets)
-    rst = 0
-    # Pearson correlation can be performed on the premise of normalization of input data
-
-    predictions = (predictions - tf.math.reduce_mean(predictions)) / tf.math.reduce_std(predictions)
-    targets = (targets -tf.math.reduce_mean(targets)) / tf.math.reduce_std(targets)
-    print(predictions)
-    for i in range(predictions.shape[0]):
-        sum_x = tf.reduce_sum(predictions[i])  # x
-        sum_y = tf.reduce_sum(targets[i])  # y
-        sum_xy = tf.reduce_sum(predictions[i] * targets[i])  # xy
-        sum_x2 = tf.reduce_sum(tf.pow(predictions[i], 2))  # x^2
-        sum_y2 = tf.reduce_sum(tf.pow(targets[i], 2))  # y^2
-        N = predictions.shape[1]
-        pearson = (N * sum_xy - sum_x * sum_y) / (
-            tf.sqrt((N * sum_x2 - tf.pow(sum_x, 2)) * (N * sum_y2 - tf.pow(sum_y, 2))))
-
-        rst += 1 - pearson
-
-    rst = rst / predictions.shape[0]
-    return rst
 
 
 @tf.keras.utils.register_keras_serializable(package="Addons")
@@ -246,80 +220,104 @@ class Model(tf.Module):
             #
             #Conv3D
             #
-            tf.keras.layers.Conv3D(1,kernel_size=(1,1,1),strides=(1,1,1),padding='same')
+            tf.keras.layers.Conv3D(1,kernel_size=(1,1,1),strides=(1,1,1),padding='same'),
+            tf.keras.layers.Reshape((-1,)),
+
         ])
 
-        self.model.compile( optimizer='adam', loss=tf.keras.losses.mean_absolute_error )
+
+        def neg_pearson_Loss(y_true, y_pred):
+            '''
+            :param predictions: inference value of trained model
+            :param targets: target label of input data
+            :return: negative pearson loss
+            '''
+            batch_size = 32
+            rst = 0
+            # Pearson correlation can be performed on the premise of normalization of input data
+            # print(y_true,y_pred)
+            predictions = (y_pred - tf.math.reduce_mean(y_pred)) / tf.math.reduce_std(y_pred)
+            targets = (y_true - tf.math.reduce_mean(y_true)) / tf.math.reduce_std(y_true)
+
+            for i in range(batch_size):
+                sum_x = tf.reduce_sum(predictions[i])  # x
+                sum_y = tf.reduce_sum(targets[i])  # y
+                sum_xy = tf.reduce_sum(predictions[i] * targets[i])  # xy
+                sum_x2 = tf.reduce_sum(tf.pow(predictions[i], 2))  # x^2
+                sum_y2 = tf.reduce_sum(tf.pow(targets[i], 2))  # y^2
+                N = predictions.shape[1]
+                pearson = (N * sum_xy - sum_x * sum_y) / (
+                    tf.sqrt((N * sum_x2 - tf.pow(sum_x, 2)) * (N * sum_y2 - tf.pow(sum_y, 2))))
+
+                rst += 1 - pearson
+
+            rst = rst / batch_size
+            return rst
+
+        self.model.compile( optimizer='adam', loss=neg_pearson_Loss)
 
 
-        @tf.function(input_signature=[
-            tf.TensorSpec([None, 3, 32, 128, 128], tf.float32),
-            tf.TensorSpec([None, 1], tf.float32),
-        ])
-        def train(self, x, y):
-            with tf.GradientTape() as tape:
-                predictions = self.model(x)
-                loss = self.model.loss(predictions, y)
-            gradients = tape.gradient(loss, self.model.trainable_variables)
-            self.model.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
-            result = {"loss":loss}
-            return result
+    @tf.function(input_signature=[
+        tf.TensorSpec([None, 3, 32, 128, 128], tf.float32),
+        tf.TensorSpec([None, 1], tf.float32),
+    ])
+    def train(self, x, y):
+        with tf.GradientTape() as tape:
+            predictions = self.model(x)
+            loss = self.model.loss(predictions, y)
+        gradients = tape.gradient(loss, self.model.trainable_variables)
+        self.model.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+        result = {"loss":loss}
+        return result
 
-        @tf.function(input_signature=[
-            tf.TensorSpec([None,3,32,128,128], tf.float32),
-        ])
-        def infer(self, x):
-            output = self.model(x)
-            return {
-                "output" : output
-            }
+    @tf.function(input_signature=[
+        tf.TensorSpec([None,3,32,128,128], tf.float32),
+    ])
+    def infer(self, x):
+        output = self.model(x)
+        return {
+            "output" : output
+        }
 
-        @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
-        def save(self, checkpoint_path):
-            tensor_names = [weight.name for weight in self.model.weights]
-            tensors_to_save = [weight.read_value() for weight in self.model.weights]
-            tf.raw_ops.Save(
-                filename=checkpoint_path, tensor_names=tensor_names,
-                data=tensors_to_save, name='save')
-            return {
-                "checkpoint_path": checkpoint_path
-            }
+    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
+    def save(self, checkpoint_path):
+        tensor_names = [weight.name for weight in self.model.weights]
+        tensors_to_save = [weight.read_value() for weight in self.model.weights]
+        tf.raw_ops.Save(
+            filename=checkpoint_path, tensor_names=tensor_names,
+            data=tensors_to_save, name='save')
+        return {
+            "checkpoint_path": checkpoint_path
+        }
 
-        @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
-        def restore(self, checkpoint_path):
-            restored_tensors = {}
-            for var in self.model.weights:
-                restored = tf.raw_ops.Restore(
-                    file_pattern=checkpoint_path, tensor_name=var.name, dt=var.dtype,
-                    name='restore')
-                var.assign(restored)
-                restored_tensors[var.name] = restored
-            return restored_tensors
+    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
+    def restore(self, checkpoint_path):
+        restored_tensors = {}
+        for var in self.model.weights:
+            restored = tf.raw_ops.Restore(
+                file_pattern=checkpoint_path, tensor_name=var.name, dt=var.dtype,
+                name='restore')
+            var.assign(restored)
+            restored_tensors[var.name] = restored
+        return restored_tensors
 
 class DataLoader(Sequence):
-    def __init__(self, x_set,y_set, batch_size, *args, **kwargs):
-        super(DataLoader, self).__init__(*args,**kwargs)
+    def __init__(self, x_set,y_set, batch_size):
+        # super(DataLoader, self).__init__(*args,**kwargs)
         self.x, self.y = x_set, y_set
         self.batch_size = batch_size
         self.on_epoch_end()
 
     def __len__(self):
-        return math.ceil(len(self.x) / self.batch_size)
+        return math.ceil(len(self.x) / self.batch_size)-1
 
 		# batch 단위로 직접 묶어줘야 함
     def __getitem__(self, idx):
 		# sampler의 역할(index를 batch_size만큼 sampling해줌)
         indices = self.indices[idx*self.batch_size:(idx+1)*self.batch_size]
-        # video_data = np.transpose(self.x[idx],(3,0,1,2))
-        # label_data =self.y[idx]
-        # return np.array(video_data), np.array(label_data)
-        #
-        #
-        #
-        #
-        #
-        batch_x = [np.transpose(self.x[i],(3,0,1,2)) for i in indices]
-        batch_y = [self.y[i] for i in indices]
+
+        batch_x = [tf.convert_to_tensor(np.transpose(self.x[i],(3,0,1,2)),dtype=tf.float32)for i in indices]
+        batch_y = [tf.convert_to_tensor(self.y[i] ,dtype=tf.float32) for i in indices]
 
         return np.array(batch_x), np.array(batch_y)
 
@@ -343,14 +341,51 @@ for key in hpy_file.keys():
      label_data.extend(hpy_file[key]['preprocessed_label'])
 hpy_file.close()
 
-train_loader = DataLoader(video_data,label_data,32)
-valid_loader = DataLoader(video_data,label_data,32)
+train_loader = DataLoader(video_data[:(int)(video_data.__len__()*0.8)],label_data[:(int)(label_data.__len__()*0.8)],32)
+valid_loader = DataLoader(video_data[(int)(video_data.__len__()*0.8):],label_data[(int)(label_data.__len__()*0.8):],32)
 test_loader = DataLoader(video_data,label_data,32)
 
 # trian
 model = Model()
+
 model.model.build(input_shape=(128,32,128,128,3))
 model.model.summary()
-model.model.fit(train_loader, validation_data=valid_loader, epochs=10,
+model.model.fit(train_loader,batch_size=32,verbose=1, validation_data=valid_loader, epochs=1,
 					workers=4)# multi로 처리할 개수
-model.evaluate(test_loader)
+model.save('./tmp/trained_model')
+
+SAVED_MODEL_DIR = "./tmp"
+
+tf.saved_model.save(
+    model,
+    SAVED_MODEL_DIR,
+    signatures={
+        'train':
+            model.train.get_concrete_function(),
+        'infer':
+            model.infer.get_concrete_function(),
+        'save':
+            model.save.get_concrete_function(),
+        'restore':
+            model.restore.get_concrete_function(),
+    })
+
+# Convert the model
+converter = tf.lite.TFLiteConverter.from_saved_model(SAVED_MODEL_DIR)
+converter.target_spec.supported_ops = [
+    tf.lite.OpsSet.TFLITE_BUILTINS,  # enable TensorFlow Lite ops.
+    tf.lite.OpsSet.SELECT_TF_OPS  # enable TensorFlow ops.
+]
+
+converter.experimental_enable_resource_variables = True
+tflite_model = converter.convert()
+
+interpreter = tf.lite.Interpreter(model_content=tflite_model)
+interpreter.allocate_tensors()
+
+infer = interpreter.get_signature_runner("infer")
+
+logits_original = model.infer(x=video_data[:1])['logits'][0]
+logits_lite = infer(x=video_data[:1])['logits'][0]
+
+print(logits_original,logits_lite)
