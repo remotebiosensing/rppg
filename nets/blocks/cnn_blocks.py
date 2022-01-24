@@ -7,17 +7,22 @@ class cnn_blocks(torch.nn.Module):
     def __init__(self):
         super(cnn_blocks, self).__init__()
         self.cnn_blocks = torch.nn.Sequential(
+            #1
             ConvBlock2D(3, 16, [5, 5], [1, 1], [2, 2]),
             torch.nn.MaxPool2d((2, 2), stride=(2, 2)),
+            #2
             ConvBlock2D(16, 32, [3, 3], [1, 1], [1, 1]),
             ConvBlock2D(32, 64, [3, 3], [1, 1], [1, 1]),
             torch.nn.MaxPool2d((2, 2), stride=(2, 2)),
+            #3
             ConvBlock2D(64, 64, [3, 3], [1, 1], [1, 1]),
             ConvBlock2D(64, 64, [3, 3], [1, 1], [1, 1]),
             torch.nn.MaxPool2d((2, 2), stride=(2, 2)),
+            #4
             ConvBlock2D(64, 64, [3, 3], [1, 1], [1, 1]),
             ConvBlock2D(64, 64, [3, 3], [1, 1], [1, 1]),
             torch.nn.MaxPool2d((2, 2), stride=(2, 2)),
+            #5
             ConvBlock2D(64, 64, [3, 3], [1, 1], [1, 1]),
             ConvBlock2D(64, 64, [3, 3], [1, 1], [1, 1]),
             torch.nn.AdaptiveMaxPool2d(1)

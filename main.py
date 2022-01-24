@@ -97,7 +97,7 @@ Setting Learning Model
 '''
 if __TIME__:
     start_time = time.time()
-model = get_model(model_params["name"])
+model = get_model("DeepPhys")
 if torch.cuda.is_available():
     # os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3, 4, 5, 6, 7, 8, 9'
     # TODO: implement parallel training

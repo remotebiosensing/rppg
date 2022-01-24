@@ -1,6 +1,6 @@
 {
     "__TIME__" : 1,
-    "__PREPROCESSING__" : 0,
+    "__PREPROCESSING__" : 1,
     "__MODEL_SUMMARY__" : 1,
     "options":{
         "parallel_criterion" : 1,
@@ -65,7 +65,7 @@
     },
     "model_params":
     {
-        "name": "PhysNet",
+        "name": "DeepPhys",
         "name_comment":
                 [
                     "DeepPhys",
