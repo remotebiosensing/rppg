@@ -13,8 +13,7 @@ class AppearanceModel_2D(Module):
         self.a_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
                                        stride=1, padding=1)
         self.a_batch_Normalization1 = torch.nn.BatchNorm2d(out_channels)
-        self.a_conv2 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=3, stride=1,
-                                       padding=1)
+        self.a_conv2 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=3, stride=1)
         self.a_batch_Normalization2 = torch.nn.BatchNorm2d(out_channels)
         self.a_dropout1 = torch.nn.Dropout2d(p=0.50)
         # Attention mask1
@@ -24,7 +23,7 @@ class AppearanceModel_2D(Module):
                                        padding=1)
         self.a_Batch_Normalization3 = torch.nn.BatchNorm2d(out_channels * 2)
         self.a_conv4 = torch.nn.Conv2d(in_channels=out_channels * 2, out_channels=out_channels * 2, kernel_size=3,
-                                       stride=1, padding=1)
+                                       stride=1)
         self.a_Batch_Normalization4 = torch.nn.BatchNorm2d(out_channels * 2)
         self.a_dropout2 = torch.nn.Dropout2d(p=0.50)
         # Attention mask2

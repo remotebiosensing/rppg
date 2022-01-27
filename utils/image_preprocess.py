@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from face_recognition import face_locations, face_landmarks
 from skimage.util import img_as_float
-import mediapipe as mp
+#import mediapipe as mp
 
 
 def Deepphys_preprocess_Video(path, flag):
@@ -45,7 +45,7 @@ def Deepphys_preprocess_Video(path, flag):
 
     return True, raw_video
 
-
+locat = ()
 def PhysNet_preprocess_Video(path, flag):
     '''
     :param path: dataset path
@@ -58,6 +58,9 @@ def PhysNet_preprocess_Video(path, flag):
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     raw_video = np.empty((frame_total, 128, 128, 3))
     j = 0
+
+    global locat
+    locat = ((),)
 
     detector = None
 
@@ -73,8 +76,7 @@ def PhysNet_preprocess_Video(path, flag):
                 rst, crop_frame = faceDetection(frame)
                 if not rst:  # can't detect face
                     return False, None
-            if flag == 2:
-
+            elif flag == 2:
                 f, dot = crop_mediapipe(detector,frame)
                 view,remove = make_mask(dot)
                 crop_frame = generate_maks(f,view,remove)
@@ -179,6 +181,7 @@ def faceDetection(frame):
     :param frame: one frame
     :return: cropped face image
     '''
+    '''
     resized_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
     face_location = face_locations(resized_frame)
     if len(face_location) == 0:  # can't detect face
@@ -186,7 +189,29 @@ def faceDetection(frame):
     top, right, bottom, left = face_location[0]
     dst = resized_frame[top:bottom, left:right]
     return True, dst
+    '''
+    global locat
 
+    resized_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+    face_location = face_locations(resized_frame)
+
+    if len(face_location) == 0:  # cant detect face
+        print('cant detect face')
+        if len(locat[0]) != 4: # 기존 frame
+            dst = resized_frame[resized_frame.shape[0] // 4: resized_frame.shape[0] // 4 * 3,
+                  resized_frame.shape[1] // 4:resized_frame.shape[1] // 4 * 3]
+        else:
+            top, right, bottom, left = locat[0]
+            dst = resized_frame[max(0, top - 10):min(resized_frame.shape[0], bottom + 10),
+                  max(0, left - 10):min(resized_frame.shape[1], right + 10)]
+        #return False, dst
+        return True, dst
+
+    top, right, bottom, left = face_location[0]
+    dst = resized_frame[max(0, top - 10):min(resized_frame.shape[0], bottom + 10),
+          max(0, left - 10):min(resized_frame.shape[1], right + 10)]
+    locat = face_location
+    return True, dst
 
 def generate_Floatimage(frame):
     '''
@@ -197,7 +222,7 @@ def generate_Floatimage(frame):
     # 왜 있지??
     dst = cv2.cvtColor(dst.astype('float32'), cv2.COLOR_BGR2RGB)
     dst[dst > 1] = 1
-    dst[dst < 0] = 0
+    dst[dst < 1e-6] = 1e-6
     return dst
 
 
@@ -377,3 +402,6 @@ def generate_maks(src, view,remove):
     rst = cv2.bitwise_and(src,img)
 
     return rst
+
+if __name__ == '__main__':
+    PhysNet_preprocess_Video('/media/hdd1/UBFC/subject20/vid.avi',1)
