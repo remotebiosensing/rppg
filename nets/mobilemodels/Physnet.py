@@ -63,8 +63,8 @@ class Deepphys(tf.keras.Model): # base model
         self.m_14 = tf.keras.layers.AveragePooling2D(pool_size=2,strides=2)
 
         self.f_1 = tf.keras.layers.Flatten()
-        # self.f_2 = tf.keras.layers.Dense(256)
-        # self.f_3 = tf.keras.layers.Dense(1)
+        self.f_2 = tf.keras.layers.Dense(256)
+        self.f_3 = tf.keras.layers.Dense(1)
 
 
     @tf.function(input_signature=[
@@ -146,8 +146,8 @@ class Deepphys(tf.keras.Model): # base model
         M = self.m_14(M)
 
         F = self.f_1(M)
-        # F = self.f_2(F)
-        # F = self.f_3(F)
+        F = self.f_2(F)
+        F = self.f_3(F)
 
         return F
 # TRF Model
@@ -305,7 +305,7 @@ NUM_EPOCHS = 10
 BATCH_SIZE = 1
 epochs = np.arange(1, NUM_EPOCHS + 1, 1)
 losses = np.zeros([NUM_EPOCHS])
-m = TransferLearningModel()
+m = Model()
 # m.model.build(input_shape=(1,36,36,6))
 # m.model.summary()
 video_data = np.asarray(video_data)
@@ -317,7 +317,7 @@ train_ds = train_ds.batch(BATCH_SIZE)
 for i in range(NUM_EPOCHS):
   for x,y in train_ds:
     x = tf.cast(x,tf.float32)
-    result = m.train(m.base(x), y)
+    result = m.train(x, y)
   losses[i] = result['loss']
   if (i + 1) % 1 == 0:
       # print(result['loss'])
@@ -374,8 +374,7 @@ for i in range(NUM_EPOCHS):
   for x,y in train_ds:
     x = tf.cast(x,tf.float32)
     y = tf.cast(y,tf.float32)
-    x = m.base(x)
-    result = train(bottleneck=x,label=y)
+    result = train(x=x,y=y)
     print(result)
 
 

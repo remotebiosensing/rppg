@@ -7,7 +7,7 @@ from nets.models.DeepPhys_DA import DeepPhys_DA
 from nets.models.PPNet import PPNet
 from nets.models.PhysNet import PhysNet
 from nets.models.PhysNet import PhysNet_2DCNN_LSTM
-from nets.models.GATNet import GAT
+from nets.models.Seq_GCN import Seq_GCN
 
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -28,7 +28,7 @@ def get_model(model_name: str = "DeepPhys"):
     elif model_name == "PPNet":
         return PPNet()
     elif model_name == "GCN":
-        return GAT(NUM_FEATURES, NUM_CLASSES)
+        return Seq_GCN()
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)

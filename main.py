@@ -97,16 +97,16 @@ Setting Learning Model
 '''
 if __TIME__:
     start_time = time.time()
-model = get_model("DeepPhys")
+model = get_model(model_params["name"])
 if torch.cuda.is_available():
-    # os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3, 4, 5, 6, 7, 8, 9'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1'
     # TODO: implement parallel training
     # if options["parallel_criterion"] :
     #     print(options["parallel_criterion_comment"])
     #     model = DataParallelModel(model, device_ids=[0, 1, 2])
     # else:
     #     model = DataParallel(model, output_device=0)
-    torch.cuda.set_device(int(options["set_gpu_device"]))
+    # torch.cuda.set_device(int(options["set_gpu_device"]))
     model.cuda()
 else:
     model = model.to('cpu')

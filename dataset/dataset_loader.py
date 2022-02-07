@@ -17,7 +17,10 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     :param option:[train, test]
     :return: dataset
     '''
-    hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
+    name = model_name
+    if model_name == "GCN":
+        name = "PhysNet"
+    hpy_file = h5py.File(save_root_path + name + "_" + dataset_name + "_" + option + ".hdf5", "r")
     graph_file = save_root_path + model_name + "_" + dataset_name + "_" + option + ".pkl"
 
     if model_name in ["DeepPhys", "MTTS"]:
@@ -34,7 +37,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name in ["PhysNet", "PhysNet_LSTM"]:
+    elif model_name in ["PhysNet", "PhysNet_LSTM","GCN"]:
         video_data = []
         label_data = []
         for key in hpy_file.keys():
@@ -77,19 +80,6 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = PPNetDataset(face_data=np.asarray(face_data),
                                mask_data=np.asarray(mask_data),
                                target=np.asarray(target_data))
-    elif model_name in ["GCN"]:
-        # video_data = []
-        label_data = []
-        for key in hpy_file.keys():
-            # video_data.extend(hpy_file[key]['preprocessed_video'])
-            label_data.extend(hpy_file[key]['preprocessed_label'])
-        hpy_file.close()
-        print("load_list_of_dicts")
-        graphs = load_list_of_dicts(graph_file)
 
-        dataset = GCNDataset(
-            # video_data=np.asarray(video_data),
-                                        graph_data=np.asarray(graphs),
-                                         label_data=np.asarray(label_data))
 
     return dataset
