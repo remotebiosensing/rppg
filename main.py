@@ -77,7 +77,7 @@ test_dataset = dataset_loader(save_root_path=params["save_root_path"],
                               option="test")
 if __TIME__:
     log_info_time("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
-print("tr/va/te")
+
 '''
     Call dataloader for iterate dataset
 '''
@@ -161,7 +161,7 @@ for epoch in range(hyper_params["epochs"]):
             tepoch.set_description(f"Train Epoch {epoch}")
             outputs = model(inputs)
 
-            if model_params["name"] in ["PhysNet", "PhysNet_LSTM","DeepPhys"]:
+            if model_params["name"] in ["PhysNet", "PhysNet_LSTM","DeepPhys","GCN"]:
                 loss = criterion(outputs, target)
             else:
                 loss_0 = criterion(outputs[:][0], target[:][0])
@@ -187,7 +187,7 @@ for epoch in range(hyper_params["epochs"]):
             for inputs, target in tepoch:
                 tepoch.set_description(f"Validation")
                 outputs = model(inputs)
-                if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys"]:
+                if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys","GCN"]:
                     loss = criterion(outputs, target)
                 else:
                     loss_0 = criterion(outputs[:][0], target[:][0])
@@ -222,7 +222,7 @@ for epoch in range(hyper_params["epochs"]):
                 for inputs, target in tepoch:
                     tepoch.set_description(f"test")
                     outputs = model(inputs)
-                    if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys"]:
+                    if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys","GCN"]:
                         loss = criterion(outputs, target)
                     else:
                         loss_0 = criterion(outputs[:][0], target[:][0])
@@ -234,7 +234,7 @@ for epoch in range(hyper_params["epochs"]):
                         continue
                     running_loss += loss.item()
                     tepoch.set_postfix(loss=running_loss / (params["train_batch_size"] / params["test_batch_size"]))
-                    if model_params["name"] in ["PhysNet","PhysNet_LSTM"]:
+                    if model_params["name"] in ["PhysNet","PhysNet_LSTM","GCN"]:
                         inference_array.extend(normalize(outputs.cpu().numpy()[0]))
                         target_array.extend(normalize(target.cpu().numpy()[0]))
                     else:

@@ -74,7 +74,7 @@ class KNN_dist(nn.Module):
         v = index_points(vertices,id)
         v_0 = v[:,:,0,:].unsqueeze(-2).repeat(1,1,self.k,1)
         v_F = torch.cat((v_0, v, v_0-v,torch.norm(v_0-v,dim=-1,p=2).unsqueeze(-1)),-1)
-        v_F = self.R(v_F)
+        v_F = self.R(v_F.type(torch.FloatTensor).to('cuda:0'))
         F = torch.mul(v_F, F)
         F = torch.sum(F,-2)
         return F
@@ -119,9 +119,9 @@ class LocalGCN(nn.Module):
         self.KNN = KNN_dist(k=self.k)
     def forward(self,F,V):
         F = self.KNN(F, V)
-        F = F.view(-1, 512)
+        F = F.view(-1, 800)
         F = self.conv(F)
-        F = F.view(-1, self.n_views, 512)
+        F = F.view(-1, self.n_views, 756)
         return F
 
 class NonLocalMP(nn.Module):

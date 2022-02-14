@@ -44,8 +44,11 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
             video_data.extend(hpy_file[key]['preprocessed_video'])
             label_data.extend(hpy_file[key]['preprocessed_label'])
         hpy_file.close()
-
-        dataset = PhysNetDataset(video_data=np.asarray(video_data),
+        if model_name in ["GCN"]:
+            dataset = GCNDataset(video_data=np.asarray(video_data),
+                                 label_data=np.asarray(label_data))
+        else:
+            dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data))
 
     elif model_name in ["PPNet"]:
