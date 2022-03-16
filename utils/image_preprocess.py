@@ -28,6 +28,7 @@ def Deepphys_preprocess_Video(path, flag):
     raw_video = np.empty((frame_total - 1, 36, 36, 6))
     prev_frame = None
     j = 0
+
     while cap.isOpened():
         ret, frame = cap.read()
         if frame is None:
@@ -60,16 +61,19 @@ def PhysNet_preprocess_Video(path, flag):
     :param flag: face detect flag
     :return:
     '''
+    set = 32
+    div = 32
     cap = cv2.VideoCapture(path)
     frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    raw_video = np.empty((frame_total, 128, 128, 3))
+    raw_video = np.empty((frame_total, set, set, 3))
 
 
     j = 0
 
     detector = None
+
 
     if flag == 2:
         detector = FaceMeshDetector(maxFaces=2)
@@ -83,7 +87,7 @@ def PhysNet_preprocess_Video(path, flag):
                 rst, crop_frame = faceDetection(frame)
                 if not rst:  # can't detect face
                     return False, None
-            if flag == 2:
+            elif flag == 2:
                 f, dot = crop_mediapipe(detector,frame)
                 #bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
                 bin_mask = '0011000000000000000100000001001'
@@ -96,7 +100,7 @@ def PhysNet_preprocess_Video(path, flag):
             else:
                 crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
-            crop_frame = cv2.resize(crop_frame, dsize=(128, 128), interpolation=cv2.INTER_AREA)
+            crop_frame = cv2.resize(crop_frame, dsize=(set, set), interpolation=cv2.INTER_AREA)
             crop_frame = generate_Floatimage(crop_frame)
 
             raw_video[j] = crop_frame
@@ -104,11 +108,11 @@ def PhysNet_preprocess_Video(path, flag):
             pbar.update(1)
         cap.release()
 
-    split_raw_video = np.zeros(((frame_total // 32), 32, 128, 128, 3))
+    split_raw_video = np.zeros(((frame_total - div + 1), div, set, set, 3))
     index = 0
-    for x in range(frame_total // 32):
-        split_raw_video[x] = raw_video[index:index + 32]
-        index = index + 32
+    for x in range(0,frame_total - div + 1,set):
+        split_raw_video[x] = raw_video[x:x + div]
+        # index = index + div
 
     return True, split_raw_video
 
@@ -160,65 +164,36 @@ def GCN_preprocess_Video(path, flag):
        :return:
        '''
     cap = cv2.VideoCapture(path)
+
+    target_size = 32
+
     frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    raw_video = np.empty((frame_total, 128, 128, 3))
-    e_count = np.zeros((frame_total),dtype=int)
-    v_count = np.zeros((frame_total),dtype=int)
+    raw_video = np.empty((frame_total, target_size, target_size, 3))
+
 
     j = 0
-
-    detector = None
 
     if flag == 2:
         detector = FaceMeshDetector(maxFaces=2)
 
-    graph = []
-
     with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
         while cap.isOpened():
             ret, frame = cap.read()
-
             if frame is None:
                 break
             if flag == 1:
                 rst, crop_frame = faceDetection(frame)
-                if not rst:  # can't detect face
+                if not rst:
                     return False, None
-            if flag == 2:
-                f, dot = crop_mediapipe(detector, frame)
-                # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
-                bin_mask = '0011000000000000000100000001001'
-                view, remove = make_mask(dot)
-                crop_frame = generate_maks(f, view, remove)
-                _, _, G = get_graph_from_image(crop_frame)
-                graph.append(G)
-                _, dot = detector.findFaceMesh(f)
-
-
-            else:
-                crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
-
-            crop_frame = cv2.resize(crop_frame, dsize=(128, 128), interpolation=cv2.INTER_AREA)
-            crop_frame = generate_Floatimage(crop_frame)
-
-            raw_video[j] = crop_frame
-            j += 1
-            pbar.update(1)
+            raw_video[j] = crop_frame = cv2.resize(crop_frame, dsize=(set,set), interpolation=cv2.INTER_AREA)
+            j+=1
+            pbar.update()
         cap.release()
 
-    split_raw_video = np.zeros(((frame_total // 32), 32, 128, 128, 3))
 
-    saved_graph =[]
-
-    index = 0
-    for x in range(frame_total // 32):
-        split_raw_video[x] = raw_video[index:index + 32]
-        saved_graph.append(graph[x:x+32])
-        index = index + 32
-
-    return True, split_raw_video,saved_graph
+    return True, raw_video
 def faceLandmarks(frame):
     '''
     :param frame: one frame

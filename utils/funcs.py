@@ -46,14 +46,16 @@ def BPF(input_val, fs=30):
     return scipy.signal.filtfilt(b_pulse, a_pulse, np.double(input_val))
 
 
-def plot_graph(start_point, length, target, inference):
+def plot_graph(start_point, length, target, inference,name):
     plt.rcParams["figure.figsize"] = (14, 5)
     plt.plot(range(len(target[start_point:start_point + length])), target[start_point:start_point + length],
              label='target')
     plt.plot(range(len(inference[start_point:start_point + length])), inference[start_point:start_point + length],
              label='inference')
+    plt.title(name)
     plt.legend(fontsize='x-large')
-    plt.show()
+    # plt.show()
+    return plt
 
 
 def normalize(input_val):

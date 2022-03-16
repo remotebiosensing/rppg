@@ -17,6 +17,8 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     :param option:[train, test]
     :return: dataset
     '''
+
+    flag = False
     name = model_name
     if model_name == "GCN":
         name = "PhysNet"
@@ -32,6 +34,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
             appearance_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
             motion_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, :3])
             target_data.extend(hpy_file[key]['preprocessed_label'])
+
         hpy_file.close()
 
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
@@ -40,13 +43,19 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     elif model_name in ["PhysNet", "PhysNet_LSTM","GCN"]:
         video_data = []
         label_data = []
+        bpm_data = []
         for key in hpy_file.keys():
             video_data.extend(hpy_file[key]['preprocessed_video'])
             label_data.extend(hpy_file[key]['preprocessed_label'])
+            bpm_data.extend(hpy_file[key]['preprocessed_bpm'])
+            if option == "test" or flag:
+                break
         hpy_file.close()
         if model_name in ["GCN"]:
             dataset = GCNDataset(video_data=np.asarray(video_data),
-                                 label_data=np.asarray(label_data))
+                                 label_data=np.asarray(label_data),
+                                 bpm_data = np.asarray(bpm_data)
+                                 )
         else:
             dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data))

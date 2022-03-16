@@ -31,17 +31,36 @@ def PhysNet_preprocess_Label(path):
     :param path: label file path
     :return: wave form
     '''
+    set = 32
+    div = 32
     # Load input
     f = open(path, 'r')
     f_read = f.read().split('\n')
     label = ' '.join(f_read[0].split()).split()
     label = list(map(float, label))
     label = np.array(label).astype('float32')
-    split_raw_label = np.zeros(((len(label) // 32), 32))
+    split_raw_label = np.zeros(((len(label) - div + 1), div))
     index = 0
-    for i in range(len(label) // 32):
-        split_raw_label[i] = label[index:index + 32]
-        index = index + 32
+    for i in range(0,(len(label) - div + 1),set):
+        split_raw_label[i] = label[i:i + div]
+        # index = index + div
     f.close()
 
     return split_raw_label
+
+def GCN_preprocess_Label(path):
+    '''
+    :param path: label file path
+    :return: wave form
+    '''
+    set = 32
+    div = 32
+    # Load input
+    f = open(path, 'r')
+    f_read = f.read().split('\n')
+    label = ' '.join(f_read[0].split()).split()
+    label = list(map(float, label))
+    label = np.array(label).astype('float32')
+    f.close()
+
+    return label

@@ -1,11 +1,11 @@
 {
-    "__TIME__" : 1,
+    "__TIME__" : 0,
     "__PREPROCESSING__" : 0,
     "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
         "parallel_criterion_comment" : "TODO need to verification",
-        "set_gpu_device" : "5"
+        "set_gpu_device" : "9"
     },
     "params":
     {
@@ -22,7 +22,7 @@
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
-        "train_batch_size" : 64,
+        "train_batch_size" : 32,
         "train_batch_size_comment" :
                 [
                     "PhysNet_LSTM : 8",
@@ -51,13 +51,14 @@
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam",
                     "PPNET : adam"
                 ],
-        "learning_rate": 0.01,
+        "learning_rate": 0.001,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001",
             "PPNet : lr = 0.001"
         ],
-        "epochs" : 100,
+
+        "epochs" : 30000,
         "epochs_comment" :
                 [
                     "PPNET : 100"
@@ -65,7 +66,7 @@
     },
     "model_params":
     {
-        "name": "DeepPhys",
+        "name": "GCN",
         "name_comment":
                 [
                     "DeepPhys",

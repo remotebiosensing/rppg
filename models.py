@@ -60,6 +60,8 @@ def summary(model, model_name):
         torchinfo.summary(model, (1, 3, 32, 128, 128))
     elif model_name in "PPNet":
         torchinfo.summary(model, (1, 1, 250))
+    elif model_name in "GCN":
+        torchinfo.summary(model,(32,3,32,32,32))
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)

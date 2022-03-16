@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
-
+import numpy as np
 from log import log_warning
 
 
@@ -70,6 +70,7 @@ def neg_Pearson_Loss(predictions, targets):
     :return: negative pearson loss
     '''
     rst = 0
+    targets = targets[:,:]
     # Pearson correlation can be performed on the premise of normalization of input data
     predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
     targets = (targets - torch.mean(targets)) / torch.std(targets)
@@ -89,6 +90,10 @@ def neg_Pearson_Loss(predictions, targets):
     rst = rst / predictions.shape[0]
     return rst
 
+def peak_mse(predictions,targets):
+    rst = 0
+    targets = targets[:, :]
+
 
 class NegPearsonLoss(nn.Module):
     def __init__(self):
@@ -96,3 +101,10 @@ class NegPearsonLoss(nn.Module):
 
     def forward(self, predictions, targets):
         return neg_Pearson_Loss(predictions, targets)
+
+class fftLoss(nn.Module):
+    def __init__(self):
+        super(fftLoss,self).__init__()
+
+    def forward(self,predictions,targets):
+        return torch.nn.MSELoss(torch.fft.fft(predictions,dim=1),torch.fft.fft(targets,dim=1))
