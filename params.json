@@ -15,14 +15,15 @@
         "dataset_comment" :
                 [
                     "UBFC",
-                    "cuff_less_blood_pressure"
+                    "cuff_less_blood_pressure",
+                    "VIPL_HR"
                 ],
         "checkpoint_path" : "/media/hdd1/dy/checkpoint/",
         "train_ratio": 0.7,
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
-        "train_batch_size" : 32,
+        "train_batch_size" : 4,
         "train_batch_size_comment" :
                 [
                     "PhysNet_LSTM : 8",
@@ -51,7 +52,7 @@
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam",
                     "PPNET : adam"
                 ],
-        "learning_rate": 0.001,
+        "learning_rate": 0.00005,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001",
@@ -66,7 +67,7 @@
     },
     "model_params":
     {
-        "name": "GCN",
+        "name": "AxisNet",
         "name_comment":
                 [
                     "DeepPhys",
@@ -74,7 +75,8 @@
                     "PhysNet_LSTM",
                     "PPNet",
                     "RTNet",
-                    "GCN"
+                    "GCN",
+                    "AxisNet"
                 ]
     }
 }

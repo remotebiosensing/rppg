@@ -21,10 +21,11 @@ from utils.funcs import normalize, plot_graph, detrend
 from utils.funcs import detrend
 from heartpy import process
 from sklearn.model_selection import KFold
-
+import config as config
 import wandb
+from utils.image_preprocess import get_haarcascade
 
-bpm_flag = True
+bpm_flag = False
 K_Fold_flag = True
 #Define Kfold Cross Validator
 if K_Fold_flag:
@@ -196,11 +197,15 @@ if K_Fold_flag:
                 i = 0
                 r = 0
                 cnt = 0
-                for inputs, target, _bpm in tepoch:
+                # for inputs, target, _bpm in tepoch:
+                for inputs, target in tepoch:
                     optimizer.zero_grad()
                     tepoch.set_description(f"Train Epoch {epoch}")
-                    p, bpm ,att= model(inputs)
-                    _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
+                    if bpm_flag:
+                        p, bpm ,att= model(inputs)
+                    else:
+                        p = model(inputs)
+                    # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
                     if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN"]:
                         loss0 = criterion(p, target)
 
@@ -231,13 +236,13 @@ if K_Fold_flag:
                     tepoch.set_postfix(loss=running_loss / tepoch.__len__())
                 wandb.log({"train_loss": running_loss / tepoch.__len__()})
                 plt.clf()
-                plt.imshow(torch.permute(att[0],(1,2,3,0))[0].cpu().detach().numpy(),aspect='auto',origin='lower',interpolation='none')
-                plt.savefig('attention_map.png',figsize=(8,8))
-                wandb.log({
-                    "Attention Map": [
-                        wandb.Image('attention_map.png')
-                    ]
-                })
+                # plt.imshow(torch.permute(att[0],(1,2,3,0))[0].cpu().detach().numpy(),aspect='auto',origin='lower',interpolation='none')
+                # plt.savefig('attention_map.png',figsize=(8,8))
+                # wandb.log({
+                #     "Attention Map": [
+                #         wandb.Image('attention_map.png')
+                #     ]
+                # })
                 if bpm_flag:
                     wandb.log({"train_pcc_loss": pcc_loss / tepoch.__len__()})
                     wandb.log({"train_bpm_loss": bpm_loss / tepoch.__len__()})
@@ -252,10 +257,14 @@ if K_Fold_flag:
                 bpm_loss = 0.0
                 pcc_loss = 0.0
                 with torch.no_grad():
-                    for inputs, target, _bpm in tepoch:
+                    # for inputs, target, _bpm in tepoch:
+                    for inputs, target in tepoch:
                         tepoch.set_description(f"Validation")
-                        p, bpm,att = model(inputs)
-                        _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
+                        if bpm_flag:
+                            p, bpm, att = model(inputs)
+                        else:
+                            p = model(inputs)
+                        # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
                         if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN"]:
                             loss0 = criterion(p, target)
 
@@ -278,15 +287,15 @@ if K_Fold_flag:
                         pcc_loss += loss0.item()
                         running_loss += loss.item()
                         tepoch.set_postfix(loss=running_loss / tepoch.__len__())
-                    if min_val_loss > running_loss:  # save the train model
-                        min_val_loss = running_loss
-                        checkpoint = {'Epoch': epoch,
-                                      'state_dict': model.state_dict(),
-                                      'optimizer': optimizer.state_dict()}
-                        torch.save(checkpoint, params["checkpoint_path"] + model_params["name"] + "/"
-                                   + params["dataset_name"] + "_" + str(epoch) + "_"
-                                   + str(min_val_loss) + '.pth')
-                        min_val_loss_model = copy.deepcopy(model)
+                    # if min_val_loss > running_loss:  # save the train model
+                    #     min_val_loss = running_loss
+                    #     checkpoint = {'Epoch': epoch,
+                    #                   'state_dict': model.state_dict(),
+                    #                   'optimizer': optimizer.state_dict()}
+                    #     torch.save(checkpoint, params["checkpoint_path"] + model_params["name"] + "/"
+                    #                + params["dataset_name"] + "_" + str(epoch) + "_"
+                    #                + str(min_val_loss) + '.pth')
+                    #     min_val_loss_model = copy.deepcopy(model)
                 wandb.log({"val_loss": running_loss / tepoch.__len__()})
                 if bpm_flag:
                     wandb.log({"val pcc_loss": pcc_loss / tepoch.__len__()})
@@ -306,10 +315,14 @@ if K_Fold_flag:
 
                     pcc_loss = 0.0
                     with torch.no_grad():
-                        for inputs, target, _bpm in tepoch:
+                        # for inputs, target, _bpm in tepoch:
+                        for inputs, target in tepoch:
                             tepoch.set_description(f"test")
-                            _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
-                            p, bpm,att = model(inputs)
+                            # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
+                            if bpm_flag:
+                                p, bpm, att = model(inputs)
+                            else:
+                                p = model(inputs)
                             if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN"]:
                                 loss0 = criterion(p, target)
 

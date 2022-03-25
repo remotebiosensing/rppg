@@ -5,7 +5,9 @@ from dataset.DeepPhysDataset import DeepPhysDataset
 from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
 from dataset.GCNDataset import GCNDataset
+from dataset.AxisNetDataset import AxisNetDataset
 from utils.funcs import load_list_of_dicts
+
 def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                    model_name: str = "DeepPhys",
                    dataset_name: str = "UBFC",
@@ -20,7 +22,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
 
     flag = False
     name = model_name
-    if model_name == "GCN":
+    if model_name == "AxisNet":
         name = "PhysNet"
     hpy_file = h5py.File(save_root_path + name + "_" + dataset_name + "_" + option + ".hdf5", "r")
     graph_file = save_root_path + model_name + "_" + dataset_name + "_" + option + ".pkl"
@@ -40,14 +42,14 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name in ["PhysNet", "PhysNet_LSTM","GCN"]:
+    elif model_name in ["PhysNet", "PhysNet_LSTM","GCN","AxisNet"]:
         video_data = []
         label_data = []
         bpm_data = []
         for key in hpy_file.keys():
             video_data.extend(hpy_file[key]['preprocessed_video'])
             label_data.extend(hpy_file[key]['preprocessed_label'])
-            bpm_data.extend(hpy_file[key]['preprocessed_bpm'])
+            # bpm_data.extend(hpy_file[key]['preprocessed_bpm'])
             if option == "test" or flag:
                 break
         hpy_file.close()
@@ -92,6 +94,17 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = PPNetDataset(face_data=np.asarray(face_data),
                                mask_data=np.asarray(mask_data),
                                target=np.asarray(target_data))
+    elif model_name in ["AxisNet"]:
+        video_data = []
+        label_data = []
+
+        for key in hpy_file.keys():
+            video_data.extend(hpy_file[key]['preprocessed_video'])
+            label_data.extend(hpy_file[key]['preprocessed_label'])
+        hpy_file.close()
+
+        dataset = AxisNetDataset(video_data=np.asarray(video_data),
+                               label_data=np.asarray(label_data),)
 
 
     return dataset

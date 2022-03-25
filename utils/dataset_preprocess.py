@@ -3,9 +3,11 @@ import os
 
 import h5py
 import numpy as np
-from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video,GCN_preprocess_Video
+from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
+    GCN_preprocess_Video, Axis_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
-from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label
+from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
+    Axis_preprocess_Label
 from utils.funcs import store_as_list_of_dicts,load_list_of_dicts
 
 
@@ -97,6 +99,19 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
         test_file.close()
+    elif model_name in ["AxisNet"]:
+        for index, data_path in enumerate(return_dict.keys()[:train]):
+            dset = train_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        train_file.close()
+
+        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[train:]):
+            dset = test_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        test_file.close()
 
 
 
@@ -146,18 +161,25 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
         ppg, sbp, dbp, hr  = PPNet_preprocess_Mat(path)
     elif model_name == "GCN":
         # rst, preprocessed_video, saved_graph = GCN_preprocess_Video(path + "/vid.avi", flag)
-        rst, preprocessed_video = GCN_preprocess_Video(path + "/vid.avi", flag)
+        rst, preprocessed_video,sliding_window_stride = GCN_preprocess_Video(path + "/vid.avi", flag)
+    elif model_name == "AxisNet":
+        rst, preprocessed_video,sliding_window_stride,num_frames = Axis_preprocess_Video(path + "/vid.avi", flag)
+
     if model_name in ["DeepPhys","MTTS","PhysNet","PhysNet_LSTM"]:  # can't detect face
         if not rst:
             return
 
     if model_name == "DeepPhys":
         preprocessed_label = Deepphys_preprocess_Label(path + "/ground_truth.txt")
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM" or model_name == "GCN":
+    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM" :
         preprocessed_label = PhysNet_preprocess_Label(path + "/ground_truth.txt")
+    elif model_name == "GCN":
+        preprocessed_label = GCN_preprocess_Label(path + "/ground_truth.txt",sliding_window_stride)
+    elif model_name == "AxisNet":
+        preprocessed_label = Axis_preprocess_Label(path + "/ground_truth.txt",sliding_window_stride,num_frames)
 
     # ppg, sbp, dbp, hr
-    if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
+    if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM","AxisNet"]:
         return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
                                             'preprocessed_label': preprocessed_label}
     elif model_name in ["PPNet"]:
@@ -165,5 +187,5 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
     elif model_name in["GCN"]:
         return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
                                                                          'preprocessed_label': preprocessed_label}
-            #,
+
                                                                         # 'preprocessed_graph': saved_graph}
