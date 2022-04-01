@@ -2,6 +2,7 @@ import torchinfo
 import torchsummary
 
 from log import log_warning, log_info
+from nets.models.AxisNet import AxisNet
 from nets.models.DeepPhys import DeepPhys
 from nets.models.DeepPhys_DA import DeepPhys_DA
 from nets.models.PPNet import PPNet
@@ -29,6 +30,8 @@ def get_model(model_name: str = "DeepPhys"):
         return PPNet()
     elif model_name == "GCN":
         return Seq_GCN()
+    elif model_name == "AxisNet":
+        return AxisNet()
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)

@@ -22,8 +22,8 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
 
     flag = False
     name = model_name
-    if model_name == "AxisNet":
-        name = "PhysNet"
+    # if model_name == "AxisNet":
+    #     name = "PhysNet"
     hpy_file = h5py.File(save_root_path + name + "_" + dataset_name + "_" + option + ".hdf5", "r")
     graph_file = save_root_path + model_name + "_" + dataset_name + "_" + option + ".pkl"
 
@@ -42,7 +42,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name in ["PhysNet", "PhysNet_LSTM","GCN","AxisNet"]:
+    elif model_name in ["PhysNet", "PhysNet_LSTM","GCN"]:
         video_data = []
         label_data = []
         bpm_data = []
@@ -58,6 +58,9 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
                                  label_data=np.asarray(label_data),
                                  bpm_data = np.asarray(bpm_data)
                                  )
+        elif model_name in ["AxisNet"]:
+            dataset = AxisNetDataset(video_data=np.asarray(video_data),
+                                     label_data=np.asarray(label_data))
         else:
             dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data))
@@ -97,14 +100,17 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     elif model_name in ["AxisNet"]:
         video_data = []
         label_data = []
+        ptt_data = []
 
         for key in hpy_file.keys():
             video_data.extend(hpy_file[key]['preprocessed_video'])
+            ptt_data.extend(hpy_file[key]['preprocessed_ptt'])
             label_data.extend(hpy_file[key]['preprocessed_label'])
         hpy_file.close()
 
         dataset = AxisNetDataset(video_data=np.asarray(video_data),
-                               label_data=np.asarray(label_data),)
+                                 ptt_data = np.asarray(ptt_data),
+                                 label_data=np.asarray(label_data),)
 
 
     return dataset

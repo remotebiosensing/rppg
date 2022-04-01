@@ -24,6 +24,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     :param train_ratio: data split [ train ratio : 1 - train ratio]
     :return:
     """
+    split_flag = True
     dataset_root_path = data_root_path + dataset_name
 
     manager = multiprocessing.Manager()
@@ -37,17 +38,42 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     process = []
 
     # multiprocessing
-    for index, data_path in enumerate(data_list):
-        proc = multiprocessing.Process(target=preprocess_Dataset,
-                                       args=(dataset_root_path + "/" + data_path, 1, model_name, return_dict))
-        # flag 0 : pass
-        # flag 1 : detect face
-        # flag 2 : remove nose
-        process.append(proc)
-        proc.start()
+    if split_flag == False:
+        for index, data_path in enumerate(data_list):
+            proc = multiprocessing.Process(target=preprocess_Dataset,
+                                           args=(dataset_root_path + "/" + data_path, 1, model_name, return_dict))
+            # flag 0 : pass
+            # flag 1 : detect face
+            # flag 2 : remove nose
+            process.append(proc)
+            proc.start()
 
-    for proc in process:
-        proc.join()
+        for proc in process:
+            proc.join()
+    else:
+        for index, data_path in enumerate(data_list[:20]):
+            proc = multiprocessing.Process(target=preprocess_Dataset,
+                                           args=(dataset_root_path + "/" + data_path, 1, model_name, return_dict))
+            # flag 0 : pass
+            # flag 1 : detect face
+            # flag 2 : remove nose
+            process.append(proc)
+            proc.start()
+
+        for proc in process:
+            proc.join()
+
+        for index, data_path in enumerate(data_list[20:]):
+            proc = multiprocessing.Process(target=preprocess_Dataset,
+                                           args=(dataset_root_path + "/" + data_path, 1, model_name, return_dict))
+            # flag 0 : pass
+            # flag 1 : detect face
+            # flag 2 : remove nose
+            process.append(proc)
+            proc.start()
+
+        for proc in process:
+            proc.join()
 
     train = int(len(return_dict.keys()) * train_ratio)  # split dataset
     dt = h5py.special_dtype(vlen=np.float32)
@@ -104,6 +130,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset = train_file.create_group(data_path)
             dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+            dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         train_file.close()
 
         test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
@@ -111,6 +138,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset = test_file.create_group(data_path)
             dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+            dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
 
 
@@ -163,12 +191,12 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
         # rst, preprocessed_video, saved_graph = GCN_preprocess_Video(path + "/vid.avi", flag)
         rst, preprocessed_video,sliding_window_stride = GCN_preprocess_Video(path + "/vid.avi", flag)
     elif model_name == "AxisNet":
-        rst, preprocessed_video,sliding_window_stride,num_frames = Axis_preprocess_Video(path + "/vid.avi", flag)
+        rst, preprocessed_video,sliding_window_stride,num_frames,stacked_ptts = Axis_preprocess_Video(path + "/vid.avi", flag)
+    #rst,bvp,sliding,frames,ptt
 
     if model_name in ["DeepPhys","MTTS","PhysNet","PhysNet_LSTM"]:  # can't detect face
         if not rst:
             return
-
     if model_name == "DeepPhys":
         preprocessed_label = Deepphys_preprocess_Label(path + "/ground_truth.txt")
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM" :
@@ -178,14 +206,18 @@ def preprocess_Dataset(path, flag, model_name, return_dict):
     elif model_name == "AxisNet":
         preprocessed_label = Axis_preprocess_Label(path + "/ground_truth.txt",sliding_window_stride,num_frames)
 
+
     # ppg, sbp, dbp, hr
-    if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM","AxisNet"]:
+    if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
         return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
                                             'preprocessed_label': preprocessed_label}
     elif model_name in ["PPNet"]:
         return_dict[path.split("/")[-1]] = {'ppg': ppg,'sbp': sbp,'dbp': dbp,'hr' : hr}
     elif model_name in["GCN"]:
         return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
-                                                                         'preprocessed_label': preprocessed_label}
-
+                                                   'preprocessed_label': preprocessed_label}
+    elif model_name in ["AxisNet"]:
+            return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
+                                                'preprocessed_ptt': stacked_ptts,
+                                                'preprocessed_label': preprocessed_label}
                                                                         # 'preprocessed_graph': saved_graph}

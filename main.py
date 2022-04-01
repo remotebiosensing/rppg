@@ -206,7 +206,7 @@ if K_Fold_flag:
                     else:
                         p = model(inputs)
                     # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
-                    if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN"]:
+                    if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
                         loss0 = criterion(p, target)
 
 
@@ -265,7 +265,7 @@ if K_Fold_flag:
                         else:
                             p = model(inputs)
                         # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
-                        if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN"]:
+                        if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
                             loss0 = criterion(p, target)
 
                             # loss1 = criterion2(y,target[:,3:-3])#criterion(torch.gradient(torch.gradient(outputs,dim=1)[0],dim=1)[0],torch.gradient(torch.gradient(target,dim=1)[0],dim=1)[0])
@@ -323,7 +323,7 @@ if K_Fold_flag:
                                 p, bpm, att = model(inputs)
                             else:
                                 p = model(inputs)
-                            if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN"]:
+                            if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
                                 loss0 = criterion(p, target)
 
                                 if bpm_flag:
@@ -346,8 +346,8 @@ if K_Fold_flag:
                             pcc_loss += loss0.item()
                             running_loss += loss.item()
                             tepoch.set_postfix(loss=running_loss / tepoch.__len__())
-                            if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "GCN"]:
-                                inference_array.extend(normalize(p.cpu().numpy()[0]))
+                            if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "GCN","AxisNet"]:
+                                inference_array.extend(normalize(np.squeeze(p.cpu().numpy()[0])))
                                 target_array.extend(normalize(target.cpu().numpy()[0]))
                             else:
                                 inference_array.extend(p[:][0].cpu().numpy())
@@ -551,3 +551,4 @@ else:
                 # plt = plot_graph(0,300,np.gradient(np.gradient(target_array[3:-3])),np.gradient(np.gradient(inference_array)),"gradient")
                 # wandb.log({"gradient": plt})
                 # print(np.gradient(target_array)-np.gradient(inference_array).mean(axis=0))
+

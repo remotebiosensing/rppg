@@ -72,29 +72,33 @@ def GCN_preprocess_Label(path,sliding_window_stride):
 
     return split_raw_label
 
-def Axis_preprocess_Label(path,num_maps,num_frames):
+def Axis_preprocess_Label(path,sliding_window_stride,num_frames,clip_size = 256):
     '''
     :param path: label file path
     :return: wave form
     '''
 
-    div = 256
-    stride = num_maps
+    # div = 256
+    # stride = num_maps
     # Load input
     f = open(path, 'r')
+
     f_read = f.read().split('\n')
     label = ' '.join(f_read[0].split()).split()
     label = list(map(float, label))
     label = np.array(label).astype('float32')
-    num_maps = int((len(label) - div)/stride + 1)
-    split_raw_label = np.zeros((num_maps, div))
+    num_maps = int((num_frames - clip_size) / sliding_window_stride + 1)
+    print(path + str(len(label))+ "  " + str(num_maps)+"  "+str(clip_size) +"  " + str(sliding_window_stride) + "  " + str(num_frames))
+
+    print(num_maps)
+    split_raw_label = np.zeros((num_maps, clip_size))
     index = 0
-    for i in range(0,num_maps,stride):
-        end_idx = index + div
-        if end_idx>num_frames:
+    for start_frame_index in range(0, num_frames,sliding_window_stride ):
+        end_frame_index = start_frame_index + clip_size
+        if end_frame_index > num_frames:
             break
-        split_raw_label[i] = label[index:end_idx]
-        index = index + stride
+        split_raw_label[index,:] = label[start_frame_index:end_frame_index]
+        index += 1
     f.close()
 
     return split_raw_label
