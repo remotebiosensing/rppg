@@ -6,7 +6,7 @@ from einops.layers.torch import Rearrange
 from einops import rearrange
 from self_attention_cv.common import expand_to_batch
 class AxisNet(nn.Module):
-    def __init__(self,img_dim =(25,256)):
+    def __init__(self,img_dim =(64,256)):
         super(AxisNet, self).__init__()
         #,img_dim,blocks,patch_dim,in_channels,out_channels
         self.vit_att_1 = BvpAttBlock(img_dim=(np.int(np.ceil(img_dim[0]/1)),np.int(np.ceil(img_dim[1]/1))),
@@ -31,12 +31,13 @@ class AxisNet(nn.Module):
         self.up_scale_block = UpScaleBlock()
 
     def forward(self,x):
-        test = self.vit_ptt_att_1(x[1])
-        test = rearrange(test, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x=1, patch_y=5, c=3,y=1)
-        test = rearrange(test, 'b c (x z) y -> b c (x y) z',x=5,y=5)
-        test = self.transconv_1(test)
-        test = self.transconv_2(test)
-        y = self.vit_att_1(x[0]*test)
+        # test = self.vit_ptt_att_1(x[1])
+        # test = rearrange(test, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x=1, patch_y=5, c=3,y=1)
+        # test = rearrange(test, 'b c (x z) y -> b c (x y) z',x=5,y=5)
+        # test = self.transconv_1(test)
+        # test = self.transconv_2(test)
+        # y = self.vit_att_1(x[0]*test)
+        y = self.vit_att_1(x[0])
         y = self.vit_att_2(y)
         y = self.vit_att_3(y)
         y = self.vit_att_4(y)

@@ -247,7 +247,8 @@ if K_Fold_flag:
 
                     pcc_loss += loss0.item()
                     running_loss += loss.item()
-                    optimizer.step()
+                    # optimizer.step()
+                    [optim.step() for optim in optimizer]
                     tepoch.set_postfix(loss=running_loss / tepoch.__len__())
                 wandb.log({"train_loss": running_loss / tepoch.__len__()})
                 plt.clf()
@@ -267,7 +268,9 @@ if K_Fold_flag:
                 log_info_time("1 epoch training time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
             with tqdm(validation_loader, desc="Validation ", total=len(validation_loader)) as tepoch:
-                model.eval()
+                # model.eval()
+                for mod in model[0]:
+                    mod.eval()
                 running_loss = 0.0
                 bpm_loss = 0.0
                 pcc_loss = 0.0
@@ -278,7 +281,11 @@ if K_Fold_flag:
                         if bpm_flag:
                             p, bpm, att = model(inputs)
                         else:
-                            p = model(inputs)
+                            if model[0].__len__() == 1:
+                                p = model(inputs)
+                            else:
+                                noise_free_map = model[0][1](target)
+                                p = model[0][0](inputs)
                         # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
                         if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
                             loss0 = criterion(p, target)
@@ -322,7 +329,8 @@ if K_Fold_flag:
                 # if epoch + 1 == hyper_params["epochs"]:
                     # model = min_val_loss_model
                 with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
-                    model.eval()
+                    for mod in model[0]:
+                        mod.eval()
                     inference_array = []
                     target_array = []
                     cnt = 0
@@ -337,7 +345,11 @@ if K_Fold_flag:
                             if bpm_flag:
                                 p, bpm, att = model(inputs)
                             else:
-                                p = model(inputs)
+                                if model[0].__len__() == 1:
+                                    p = model(inputs)
+                                else:
+                                    noise_free_map = model[0][1](target)
+                                    p = model[0][0](inputs)
                             if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
                                 loss0 = criterion(p, target)
 

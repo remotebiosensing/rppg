@@ -14,7 +14,7 @@ from skimage.segmentation import slic
 from skimage.future import graph
 from skimage import color,segmentation
 from utils.funcs import _weight_mean_color, merge_mean_color,weight_boundary,merge_boundary
-from test import plot_graph_from_image,get_graph_from_image
+# from test import plot_graph_from_image,get_graph_from_image
 from sklearn import preprocessing
 def Deepphys_preprocess_Video(path, flag):
     '''

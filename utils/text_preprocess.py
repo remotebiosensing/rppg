@@ -81,16 +81,26 @@ def Axis_preprocess_Label(path,sliding_window_stride,num_frames,clip_size = 256)
     # div = 256
     # stride = num_maps
     # Load input
+    ext = path.split('.')[-1]
+
+
     f = open(path, 'r')
 
     f_read = f.read().split('\n')
-    label = ' '.join(f_read[0].split()).split()
-    label = list(map(float, label))
-    label = np.array(label).astype('float32')
-    num_maps = int((num_frames - clip_size) / sliding_window_stride + 1)
-    print(path + str(len(label))+ "  " + str(num_maps)+"  "+str(clip_size) +"  " + str(sliding_window_stride) + "  " + str(num_frames))
+    if ext == 'txt':
+        label = ' '.join(f_read[0].split()).split()
+        label = list(map(float, label))
 
-    print(num_maps)
+
+    elif ext == 'csv':
+        label = f_read[1:]
+        label = [float(txt) for txt in label if txt != '']
+
+    label = np.array(label).astype('float32')
+    label = np.resize(label,num_frames)
+    # print(path + str(len(label))+ "  " + str(num_maps)+"  "+str(clip_size) +"  " + str(sliding_window_stride) + "  " + str(num_frames))
+    # print(num_maps)
+    num_maps = int((num_frames - clip_size) / sliding_window_stride + 1)
     split_raw_label = np.zeros((num_maps, clip_size))
     index = 0
     for start_frame_index in range(0, num_frames,sliding_window_stride ):

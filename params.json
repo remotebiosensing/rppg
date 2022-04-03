@@ -11,7 +11,7 @@
     {
         "save_root_path": "/media/hdd1/dy/dataset/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "UBFC",
+        "dataset_name": "VIPL_HR",
         "dataset_comment" :
                 [
                     "UBFC",

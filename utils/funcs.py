@@ -6,7 +6,7 @@ from scipy.sparse import spdiags
 import networkx as nx
 import pickle
 
-from test import load_graph, batch_graphs
+# from test import load_graph, batch_graphs
 
 
 def detrend(signal, Lambda):
