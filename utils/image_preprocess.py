@@ -680,8 +680,8 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
         return None
 
     # stacked_maps is the all the st maps for a given video (=num_maps) stacked.
-    stacked_ptts = np.zeros((num_maps, 25,frames.shape[2], 3))
-    stacked_maps = np.zeros((num_maps, 25,clip_size, 3))
+    stacked_ptts = np.zeros((num_maps, 5*64,frames.shape[2], 3))
+    stacked_maps = np.zeros((num_maps, 64,clip_size, 3))
 
     # processed_maps will contain all the data after processing each frame, but not yet converted into maps
     processed_maps = np.zeros((num_frames, 25, 3))
@@ -731,10 +731,10 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
         end_frame_index = start_frame_index + clip_size
         if end_frame_index > num_frames:
             break
-        spatio_temporal_map = np.zeros((clip_size, 25, 3))
+        spatio_temporal_map = np.zeros((clip_size, 64, 3))
 
         for idx, frame in enumerate(processed_frames[start_frame_index:end_frame_index]):
-            roi_blocks = chunkify(frame)
+            roi_blocks = chunkify(frame,8,8)
             for block_idx, block in enumerate(roi_blocks):
                 avg_pixels = cv2.mean(block)
                 spatio_temporal_map[idx, block_idx, 0] = avg_pixels[0]
@@ -755,9 +755,9 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
 
         transpose = np.transpose(processed_frames[start_frame_index:end_frame_index],(1,0,2,3))
 
-        ptt_map = np.zeros((np.shape(transpose)[0], 25, 3))
+        ptt_map = np.zeros((np.shape(transpose)[0], 5 * 64, 3))
         for idx, frame in enumerate(transpose):
-            roi_blocks = chunkify(frame)
+            roi_blocks = chunkify(frame,block_width=64, block_height=5)
             for block_idx, block in enumerate(roi_blocks):
                 avg_pixels = cv2.mean(block)
                 ptt_map[idx, block_idx, 0] = avg_pixels[0]

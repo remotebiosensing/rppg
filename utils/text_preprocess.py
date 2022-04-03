@@ -1,5 +1,5 @@
 import numpy as np
-
+from sklearn.preprocessing import minmax_scale
 
 def Deepphys_preprocess_Label(path):
     '''
@@ -97,7 +97,7 @@ def Axis_preprocess_Label(path,sliding_window_stride,num_frames,clip_size = 256)
         end_frame_index = start_frame_index + clip_size
         if end_frame_index > num_frames:
             break
-        split_raw_label[index,:] = label[start_frame_index:end_frame_index]
+        split_raw_label[index,:] = minmax_scale(label[start_frame_index:end_frame_index],axis=0,copy=True)*2-1#label[start_frame_index:end_frame_index]
         index += 1
     f.close()
 

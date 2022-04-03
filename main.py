@@ -116,7 +116,8 @@ Setting Learning Model
 '''
 if __TIME__:
     start_time = time.time()
-model = get_model(model_params["name"])
+
+model = [get_model(model_params["name"])]
 if torch.cuda.is_available():
     # os.environ["CUDA_VISIBLE_DEVICES"] = '9'
     # TODO: implement parallel training
@@ -126,11 +127,16 @@ if torch.cuda.is_available():
     # else:
     #     model = DataParallel(model, output_device=0)
     # torch.cuda.set_device(int(options["set_gpu_device"]))
-    model.cuda()
+    for mod in model[0]:
+        mod.cuda()
+    # model.cuda()
 else:
-    model = model.to('cpu')
+    for mod in model[0]:
+        mod = mod.to('cpu')
+    # model = model.to('cpu')
 print("summary")
 if __MODEL_SUMMARY__:
+
     summary(model,model_params["name"])
 
 if __TIME__:
@@ -159,8 +165,10 @@ Setting Optimizer
 print("set optim")
 if __TIME__:
     start_time = time.time()
-optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
-scheduler = lr_scheduler.ExponentialLR(optimizer,gamma=0.99)
+optimizer = [optimizer(mod.parameters(),hyper_params["learning_rate"], hyper_params["optimizer"]) for mod in model[0]]
+scheduler = [lr_scheduler.ExponentialLR(optim,gamma=0.99) for optim in optimizer]
+# optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
+# scheduler = lr_scheduler.ExponentialLR(optimizer,gamma=0.99)
 
 wandb.config = {
   "learning_rate": hyper_params["learning_rate"],
@@ -190,7 +198,9 @@ if K_Fold_flag:
 
         for epoch in range(hyper_params["epochs"]):
             with tqdm(train_loader, desc="Train ", total=len(train_loader)) as tepoch:
-                model.train()
+                for mod in model[0]:
+                    mod.train()
+                # model.train()
                 running_loss = 0.0
                 bpm_loss = 0.0
                 pcc_loss = 0.0
@@ -199,12 +209,17 @@ if K_Fold_flag:
                 cnt = 0
                 # for inputs, target, _bpm in tepoch:
                 for inputs, target in tepoch:
-                    optimizer.zero_grad()
+                    [optim.zero_grad() for optim in optimizer]
                     tepoch.set_description(f"Train Epoch {epoch}")
                     if bpm_flag:
                         p, bpm ,att= model(inputs)
                     else:
-                        p = model(inputs)
+                        if model[0].__len__() == 1:
+                            p = model(inputs)
+                        else:
+                            noise_free_map = model[0][1](target)
+                            p = model[0][0](inputs)
+
                     # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
                     if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
                         loss0 = criterion(p, target)
