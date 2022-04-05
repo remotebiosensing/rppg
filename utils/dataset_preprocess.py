@@ -25,7 +25,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     :param train_ratio: data split [ train ratio : 1 - train ratio]
     :return:
     """
-    split_flag = False
+    split_flag = True
     dataset_root_path = data_root_path + dataset_name
 
     manager = multiprocessing.Manager()
@@ -221,15 +221,15 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, flag, model_name, retu
 
     # ppg, sbp, dbp, hr
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
-        return_dict[path.replace('/','')] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
                                             'preprocessed_label': preprocessed_label}
     elif model_name in ["PPNet"]:
-        return_dict[path.replace('/','')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
+        return_dict[path.split("/")[-1]] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
     elif model_name in ["GCN"]:
-        return_dict[path.replace('/','')] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
                                             'preprocessed_label': preprocessed_label}
     elif model_name in ["AxisNet"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
                                             'preprocessed_ptt': stacked_ptts,
                                             'preprocessed_label': preprocessed_label}
         # 'preprocessed_graph': saved_graph}

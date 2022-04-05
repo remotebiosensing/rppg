@@ -25,18 +25,19 @@ class AxisNet(nn.Module):
                                      blocks=1,
                                      patch_dim=(np.int(np.ceil(img_dim[0] / 8)), 1),
                                      in_channels=256, out_channels=512)
-        self.vit_ptt_att_1 = ViT(img_dim=(448, 640), in_channels=3, blocks=1, patch_dim=(1, 640),dim=15, classification=False)
+        self.vit_ptt_att_1 = ViT(img_dim=(320, 472), in_channels=3, blocks=1, patch_dim=(1, 472),dim=15, classification=False)
         self.transconv_1 = nn.ConvTranspose2d(in_channels=3,out_channels=3,kernel_size=(1,2),stride=(1,2))
         self.transconv_2 = nn.ConvTranspose2d(in_channels=3, out_channels=3, kernel_size=(1, 2), stride=(1, 2))
         self.up_scale_block = UpScaleBlock()
 
     def forward(self,x):
-        # test = self.vit_ptt_att_1(x[1])
-        # test = rearrange(test, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x=1, patch_y=5, c=3,y=1)
-        # test = rearrange(test, 'b c (x z) y -> b c (x y) z',x=5,y=5)
-        # test = self.transconv_1(test)
-        # test = self.transconv_2(test)
-        # y = self.vit_att_1(x[0]*test)
+        test = self.vit_ptt_att_1(x[1])
+        test = rearrange(test, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x=1, patch_y=5, c=3,y=1)
+        test = rearrange(test, 'b c (x z) y -> b c (x y) z',x=5,y=5)
+        test = self.transconv_1(test)
+        test = self.transconv_2(test)
+        test = torch.nn.functional.interpolate(test,x[0].shape[2:])
+        y = self.vit_att_1(x[0]*test)
         y = self.vit_att_1(x[0])
         y = self.vit_att_2(y)
         y = self.vit_att_3(y)
