@@ -76,10 +76,12 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             proc.join()
     else:
         loop = len(data_list)//32
-        loop = 5
+        loop = 8
 
         for i in range(loop):
+            print("+++++++++++++++++++++++++++++"+str(i))
             for index, data_path in enumerate(data_list[i*32:(i+1)*32]):
+                print("-----------------------------"+str(index))
                 proc = multiprocessing.Process(target=preprocess_Dataset,
                                                args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name, 1, model_name, return_dict))
                 # flag 0 : pass
@@ -221,15 +223,15 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, flag, model_name, retu
 
     # ppg, sbp, dbp, hr
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
-        return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.replace('/','')] = {'preprocessed_video': preprocessed_video,
                                             'preprocessed_label': preprocessed_label}
     elif model_name in ["PPNet"]:
-        return_dict[path.split("/")[-1]] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
+        return_dict[path.replace('/','')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
     elif model_name in ["GCN"]:
-        return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.replace('/','')] = {'preprocessed_video': preprocessed_video,
                                             'preprocessed_label': preprocessed_label}
     elif model_name in ["AxisNet"]:
-        return_dict[path.split("/")[-1]] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.replace('/','')] = {'preprocessed_video': preprocessed_video,
                                             'preprocessed_ptt': stacked_ptts,
                                             'preprocessed_label': preprocessed_label}
         # 'preprocessed_graph': saved_graph}
