@@ -108,6 +108,12 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
             label_data.extend(hpy_file[key]['preprocessed_label'])
         hpy_file.close()
 
+        std_shape = (320,472, 3)# ptt_data[0].shape
+        for i in range(len(ptt_data)):
+            if ptt_data[i].shape != std_shape:
+                ptt_data[i] = np.resize(ptt_data[i],std_shape)
+
+
         dataset = AxisNetDataset(video_data=np.asarray(video_data),
                                  ptt_data = np.asarray(ptt_data),
                                  label_data=np.asarray(label_data),)
