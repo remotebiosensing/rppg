@@ -20,10 +20,10 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     :return: dataset
     '''
 
-    flag = False
+    flag = True
     name = model_name
-    # if model_name == "AxisNet":
-    #     name = "PhysNet"
+    if model_name == "GCN":
+        name = "PhysNet"
     hpy_file = h5py.File(save_root_path + name + "_" + dataset_name + "_" + option + ".hdf5", "r")
     graph_file = save_root_path + model_name + "_" + dataset_name + "_" + option + ".pkl"
 

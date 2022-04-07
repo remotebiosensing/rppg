@@ -31,8 +31,8 @@ def PhysNet_preprocess_Label(path):
     :param path: label file path
     :return: wave form
     '''
-    set = 32
-    div = 32
+    set = 64
+    div = 64
     # Load input
     f = open(path, 'r')
     f_read = f.read().split('\n')
@@ -41,7 +41,7 @@ def PhysNet_preprocess_Label(path):
     label = np.array(label).astype('float32')
     split_raw_label = np.zeros(((len(label) - div + 1), div))
     index = 0
-    for i in range(0,(len(label) - div + 1),set):
+    for i in range(0,(len(label) - div + 1),div):
         split_raw_label[i] = label[i:i + div]
         # index = index + div
     f.close()

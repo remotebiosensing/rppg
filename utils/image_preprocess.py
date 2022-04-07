@@ -61,8 +61,8 @@ def PhysNet_preprocess_Video(path, flag):
     :param flag: face detect flag
     :return:
     '''
-    set = 32
-    div = 32
+    set = 128
+    div = 64
     cap = cv2.VideoCapture(path)
     frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -110,7 +110,7 @@ def PhysNet_preprocess_Video(path, flag):
 
     split_raw_video = np.zeros(((frame_total - div + 1), div, set, set, 3))
     index = 0
-    for x in range(0,frame_total - div + 1,set):
+    for x in range(0,frame_total - div + 1,div):
         split_raw_video[x] = raw_video[x:x + div]
         # index = index + div
 

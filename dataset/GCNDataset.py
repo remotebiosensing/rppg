@@ -7,8 +7,10 @@ from torch.utils.data import Dataset
 class GCNDataset(Dataset):
     def __init__(self, video_data, label_data,bpm_data):
         self.transform = transforms.Compose([transforms.ToTensor()])
-        self.video_data = np.resize(video_data,(video_data.shape[0],64,256,3))
-        # self.video_data =
+        # self.video_data = np.resize(video_data,(video_data.shape[0],64,256,3))
+        # self.video_data = video_data.repeat(2,axis=2).repeat(2,axis=3)
+        self.video_data = video_data
+        #smaller_img.repeat(2, axis=0).repeat(2, axis=1)
         # self.video_data = video_data[:,:,:,:,:]*2-1
         self.label = label_data
         self.bpm = bpm_data
@@ -16,8 +18,8 @@ class GCNDataset(Dataset):
     def __getitem__(self, index):
         if torch.is_tensor(index):
             index = index.tolist()
-        video_data = torch.tensor(self.video_data[index],dtype=torch.float32)
-        # video_data = torch.tensor(np.transpose(self.video_data[index], (3,0,1,2)), dtype=torch.float32)
+        # video_data = torch.tensor(self.video_data[index],dtype=torch.float32)
+        video_data = torch.tensor(np.transpose(self.video_data[index], (3,0,1,2)), dtype=torch.float32)
         label_data = torch.tensor(self.label[index], dtype=torch.float32)
         # bpm_data = torch.tensor(self.bpm[index],dtype=torch.float32)
 

@@ -1,6 +1,6 @@
 {
     "__TIME__" : 0,
-    "__PREPROCESSING__" : 1,
+    "__PREPROCESSING__" : 0,
     "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
@@ -11,7 +11,7 @@
     {
         "save_root_path": "/media/hdd1/dy/dataset/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "VIPL_HR",
+        "dataset_name": "UBFC",
         "dataset_comment" :
                 [
                     "UBFC",
@@ -23,14 +23,14 @@
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
-        "train_batch_size" : 32,
+        "train_batch_size" : 16,
         "train_batch_size_comment" :
                 [
                     "PhysNet_LSTM : 8",
                     "PPNET :  100"
                 ],
         "train_shuffle" : 0,
-        "test_batch_size" : 32,
+        "test_batch_size" : 16,
         "test_shuffle" : 0
     },
     "hyper_params":
@@ -67,7 +67,7 @@
     },
     "model_params":
     {
-        "name": "AxisNet",
+        "name": "GCN",
         "name_comment":
                 [
                     "DeepPhys",

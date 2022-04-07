@@ -3,7 +3,7 @@ import torch
 from torch import einsum
 import torch.nn as nn
 import torch.nn.functional as F
-from self_attention_cv import AxialAttentionBlock,MultiHeadSelfAttention,ViT,TransformerEncoder
+from self_attention_cv import AxialAttentionBlock,MultiHeadSelfAttention,TransformerEncoder
 from self_attention_cv.common import expand_to_batch
 from self_attention_cv.pos_embeddings import AbsPosEmb1D, RelPosEmb2D
 from nets.models.gcn_utils import KNN_dist, View_selector, LocalGCN, NonLocalMP
@@ -1065,9 +1065,9 @@ class FDATransformerEncoder(nn.Module):
             x = attn(x) + x
 
         return x
-class Seq_GCN(nn.Module):
+class Seq_GCN_SS(nn.Module):
     def __init__(self):
-        super(Seq_GCN,self).__init__()
+        super(Seq_GCN_SS,self).__init__()
         self.conv1 = ConvBlock(3,64)
         self.conv2 = ConvBlock(64,128)
         self.conv3 = ConvBlock(128,256)
@@ -1092,7 +1092,6 @@ class Seq_GCN(nn.Module):
         y = self.up4(y)
 
         return y
-
 class ConvBlock(nn.Module):
     def __init__(self,in_dim,out_dim):
         super(ConvBlock, self).__init__()
@@ -1107,7 +1106,6 @@ class ConvBlock(nn.Module):
 
     def forward(self,x):
         return self.conv(x)
-
 class UpBlock(nn.Module):
     def __init__(self,in_dim,out_dim):
         super(UpBlock, self).__init__()
@@ -1458,3 +1456,15 @@ class Transformer_ST_TDC_gra_sharp(nn.Module):
         for block in self.blocks:
             x, Score = block(x, gra_sharp)
         return x, Score
+class Seq_GCN(nn.Module):
+    def __init__(self):
+        super(Seq_GCN, self).__init__()
+        self.conv = nn.Conv2d(in_channels=3,out_channels=20,kernel_size=3)
+        self.vit_1 = ViT(img_dim=(128,32))
+    def forward(self,x):
+        batch, length, channel, height, width = x.shape
+        x = Rearrange(x, 'b l c h w -> (b h) c l w')
+        y = self.vit_1(x)
+
+
+        return y
