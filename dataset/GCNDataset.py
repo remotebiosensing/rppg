@@ -10,6 +10,7 @@ class GCNDataset(Dataset):
         # self.video_data = np.resize(video_data,(video_data.shape[0],64,256,3))
         # self.video_data = video_data.repeat(2,axis=2).repeat(2,axis=3)
         self.video_data = video_data
+        # self.video_data = video_data[:,:,::4,::4]
         #smaller_img.repeat(2, axis=0).repeat(2, axis=1)
         # self.video_data = video_data[:,:,:,:,:]*2-1
         self.label = label_data
