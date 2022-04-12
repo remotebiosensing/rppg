@@ -1,4 +1,5 @@
 import numpy as np
+from torch.autograd import Variable
 import torch
 from torch import einsum
 import torch.nn as nn
@@ -10,162 +11,199 @@ from typing import Optional
 from self_attention_cv.common import expand_to_batch
 import torch
 from torch import nn
+from vit_pytorch import ViT as V
+
+
+print(torch.__version__)
 
 class Seq_GCN(nn.Module):
     def __init__(self):
         super(Seq_GCN, self).__init__()
-        self.conv = ConvBlock(in_dim=3,out_dim=3)
-        self.bvp_plane_module = PlaneModule()
-        self.ptt_plane_module = PlaneModule()
+
+        self.dim = [3,32,64,128]
 
 
-        self.lastconv = nn.Sequential(
-            ConvBlock(3, 64),
-            ConvBlock(64, 128),
-            ConvBlock(128, 256),
-            ConvBlock(256, 512),
-            UpBlock(512, 256),
-            UpBlock(256, 128),
-            UpBlock(128, 64),
-            UpBlock(64, 1),
-        )
+        self.main_plane = MainPlan()
+        self.bvp_plane = BvpPlan()
+        self.ptt_plane = PttPlan()
 
-        self.lin = nn.Sequential(
-            nn.Linear(32,1024),
-            nn.Dropout(0.5),
-            nn.ELU(inplace=True),
-            nn.Linear(1024, 32)
-        )
+        self.main_vit = ViT(img_dim=(8,264),in_channels=self.dim[2],patch_dim=(2,132),dim=4*32,blocks=1,classification=False,dropout=0.1)
 
-        self.conv1 = nn.Conv1d(in_channels=3,out_channels=1,kernel_size=1, stride=1, padding=0)
-        self.adaptive_1x1x1 = nn.AdaptiveAvgPool3d([32,1,1])
-        self.conv_2_2 = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=(64,64), dilation=(1,32))
+        self.up_1 = UpBlock(64,32)
+        self.up_2 = UpBlock(32, 16)
+        self.up_3 = UpBlock(16, 3)
+        self.up_4 = UpBlock(3, 1)
+
+        self.batch_norm = nn.BatchNorm2d(32)
+        self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout2d(0.5)
+        self.dropout_2 = nn.Dropout2d(0.2)
+
+
 
     def forward(self,x):
-        batch, channel, length, height, width = x.shape
 
-        stem = rearrange(x, 'b c l h w -> (b l) c h w')
-        stem = self.conv(stem)
-        stem = rearrange(stem, '(b l) c h w -> b c l h w', b = batch, l= length)
+        main_plane = self.main_plane(x)
+        ptt_plane = self.ptt_plane(x)
+        bvp_plane = self.bvp_plane(x)
 
-        batch, channel, length, height, width = stem.shape
+        out = []
+        batch, channel, length, e = main_plane.shape
+        for i in range(length):
+            out.append(torch.unsqueeze(torch.cat([main_plane[:,:,i,:],ptt_plane,bvp_plane],dim=2),dim=2))
 
-        ptt_plane = rearrange(stem, 'b c l h w -> (b w) c h l', b=batch, c=channel, l=length, h=height, w=width)
-        ptt_plane = self.ptt_plane_module(ptt_plane)
-        # ptt_plane = self.norm(ptt_plane)/
-        ptt_plane = rearrange(ptt_plane, '(b w) c h l -> b c l h w', b=batch, c=3, l=length, h=1, w=width)
+        out = torch.cat(out,dim=2)
+        out = self.main_vit(out)
+        out = rearrange(out, 'b xy (p c) -> b c xy p',c =self.dim[2],xy=8)
 
-        batch, channel, length, height, width = ptt_plane.shape
-        # stem = stem*torch.sigmoid(ptt_plane)
-
-        bvp_plane = rearrange(ptt_plane, 'b c l h w -> (b h) c w l', b = batch, c = channel, l = length, h = height, w =  width)
-        bvp_plane = self.bvp_plane_module(bvp_plane)
-        bvp_plane = rearrange(bvp_plane, '(b h) c w l -> b c l h w', b=batch, c=3, l=length, h=height, w=1)
-
-        out = torch.squeeze(bvp_plane)
-        out = self.conv1(out)
-
-
-
-        # out = self.conv_2_2(main_plane)
-        # out = self.lastconv(out)
-        # out = rearrange(out,'(b l) c h w -> b c l (h w)',l = length)
-        # out = torch.mean(out,3)
-        # out = self.conv1(out)
-        # out = torch.squeeze(out)
+        out = self.up_1(out)
+        out = self.up_2(out)
+        out = self.up_3(out)
+        out = self.up_4(out)
         out = torch.squeeze(out)
-        # out = self.lin(out)
-        # x = torch.squeeze(bvp_plane*ptt_plane)
-        # x = rearrange(x,'b l h w -> b (h w) l')
-        # x = self.conv1(x)
-
         return out
 
-class PlaneModule(nn.Module):
-    def __init__(self):
-        super(PlaneModule, self).__init__()
-        self.vit_1 = ViT(img_dim=(64, 32),in_channels=3, blocks=1, patch_dim=(8, 8),classification=False)
-        # 16 * 16 * 3 = 768
-        self.vit_2 = ViT(img_dim=(32, 16),in_channels=64, blocks=1, patch_dim=(4, 4),classification=False)
-        # 8 * 8 * 64 = 4096
-        self.vit_3 = ViT(img_dim=(16, 8), in_channels=128, blocks=1, patch_dim=(2, 2), classification=False)
-        # 4 * 4 * 128 =
-        self.vit_4 = ViT(img_dim=(8, 4), in_channels=256, blocks=1, patch_dim=(1, 1), classification=False)
-
-        self.d1 = ConvBlock(3, 64)
-        self.d2 = ConvBlock(64, 128)
-        self.d3 = ConvBlock(128, 256)
-        self.d4 = ConvBlock(256, 512)
-        self.u1 = UpBlock(512, 256)
-        self.u2 = UpBlock(256, 128)
-        self.u3 = UpBlock(128, 64)
-        self.u4 = UpBlock(64, 3)
+class ConvBlock(nn.Module):
+    def __init__(self,in_dim,out_dim):
+        super(ConvBlock, self).__init__()
+        self.seq = nn.Sequential(
+            nn.Conv2d(in_channels=in_dim,out_channels=out_dim,kernel_size=(3,3),stride=(2,2),padding=(1,1)),
+            nn.BatchNorm2d(out_dim),
+            nn.Conv2d(in_channels=out_dim,out_channels=out_dim,kernel_size=(3,3),stride=(1,1),padding=(1,1)),
+            nn.BatchNorm2d(out_dim),
+            nn.ReLU()
+        )
+        # (25 - 3)/2 +1
 
     def forward(self,x):
-        plane = self.vit_1(x)
-        plane = rearrange(plane, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x = 8, patch_y = 8, c = 3,x = 8, y = 4)
-        plane = self.d1(plane)
+        return self.seq(x)
 
-        plane = self.vit_2(plane)
-        plane = rearrange(plane, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x = 4, patch_y = 4, c = 64,x = 8, y = 4)
-        plane = self.d2(plane)
-
-        plane = self.vit_3(plane)
-        plane = rearrange(plane, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x=2, patch_y=2, c=128, x=8, y=4)
-        plane = self.d3(plane)
-
-        plane = self.vit_4(plane)
-        plane = rearrange(plane, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x=1, patch_y=1, c=256, x=8, y=4)
-        plane = self.d4(plane)
-
-        plane = self.u1(plane)
-        plane = self.u2(plane)
-        plane = self.u3(plane)
-        plane = self.u4(plane)
-        return plane
-
-class MainPlaneModule(nn.Module):
-    def __init__(self):
-        super(MainPlaneModule, self).__init__()
-        self.vit_1 = ViT(img_dim=(128, 128),in_channels=3, blocks=1, patch_dim=(16, 16),classification=False)
-        # 16 * 16 * 3 = 768
-        self.vit_2 = ViT(img_dim=(16, 64),in_channels=64, blocks=1, patch_dim=(8, 8),classification=False)
-        # 8 * 8 * 64 = 4096
-        self.vit_3 = ViT(img_dim=(8, 32), in_channels=128, blocks=1, patch_dim=(4, 4), classification=False)
-        # 4 * 4 * 128 =
-        self.vit_4 = ViT(img_dim=(4, 16), in_channels=256, blocks=1, patch_dim=(2, 2), classification=False)
-
-        self.d1 = ConvBlock(3, 64)
-        self.d2 = ConvBlock(64, 128)
-        self.d3 = ConvBlock(128, 256)
-        self.d4 = ConvBlock(256, 512)
-        self.u1 = UpBlock(512, 256)
-        self.u2 = UpBlock(256, 128)
-        self.u3 = UpBlock(128, 64)
-        self.u4 = UpBlock(64, 1)
+class ConvBlock_main(nn.Module):
+    def __init__(self,in_dim,out_dim):
+        super(ConvBlock_main, self).__init__()
+        self.seq = nn.Sequential(
+            nn.Conv2d(in_channels=in_dim,out_channels=out_dim,kernel_size=(3,3),stride=(2,2),padding=(1,1)),
+            nn.BatchNorm2d(out_dim),
+            nn.Conv2d(in_channels=out_dim,out_channels=out_dim,kernel_size=(3,3),stride=(2,2),padding=(1,1)),
+            nn.BatchNorm2d(out_dim),
+            nn.ReLU(inplace=True)
+        )
+        # (25 - 3)/2 +1
 
     def forward(self,x):
-        plane = self.vit_1(x)
-        plane = rearrange(plane, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x = 16, patch_y = 16, c = 3,x = 8, y = 2)
-        plane = self.d1(plane)
+        return self.seq(x)
 
-        plane = self.vit_2(plane)
-        plane = rearrange(plane, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x = 8, patch_y = 8, c = 64,x = 8, y = 2)
-        plane = self.d2(plane)
 
-        plane = self.vit_3(plane)
-        plane = rearrange(plane, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x=4, patch_y=4, c=128, x=8, y=2)
-        plane = self.d3(plane)
+class UpBlock(nn.Module):
+    def __init__(self,in_dim,out_dim):
+        super(UpBlock, self).__init__()
+        self.seq = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=in_dim,out_channels=out_dim,kernel_size=(1,2),stride=(1,2)),
+            nn.Conv2d(in_channels=out_dim,out_channels=out_dim,kernel_size=3,stride=(2,1),padding=(1,1)),
+            nn.BatchNorm2d(out_dim),
+            nn.Conv2d(in_channels=out_dim,out_channels=out_dim,kernel_size=3,stride=(1,1),padding=(1,1)),
+            nn.BatchNorm2d(out_dim),
+            nn.SELU(inplace=True)
+        )
+    def forward(self,x):
+        return self.seq(x)
 
-        plane = self.vit_4(plane)
-        plane = rearrange(plane, 'b (x y) (patch_x patch_y c) -> b c (patch_x x) (patch_y y)', patch_x=2, patch_y=2, c=256, x=8, y=2)
-        plane = self.d4(plane)
+class MainPlan(nn.Module):
+    def __init__(self):
+        super(MainPlan, self).__init__()
+        self.dim = [3,32,64,128]
+        self.involve_main_conv2d = ConvBlock_main(in_dim=self.dim[0], out_dim=self.dim[1])
+        # nn.Conv2d(in_channels=3, out_channels=32, kernel_size=(2,2),stride=2)
+        self.main_conv2d = nn.Sequential(
+            nn.Conv2d(in_channels=self.dim[1], out_channels=self.dim[1], kernel_size=(1, 32), stride=(1, 1), dilation=(1, 32)),
+            nn.BatchNorm2d(self.dim[1]),
+            nn.Conv2d(in_channels=self.dim[1], out_channels=self.dim[1], kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
+            nn.BatchNorm2d(self.dim[1]),
+            nn.ReLU(inplace=True)
+        )
+        # self.main_vit = V(image_size=32,patch_size=4,nu)
+        self.main_vit = ViT(img_dim=(32,32),in_channels=self.dim[1],patch_dim=(4,4),blocks=2,classification=False)
+        self.main_conv_block = ConvBlock(self.dim[1],self.dim[2])
+    def forward(self,x):
+        batch, channel, length, height, width = x.shape
+        main_plane = rearrange(x, 'b c l h w -> (b l) c h w')  # 128/3/128/128
 
-        plane = self.u1(plane)
-        plane = self.u2(plane)
-        plane = self.u3(plane)
-        plane = self.u4(plane)
-        return plane
+        main_plane = self.involve_main_conv2d(main_plane)  # 128/3/32/32
+        main_plane = rearrange(main_plane, '(b l) c h w -> b c l (h w)', l=length)  # 4/3/32/1024
+        main_plane = self.main_conv2d(main_plane)  # 4/3/16/16
+        main_plane = self.main_vit(main_plane) # 32/32/16/16
+        main_plane = rearrange(main_plane, 'b xy (patch c) -> b c patch xy', c = self.dim[1])
+
+        main_plane = self.main_conv_block(main_plane)  # 4/64/8/8 # b c l (h w)
+        return main_plane
+class PttPlan(nn.Module):
+    def __init__(self):
+        super(PttPlan, self).__init__()
+        self.dim = [3, 32, 64, 128]
+        self.involve_ptt_conv2d = ConvBlock_main(in_dim=self.dim[0], out_dim=self.dim[
+            1])  # nn.Conv2d(in_channels=3, out_channels=32, kernel_size=(2, 2), stride=2)
+        self.ptt_conv2d = nn.Sequential(
+            nn.Conv2d(in_channels=self.dim[1], out_channels=self.dim[1], kernel_size=(1, 8), stride=(1, 1),
+                      dilation=(1, 32)),
+            nn.BatchNorm2d(self.dim[1]),
+            nn.Conv2d(in_channels=self.dim[1], out_channels=self.dim[1], kernel_size=(3, 3), stride=(2, 2),
+                      padding=(1, 1)),
+            nn.BatchNorm2d(self.dim[1]),
+            nn.ReLU(inplace=True)
+        )
+       # self.ptt_vit = ViT(img_dim=(64, 16), in_channels=self.dim[1], patch_dim=(8, 2), blocks=2,dim_head=64, classification=False)
+        self.ptt_conv_block = ConvBlock(self.dim[1], self.dim[2])
+        self.dropout_2 = nn.Dropout2d(0.2)
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((64, 128))
+    def forward(self,x):
+        batch, channel, length, height, width = x.shape
+        ptt_plane = rearrange(x, 'b c l h w -> (b h) c l w')     # 512/3/32/128
+        ptt_plane = self.involve_ptt_conv2d(ptt_plane)          # 512/3/8/32
+        ptt_plane = rearrange(ptt_plane, '(b h) c l w -> b c h (l w)',h=height)  # 4/3/128/256
+        ptt_plane = self.ptt_conv2d(ptt_plane) # 4/32/128/32
+        # ptt_plane = self.ptt_conv2d_2(ptt_plane) # 4/32/64/16
+        # ptt_plane = self.ptt_vit(ptt_plane)
+        # ptt_plane = rearrange(ptt_plane, 'b xy (patch c) -> b c patch xy', c=self.dim[1])
+        ptt_plane = self.ptt_conv_block(ptt_plane) #4/64/32/8 # b c h (l w)
+
+        ptt_plane = rearrange(ptt_plane, 'b c h e -> b c (h e)')
+        ptt_plane = self.dropout_2(ptt_plane)
+        ptt_plane = self.adaptive_pool(ptt_plane)
+        return ptt_plane
+class BvpPlan(nn.Module):
+    def __init__(self):
+        super(BvpPlan, self).__init__()
+        self.dim = [3,32,64,128]
+        self.involve_bvp_conv2d = ConvBlock_main(in_dim=self.dim[0], out_dim=self.dim[
+            1])  # nn.Conv2d(in_channels=3, out_channels=32, kernel_size=(2, 2), stride=2)
+        self.bvp_conv2d = nn.Sequential(
+            nn.Conv2d(in_channels=self.dim[1], out_channels=self.dim[1], kernel_size=(1, 8), stride=(1, 1),
+                      dilation=(1, 32)),
+            nn.BatchNorm2d(self.dim[1]),
+            nn.Conv2d(in_channels=self.dim[1], out_channels=self.dim[1], kernel_size=(3, 3), stride=(2, 2),
+                      padding=(1, 1)),
+            nn.BatchNorm2d(self.dim[1]),
+            nn.ReLU(inplace=True)
+        )
+        # self.bvp_vit = ViT(img_dim=(64, 16), in_channels=self.dim[1], patch_dim=(8, 2), blocks=2,dim_head=64, classification=False)
+        self.bvp_conv_block = ConvBlock(self.dim[1], self.dim[2])
+        self.dropout = nn.Dropout2d(0.5)
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((64, 128))
+    def forward(self,x):
+        batch, channel, length, height, width = x.shape
+        bvp_plane = rearrange(x, 'b c l h w -> (b w) c l h')  # 512/3/32/128
+
+        bvp_plane = self.involve_bvp_conv2d(bvp_plane)  # 512/3/8/32
+        bvp_plane = rearrange(bvp_plane, '(b w) c l h -> b c w (l h)', w=width)  # 4/3/128/256
+        bvp_plane = self.bvp_conv2d(bvp_plane)  # 4/32/64/16
+        # bvp_plane = self.bvp_vit(bvp_plane)
+        # bvp_plane = rearrange(bvp_plane, 'b xy (patch c) -> b c patch xy', c=self.dim[1])
+        bvp_plane = self.bvp_conv_block(bvp_plane)  # 4/64/32/8 # b c w (l h)
+        bvp_plane = rearrange(bvp_plane, 'b c w e -> b c (w e)')
+        bvp_plane = self.dropout(bvp_plane)
+        bvp_plane = self.adaptive_pool(bvp_plane)
+        return bvp_plane
+
 
 class TransformerEncoder(nn.Module):
     def __init__(self, dim, blocks=6, heads=8, dim_head=None, dim_linear_block=1024, dropout=0, prenorm=False):
@@ -353,32 +391,3 @@ class ViT(nn.Module):
 
         # we index only the cls token for classification. nlp tricks :P
         return self.mlp_head(y[:, 0, :]) if self.classification else y[:, 1:, :]
-
-class ConvBlock(nn.Module):
-    def __init__(self,in_dim,out_dim):
-        super(ConvBlock, self).__init__()
-        self.seq = nn.Sequential(
-            nn.Conv2d(in_channels=in_dim,out_channels=out_dim,kernel_size=(3,3),stride=(2,2),padding=(1,1)),
-            nn.BatchNorm2d(out_dim),
-            nn.Conv2d(in_channels=out_dim,out_channels=out_dim,kernel_size=(3,3),stride=(1,1),padding=(1,1)),
-            nn.BatchNorm2d(out_dim),
-            nn.ReLU(inplace=True)
-        )
-        # (25 - 3)/2 +1
-
-    def forward(self,x):
-        return self.seq(x)
-
-class UpBlock(nn.Module):
-    def __init__(self,in_dim,out_dim):
-        super(UpBlock, self).__init__()
-        self.seq = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=in_dim,out_channels=out_dim,kernel_size=(1,2),stride=(1,2)),
-            nn.Conv2d(in_channels=out_dim,out_channels=out_dim,kernel_size=3,stride=(2,1),padding=(1,1)),
-            nn.BatchNorm2d(out_dim),
-            nn.Conv2d(in_channels=out_dim,out_channels=out_dim,kernel_size=3,stride=1,padding=(1,1)),
-            nn.BatchNorm2d(out_dim),
-            nn.ReLU(inplace=True)
-        )
-    def forward(self,x):
-        return self.seq(x)
