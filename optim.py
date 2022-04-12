@@ -24,7 +24,7 @@ def optimizer(model_params, learning_rate: float = 1, optim: str = "mse"):
     elif optim == "ada_max":
         return opt.Adamax(model_params, learning_rate)
     elif optim == "ada_mw":
-        return opt.AdamW(model_params, learning_rate)
+        return opt.AdamW(model_params, learning_rate,weight_decay=0.9)
     elif optim == "a_sgd":
         return opt.ASGD(model_params, learning_rate)
     elif optim == "lbfgs":
@@ -32,7 +32,7 @@ def optimizer(model_params, learning_rate: float = 1, optim: str = "mse"):
     elif optim == "n_adam":
         return opt.NAdam(model_params, learning_rate)
     elif optim == "r_adam":
-        return opt.RAdam(model_params, learning_rate)
+        return opt.RAdam(model_params, learning_rate,betas=(0.9,0.999),eps=1e-08,weight_decay=1e-2)
     elif optim == "rprop":
         return opt.Rprop(model_params, learning_rate)
     elif optim == "sparse_adam":

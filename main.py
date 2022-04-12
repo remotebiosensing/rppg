@@ -236,7 +236,9 @@ if K_Fold_flag:
                             bpm_loss += loss1.item()
                             loss = loss0  + loss1
                         else:
-                            loss = loss0
+                            l2_lambda = 0.001
+                            l2_norm = sum(d.pow(2.0).sum() for d in model.parameters(()))
+                            loss = loss0 + l2_lambda * l2_norm
                     else:
                         loss_0 = criterion(y[:][0], target[:][0])
                         loss_1 = criterion(y[:][1], target[:][1])

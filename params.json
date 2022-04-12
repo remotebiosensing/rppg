@@ -45,21 +45,21 @@
                    "triplet_margin","triplet_margin_distance",
                    "PPNET : MSE"
                ],
-        "optimizer": "adam",
+        "optimizer": "r_adam",
         "optimizer_comment":
                 [
                     "adam","sgd","rms_prop","ada_delta","ada_grad","ada_max",
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam",
                     "PPNET : adam"
                 ],
-        "learning_rate": 0.0001,
+        "learning_rate": 0.005,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001",
             "PPNet : lr = 0.001"
         ],
 
-        "epochs" : 30000,
+        "epochs" : 1000,
         "epochs_comment" :
                 [
                     "PPNET : 100"
