@@ -1,4 +1,5 @@
 # 디폴트 무시된 파일
+/dataset/
 /shelf/
 /workspace.xml
 # 에디터 기반 HTTP 클라이언트 요청
@@ -6,3 +7,4 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+
