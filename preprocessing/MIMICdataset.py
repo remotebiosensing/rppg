@@ -2,6 +2,36 @@ from IPython.display import display
 import os
 import wfdb
 
+'''
+find_person(root_path)
+
+< input >
+    root_path : folder path containing person
+< output > 
+    ABPBVP_list : list of people that have both channel; BVP, ABP
+'''
+
+def find_person(root_path):
+    person_list = []
+    for (path, dirs, files) in os.walk(root_path):
+        for dir in dirs:
+            if len(dir) == 3:
+                person_list.append(dir)
+
+    ABPBVP_list = []
+    for person in person_list:
+        channel_cnt = 0
+        p = root_path + person
+        for (path, dirs, files) in os.walk(p):
+            for file in files:
+                if file.split('.')[-1] == 'abp' or file.split('.')[-1] == 'ple':
+                    channel_cnt += 1
+                    if channel_cnt == 2:
+                        ABPBVP_list.append(person)
+                        continue
+
+    return ABPBVP_list
+
 
 '''
 def find_idx(path)
