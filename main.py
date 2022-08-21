@@ -1,137 +1,104 @@
 import os
 import sys
 
-import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-import torchvision
-# import pytorch_model_summary
+
 import numpy as np
+from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 from preprocessing import MIMICdataset, customdataset
 from preprocessing.utils import math_module
 from nets.modules.sub_modules.bvp2abp import *
 from nets.loss import loss
 
-# import wandb
-#
-# wandb.init()
-# config = {
-#     'epochs': 500,
-#     'batch_size': 7500,
-#     'learning_rate': 0.0001,
-#     'weight_decay': 0.00005,
-#     'seed': 42
-# }
+'''
+wandb setup
+'''
+import wandb
+
+wandb.init(project="VBPNet", entity="paperchae")
+
+wandb.config = {
+    'learning_rate': 0.01,
+    'weight_decay': 0.005,
+    'epochs': 50,
+    'batch_size': 64
+}
+# torch.multiprocessing.set_start_method('spawn')
+
+
 print(sys.version)
 
 # GPU Setting
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print('Device:', device)  # 출력결과: cuda
+print('----- GPU INFO -----\nDevice:', device)  # 출력결과: cuda
 print('Count of using GPUs:', torch.cuda.device_count())
-print('Current cuda device:', torch.cuda.current_device())
+print('Current cuda device:', torch.cuda.current_device(), '\n--------------------\n')
 
+'''--------------------'''
 root_path = '/home/paperc/PycharmProjects/BPNET/dataset/mimic-database-1.0.0/'
-# root_path = '/tmp/pycharm_project_811/VBPNet/dataset/mimic-database-1.0.0/'
-t_path1 = '039/03900004'
-t_path2 = '039/03900001'
-train_path = root_path + t_path1
-test_path = root_path + t_path1
-chunk_size = 10
-# print('data_path:', data_path)
 
-# read record
-train_record = MIMICdataset.read_record(train_path)
-test_record = MIMICdataset.read_record(train_path)
-# returns name of file
-record_name = train_record.record_name
-# returns list of signals [abp, bvp]
-sig_name = train_record.sig_name
-# returns numpy array of signals
-train_signal = train_record.p_signal
-test_signal = train_record.p_signal
-
-train_abp, train_ple = MIMICdataset.sig_slice(signals=train_signal, size=chunk_size)
-test_abp, test_ple = MIMICdataset.sig_slice(signals=test_signal, size=chunk_size)
-
-# print(abp.shape)
-# print('--------------------------------')
-# print(ple.shape)
-# print('--------------------------------')
-print('__main__ -> ', np.shape(train_abp[0]), np.shape(train_ple[0]))
-# test_list = MIMICdataset.find_person(root_path)
-# print(test_list)
-#
-# t = test_list[0]
-#
-# test_path = root_path + t
-# print(test_path)
-# new_dataset_path = '/tmp/pycharm_project_811/VBPNet/dataset/bvp2abp/'
-# for l in test_list:
-#     os.makedirs(new_dataset_path+l)
-
-# train_dataset = customdataset.CustomDataset(x_data=ple[0:3], y_data=abp[0:3])
+train_signal = MIMICdataset.data_aggregator(root_path, slicefrom=10, sliceto=12)
+print(np.shape(train_signal)[0])
+chunk_num = int(np.shape(train_signal)[0] / 7500)
+print(chunk_num)
+train_ple, train_abp = MIMICdataset.signal_slicing(signals=train_signal, chunk_num=chunk_num)
 train_dataset = customdataset.CustomDataset(x_data=train_ple, y_data=train_abp)
-train_loader = DataLoader(train_dataset, batch_size=7500, shuffle=False)
-test_dataset = customdataset.CustomDataset(x_data=test_ple[0], y_data=test_abp[0])
-test_loader = DataLoader(test_dataset, batch_size=7500, shuffle=False)
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=False)
 
-print('__main__ -> train_dataset[0][0] :', train_dataset[0][0].size())
-
-dataiter = iter(train_loader)
-seq, labels = dataiter.next()
-print('__main__ -> seq_size :', seq.size(), 'label_size', labels.size())
-print('train ple :', seq)
-print('abp label :', labels)
-
-# derivativetest = math_module.derivative(labels)
-
-''' model test '''
+#
+''' model train '''
 model = bvp2abp(in_channels=1, out_channels=64, kernel_size=3).to(device)
 
-learning_rate = 0.0001
-training_epochs = 500
-# loss = nn.MSELoss().to(device)
+learning_rate = 0.01
+training_epochs = 50
+
 loss1 = loss.NegPearsonLoss().to(device)
-# loss2 = loss.rmseLoss().to(device)
 loss2 = nn.MSELoss().to(device)
 # loss2 = loss.fftLoss().to(device)
-# print(loss1.shape)
-# print(loss2.shape)
-# loss = loss1 + loss2
-optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.00005)
+# loss2 = loss.rmseLoss().to(device)
+
+optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.005)
 
 total_batch = len(train_loader)
 print('batchN :', total_batch)
+
 costarr = []
+cnt = 0
 # wandb.watch(model=model, criterion=loss, log="all", log_freq=10)
-for epoch in range(training_epochs):
+for epoch in tqdm(range(training_epochs)):
     avg_cost = 0
+    for batch_idx, samples in enumerate(train_loader):
+        X_train, Y_train = samples
 
-    for X, Y in train_loader:
-        hypothesis = model(X)
-
+        hypothesis = model(X_train)
         optimizer.zero_grad()
-        cost1 = loss1(hypothesis, Y)
-        cost2 = loss2(hypothesis, Y)
+
+        cost1 = loss1(torch.squeeze(hypothesis), Y_train)
+        cost2 = loss2(torch.squeeze(hypothesis), Y_train)
         cost = cost1 * cost2
+
         cost.backward()
         optimizer.step()
-
+        cnt += 1
         avg_cost += cost / total_batch
+        wandb.log({"Epoch": training_epochs, "Loss": cost, "Negative Pearson Loss": cost1, "MSE Loss": cost2})
     costarr.append(avg_cost.__float__())
-    print('[Epoch: {:>4}] cost = {:>.9}'.format(epoch + 1, avg_cost))
-
-print(costarr)
-
-# print(pytorch_model_summary.summary(model=model, show_input=False))
-
-from matplotlib import pyplot as plt
-import numpy as np
+    # print('     ->     avg_cost == ', avg_cost.__float__())
+print('cost :', costarr[-1])
 
 t_val = np.array(range(len(costarr)))
 plt.plot(t_val, costarr)
-plt.title('NegPearsonLoss * fftLoss')
+plt.title('NegPearsonLoss * mseLoss')
 plt.show()
+
+# model save
+PATH = '/home/paperc/PycharmProjects/BPNET/weights/'
+torch.save(model, PATH + 'model.pt')  # 전체 모델 저장
+torch.save(model.state_dict(), PATH + 'model_state_dict.pt')  # 모델 객체의 state_dict 저장
+torch.save({'model': model.state_dict(),  # 여러 가지 값 저장, 학습 중 진행 상황 저장을 위해 epoch, loss 값 등 일반 scalar 값 저장 가능
+            'optimizer': optimizer.state_dict()},
+           PATH + 'all.tar')
