@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
 
+
 class CustomDataset(Dataset):
     def __init__(self, x_data, y_data):
         # 들어온 x는 tensor형태로 변환
@@ -15,8 +16,10 @@ class CustomDataset(Dataset):
 
     # x,y를 튜플형태로 내보내기
     def __getitem__(self, index):
-        return self.x_data[index], self.y_data[index]
+        # self.x_data = torch.reshape(self.x_data, [1, 1, len(self.x_data)])
+        x = self.x_data[index].to('cuda')
+        y = self.y_data[index].to('cuda')
+        return x, y
 
     def __len__(self):
         return self.len
-
