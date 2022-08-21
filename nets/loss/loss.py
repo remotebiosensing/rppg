@@ -15,7 +15,9 @@ def neg_Pearson_Loss(predictions, targets):
     '''
     rst = 0
     # targets = targets[:,:]
-    predictions = torch.squeeze(predictions)
+    # print('before squeeze', predictions.shape)
+    predictions = torch.squeeze(predictions, 1)
+    # print('after squeeze', predictions.shape)
     # Pearson correlation can be performed on the premise of normalization of input data
     predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
     targets = (targets - torch.mean(targets)) / torch.std(targets)
@@ -50,7 +52,7 @@ class fftLoss(nn.Module):
         super(fftLoss, self).__init__()
 
     def forward(self, predictions, targets):
-        return torch.nn.MSELoss(torch.fft.fft(predictions, dim=-1), torch.fft.fft(targets, dim=-1))
+        return torch.nn.MSELoss(torch.fft.fft(predictions), torch.fft.fft(targets))
 
 
 class rmseLoss(nn.Module):
