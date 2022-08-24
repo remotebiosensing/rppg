@@ -1,13 +1,33 @@
 import torch
 import torch.nn as nn
-import numpy as np
+
+'''
+np.shape(predictions) = torch.Size([64,7500])
+np.shape(targets) = torch.Size([64,7500])
+'''
 
 
-def rmse(prediction, target):
-    return np.sqrt((1 / len(target)) * np.sum((target - prediction) ** 2))
+def rmse_Loss(predictions, targets):
+    predictions = torch.squeeze(predictions)
+    N = predictions.shape[1]
+    global rmse
+
+    for i in range(predictions.shape[0]):
+        rmse = torch.sqrt((1 / N) * torch.sum(torch.pow(targets[i] - predictions[i], 2)))
+    return rmse
 
 
-def neg_Pearson_Loss(predictions, targets):
+def fft_Loss(predictions, targets):
+    predictions = torch.squeeze(predictions)
+    global fft
+
+    for i in range(predictions.shape[0]):
+        fft = torch.nn.MSELoss(torch.fft.fft(predictions[i]), torch.fft.fft(targets[i]))
+    return fft
+
+
+def Neg_Pearson_Loss(predictions, targets):
+    # print('Neg*** prediction.shape :', np.shape(predictions), 'targets.shape :', np.shape(targets))
     '''
     :param predictions: inference value of trained model
     :param targets: target label of input data
@@ -20,6 +40,7 @@ def neg_Pearson_Loss(predictions, targets):
     # print('after squeeze', predictions.shape)
     # Pearson correlation can be performed on the premise of normalization of input data
     predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
+    # targets = np.reshape(targets, (2, 1, 7500))
     targets = (targets - torch.mean(targets)) / torch.std(targets)
 
     # for i in range(predictions.shape[0]):
@@ -44,7 +65,7 @@ class NegPearsonLoss(nn.Module):
         super(NegPearsonLoss, self).__init__()
 
     def forward(self, predictions, targets):
-        return neg_Pearson_Loss(predictions, targets)
+        return Neg_Pearson_Loss(predictions, targets)
 
 
 class fftLoss(nn.Module):
@@ -52,12 +73,12 @@ class fftLoss(nn.Module):
         super(fftLoss, self).__init__()
 
     def forward(self, predictions, targets):
-        return torch.nn.MSELoss(torch.fft.fft(predictions), torch.fft.fft(targets))
+        return fft_Loss(predictions=predictions, targets=targets)
 
 
 class rmseLoss(nn.Module):
-    def __inti__(self):
-        super(rmse, self).__init__()
+    def __init__(self):
+        super(rmseLoss, self).__init__()
 
     def forward(self, predictions, targets):
-        return rmse(prediction=predictions, target=targets)
+        return rmse_Loss(predictions=predictions, targets=targets)
