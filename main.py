@@ -9,9 +9,9 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from preprocessing import MIMICdataset, customdataset
-from preprocessing.utils import math_module
 from nets.modules.sub_modules.bvp2abp import *
 from nets.loss import loss
+import test
 
 '''
 wandb setup
@@ -20,12 +20,13 @@ import wandb
 
 wandb.init(project="VBPNet", entity="paperchae")
 
-wandb.config = {
+config = {
     'learning_rate': 0.01,
     'weight_decay': 0.005,
     'epochs': 50,
     'batch_size': 64
 }
+wandb.config = config
 # torch.multiprocessing.set_start_method('spawn')
 
 
@@ -41,25 +42,21 @@ print('Current cuda device:', torch.cuda.current_device(), '\n------------------
 '''--------------------'''
 root_path = '/home/paperc/PycharmProjects/BPNET/dataset/mimic-database-1.0.0/'
 
-train_signal = MIMICdataset.data_aggregator(root_path, slicefrom=10, sliceto=12)
-print(np.shape(train_signal)[0])
-chunk_num = int(np.shape(train_signal)[0] / 7500)
-print(chunk_num)
-train_ple, train_abp = MIMICdataset.signal_slicing(signals=train_signal, chunk_num=chunk_num)
+train_ple, train_abp = MIMICdataset.data_aggregator(root_path, slicefrom=1, sliceto=2)
+'''--------------------------'''
 train_dataset = customdataset.CustomDataset(x_data=train_ple, y_data=train_abp)
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=False)
 
-#
 ''' model train '''
 model = bvp2abp(in_channels=1, out_channels=64, kernel_size=3).to(device)
 
 learning_rate = 0.01
-training_epochs = 50
+training_epochs = 200
 
 loss1 = loss.NegPearsonLoss().to(device)
-loss2 = nn.MSELoss().to(device)
+# loss2 = nn.MSELoss().to(device)
 # loss2 = loss.fftLoss().to(device)
-# loss2 = loss.rmseLoss().to(device)
+loss2 = loss.rmseLoss().to(device)
 
 optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.005)
 
@@ -67,32 +64,31 @@ total_batch = len(train_loader)
 print('batchN :', total_batch)
 
 costarr = []
-cnt = 0
 # wandb.watch(model=model, criterion=loss, log="all", log_freq=10)
 for epoch in tqdm(range(training_epochs)):
     avg_cost = 0
     for batch_idx, samples in enumerate(train_loader):
         X_train, Y_train = samples
-
         hypothesis = model(X_train)
         optimizer.zero_grad()
 
-        cost1 = loss1(torch.squeeze(hypothesis), Y_train)
-        cost2 = loss2(torch.squeeze(hypothesis), Y_train)
+        cost1 = loss1(hypothesis, Y_train)
+        cost2 = loss2(hypothesis, Y_train)
         cost = cost1 * cost2
 
         cost.backward()
         optimizer.step()
-        cnt += 1
+
         avg_cost += cost / total_batch
-        wandb.log({"Epoch": training_epochs, "Loss": cost, "Negative Pearson Loss": cost1, "MSE Loss": cost2})
+        wandb.log({"Loss": cost, "Negative Pearson Loss": cost1, "RMSE Loss": cost2}, step=epoch)
+
     costarr.append(avg_cost.__float__())
     # print('     ->     avg_cost == ', avg_cost.__float__())
 print('cost :', costarr[-1])
 
 t_val = np.array(range(len(costarr)))
 plt.plot(t_val, costarr)
-plt.title('NegPearsonLoss * mseLoss')
+plt.title('NegPearsonLoss * rmseLoss')
 plt.show()
 
 # model save
@@ -102,3 +98,5 @@ torch.save(model.state_dict(), PATH + 'model_state_dict.pt')  # 모델 객체의
 torch.save({'model': model.state_dict(),  # 여러 가지 값 저장, 학습 중 진행 상황 저장을 위해 epoch, loss 값 등 일반 scalar 값 저장 가능
             'optimizer': optimizer.state_dict()},
            PATH + 'all.tar')
+
+test.model_test()
