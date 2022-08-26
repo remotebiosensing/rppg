@@ -42,3 +42,30 @@ def diff_np(input_sig):
     return diff
 
 
+def diff_channels_aggregator(zero, first=None, second=None):
+    zero = np.expand_dims(zero, axis=1)
+
+    if first is None:
+        # print('zero called')
+        print(np.shape(zero))
+        print(zero)
+        return zero
+
+    elif (first is not None) and (second is None):
+        # print('first called')
+        first = np.expand_dims(first, axis=1)
+        temp1 = np.concatenate((zero, first),axis=1)
+
+        print(np.shape(temp1))
+        print(temp1)
+        return temp1
+    elif (first is not None) and (second is not None):
+        # print('second called')
+        first = np.expand_dims(first, axis=1)
+        second = np.expand_dims(second, axis=1)
+        temp2 = np.concatenate((zero, first, second), axis=1)
+
+        print(np.shape(temp2))
+        print(temp2)
+        return temp2
+
