@@ -1,0 +1,31 @@
+{
+  "wandb": {
+    "config": {
+      "project": "VBPNet",
+      "entity": "paperchae",
+      "learning_rate": 0.001,
+      "weight_decay": 0.0005,
+      "epochs": 200,
+      "batch_size": 64
+    }
+  },
+  "parameters": {
+    "root_path": "/home/paperc/PycharmProjects/BPNET/dataset/mimic-database-1.0.0/",
+    "save_path": "/home/paperc/PycharmProjects/BPNET/weights/",
+    "model_path": "/home/paperc/PycharmProjects/BPNET/weights/",
+    "in_channels" : {
+      "zero": 1,
+      "first": 2,
+      "second": 3
+    },
+    "dataset": "mimic-database-1.0.0",
+    "train_ratio": 0.7,
+    "validation_ratio": 0.9
+  },
+  "hyper_parameters": {
+    "learning_rate": 0.01,
+    "weight_decay": 0.005,
+    "epochs": 200,
+    "batch_size": 1000
+  }
+}
