@@ -1,8 +1,10 @@
-# from IPython.display import display
+from IPython.display import display
 import os
 import wfdb
 import numpy as np
 from tqdm import tqdm
+from preprocessing.utils import math_module
+from scipy import signal
 import multiprocessing
 
 '''
@@ -16,14 +18,14 @@ find_available_data(root_path)
 
 
 def find_available_data(root_path):
-    print('***MIMICdataset.find_available_data() called***')
+    print('\n***MIMICdataset.find_available_data() called***')
     person_list = []
     for (path, dirs, files) in os.walk(root_path):
         for dir in dirs:
             if len(dir) == 3:
                 person_list.append(dir)
 
-    ABPBVP_list = []
+    available_list = []
     for person in person_list:
         channel_cnt = 0
         p = root_path + person
@@ -32,11 +34,11 @@ def find_available_data(root_path):
                 if file.split('.')[-1] == 'abp' or file.split('.')[-1] == 'ple':
                     channel_cnt += 1
                     if channel_cnt == 2:
-                        ABPBVP_list.append(person)
+                        available_list.append(person)
                         continue
-    ABPBVP_list = sorted(ABPBVP_list)
+    available_list = sorted(available_list)
 
-    return ABPBVP_list
+    return available_list
 
 
 '''
@@ -114,60 +116,107 @@ def nan_checker(signal):
         return None
 
 
+
 def signal_slicing(signals, chunk_num):
-    print('***MIMICdataset.signal_slicing() called***')
-    print('in signal_slicing np.shape(signals) \n', np.shape(signals))
-    nan_list1 = []
-    sig = []
-    drop_cnt1 = 0
+    print('\n***MIMICdataset.signal_slicing() called***')
+    nan_check_list = []
+    refined_sig = []
+    dropped_nan = []  # dropped signal chunk index list ( nan included )
+    dropped_zero = []  # dropped signal chunk index list ( 0.0 included )
     r, c = np.shape(signals)
-    print('signal r, c :', r, c)
+    print('before signal_slicing >> np.shape(signals) :', np.shape(signals), '== (', int(r / 75000), '* 75000, 2 )')
+
+    # np.shape(signal_nan) : (used_file_cnt(85) * 10, 7500, 2)
     signal_nan = np.reshape(signals, (chunk_num, int(r / chunk_num), 2))
-    for s in np.isnan(signal_nan):
-        nan_list1.append(s.any())
-    for n, idx in enumerate(nan_list1):
-        if not idx:  # pleth가 0이 아닐때 append()
-            if signal_nan[n][0][1] != 0.0:
-                sig.append(signal_nan[n])
+
+    for s in np.isnan(signal_nan):  # np.isnan(signal_nan) : boolean list
+        nan_check_list.append(s.any())  # s.any() : returns true if np.isnan(signal_nan) has "any" true
+
+    for idx, nan in enumerate(nan_check_list):
+        if not nan:
+            if signal_nan[idx][0][1] != 0.0:  # 850개 중 signal_nan의 첫번째줄(abp, ple) 값 중에 ple가 0인 값 제거
+                refined_sig.append(signal_nan[idx])
+            else:
+                dropped_zero.append(idx)
         else:
-            drop_cnt1 += 1
+            dropped_nan.append(idx)
 
-    sig = np.split(np.array(sig), 2, axis=2)
-    abp, ple = np.squeeze(sig[0]), np.squeeze(sig[1])
+    dropped = sorted(dropped_zero + dropped_nan)
 
-    print('preprocessed1 : len(abp) :', len(abp), 'len(ple) :', len(ple))
-    print('np.shape(abp) , np.shape(ple) :', np.shape(abp), np.shape(ple))
+    refined_sig = np.split(np.array(refined_sig), 2, axis=2)
+    abp, ple = np.squeeze(refined_sig[0]), np.squeeze(refined_sig[1])
+    print(' >> dropped_nan num :', len(dropped_nan))
+    print(' >> dropped_zero num:', len(dropped_zero))
+    print(' >> dropped num:', len(dropped))
+    # print(' >> dropped :', dropped)
 
+    print('after signal_slicing >> np.shape(ple) :', np.shape(ple), 'np.shape(abp) :', np.shape(abp))
+
+    # np.shape(ple) : ndarray(702, 7500), np.shape(abp) : ndarray(702, 7500)
     return ple, abp
 
 
-def data_aggregator(root_path, slicefrom=0, sliceto=None):
-    print('***MIMICdataset.data_aggregator called***')
-    valid_list = find_available_data(root_path)
-    print('Number of total ICU patient :', len(valid_list))
-    print(valid_list)
-    total_data = np.empty((75000, 2))
-    using_list = valid_list[slicefrom:sliceto]
-    print('Number of selected ICU patient :', len(using_list))
-    print(using_list)
-    for l in using_list:
-        ll = root_path + l
+def data_aggregator(root_path, degree=0, slicefrom=0, sliceto=None):
+    print('\n***MIMICdataset.data_aggregator called*** >> degree :', degree)
+    available_list = find_available_data(root_path)
+    print('Number of total ICU patient :', len(available_list))
+    print(' >>', available_list)
+    total_data = np.empty((1, 2))
+    used_list = available_list[slicefrom:sliceto]
+    total_cnt = 0
+    print('Number of selected ICU patient :', len(used_list))
+    print(' >>', used_list)
+
+    down_sample = 1800
+
+    for u in used_list:
+        p = root_path + u
         used_file_cnt = 0
-        for (path, dirs, files) in os.walk(ll):
+        for (path, dirs, files) in os.walk(p):
             for file in tqdm(files):
                 if len(file.split('/')[-1]) == 12 and file.split('.')[-1] == 'hea':
-                    data_path = (ll + '/' + file).strip('.hea')
+                    data_path = (p + '/' + file).strip('.hea')
                     temp_data = read_record(data_path)
+                    total_cnt += 1
                     if np.shape(temp_data) == (75000, 2):
                         used_file_cnt += 1
+                        ## down_Sampling
+                        temp_data = signal.resample(temp_data, down_sample * 10)
                         total_data = np.append(total_data, temp_data, axis=0)
-                        # print('np.shape(total_data) :', np.shape(total_data))
                     else:
-                        print('\ntrain file dropped :', used_file_cnt, 'th ->> due to file shape :',
+                        print('\ntrain file dropped :', used_file_cnt, 'th ->> due to file shape is not right :',
                               np.shape(temp_data))
 
-    data = total_data[75000:]
-    print('type of total data :', type(total_data))
-    print('np.shape(total_data) :', np.shape(total_data), '== (', int(len(total_data) / 75000), '* 75000, 2 )')
-    print('train file number :', used_file_cnt)
-    return data
+    data = total_data[1:]
+    print('np.shape(total_data) :', np.shape(data))
+    print('total_cnt :', total_cnt, '/ used_file_cnt :', used_file_cnt, ' ( dropped_file_cnt :',
+          total_cnt - used_file_cnt, ')')
+    chunk_num = int(np.shape(data)[0] / down_sample)
+    print('np.shape(data_aggregator input) :', np.shape(data), '== (', int(len(data) / down_sample*10), '* 75000, 2 )')
+
+    if degree == 0:
+        ple, abp = signal_slicing(data, chunk_num)  # f
+
+        print('*** f data aggregation done***')
+        return ple, abp
+    elif degree == 1:
+        ple, abp = signal_slicing(data, chunk_num)  # f
+        ple_first, abp_first = math_module.diff_np(ple, abp)  # f'
+
+        ple_total = math_module.diff_channels_aggregator(ple, ple_first)
+        abp_total = abp
+
+        print('*** f & f\' data aggregation done***')
+        return ple_total, abp_total
+    elif degree == 2:
+        ple, abp = signal_slicing(data, chunk_num)  # f
+        ple_first, abp_first = math_module.diff_np(ple, abp)  # f'
+        ple_second, abp_second = math_module.diff_np(ple_first, abp_first)  # f''
+
+        ple_total = math_module.diff_channels_aggregator(ple, ple_first, ple_second)
+        abp_total = abp
+        print('*** f & f\' & f\'\' data aggregation done***')
+
+        return ple_total, abp_total
+    else:
+        print('derivative not supported... goto data_aggregator()')
