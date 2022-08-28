@@ -3,43 +3,36 @@ import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 
-'''should be done before sig_slicing'''
-
-
-def derivative(input_sig):
-    # print('input_sig :', np.shape(input_sig))
-    # print('input_sig :', input_sig)
-    # deriv = np.array(len(input_sig))
-    temp = input_sig[1:]
-    # print('input_sig[1:]', np.shape(temp))
-    # print('input_sig[1:]', temp)
-    temp = np.append(temp, temp[-1])
-    # print('temp', np.shape(temp))
-    # print('temp', temp)
-    # print('np.append(temp,0)', temp)
-    # deriv = np.subtract(temp, input_sig)
-    deriv = [tempi - inputi for tempi, inputi in zip(temp, input_sig)]
-    # print('deriv :', np.shape(deriv))
-    # print('deriv :', deriv)
-    return deriv
-
+'''should be done after sig_slicing()'''
 
 '''
 np.shape(input_sig) : ndarray(702, 7500)     ex) ple, abp
 '''
 
 
+def diff_np(input_sig, input_sig2=None):
+    ple_diff = []
+    abp_diff = []
+    if input_sig2 is None:
+        for p in input_sig:
+            ple_temp = np.append(p[1:], p[-1]) - p
+            ple_temp[-1] = np.mean(ple_temp[-3:-2])
+            ple_diff.append(ple_temp)
 
-def diff_np(input_sig):
-    diff = []
-    # print('before diff_np :', np.shape(input_sig))
-    for s in input_sig:
-        temp = np.append(s[1:], s[-1]) - s
-        temp[-1] = np.mean(temp[-3:-2])
-        diff.append(temp)
-    diff = np.array(diff)
-    # print('before diff_np :', np.shape(diff))
-    return diff
+        ple_diff = np.array(ple_diff)
+        return ple_diff
+    else:
+        for p, s in zip(input_sig, input_sig2):
+            ple_temp = np.append(p[1:], p[-1]) - p
+            abp_temp = np.append(s[1:], s[-1]) - s
+            ple_temp[-1] = np.mean(ple_temp[-3:-2])
+            abp_temp[-1] = np.mean(abp_temp[-3:-2])
+            ple_diff.append(ple_temp)
+            abp_diff.append(abp_temp)
+
+        ple_diff = np.array(ple_diff)
+        abp_diff = np.array(abp_diff)
+        return ple_diff, abp_diff
 
 
 def diff_channels_aggregator(zero, first=None, second=None):
@@ -54,7 +47,7 @@ def diff_channels_aggregator(zero, first=None, second=None):
     elif (first is not None) and (second is None):
         # print('first called')
         first = np.expand_dims(first, axis=1)
-        temp1 = np.concatenate((zero, first),axis=1)
+        temp1 = np.concatenate((zero, first), axis=1)
 
         print(np.shape(temp1))
         print(temp1)
@@ -66,6 +59,5 @@ def diff_channels_aggregator(zero, first=None, second=None):
         temp2 = np.concatenate((zero, first, second), axis=1)
 
         print(np.shape(temp2))
-        print(temp2)
+        # print(temp2)
         return temp2
-
