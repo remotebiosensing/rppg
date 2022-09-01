@@ -1,13 +1,12 @@
-import torch
-import torch.nn as nn
 import numpy as np
-from tqdm import tqdm
 
-'''should be done after sig_slicing()'''
+'''should be done right after sig_slicing()'''
 
 '''
 np.shape(input_sig) : ndarray(702, 7500)     ex) ple, abp
 '''
+
+# TODO np.diff 사용 고려
 
 
 def diff_np(input_sig, input_sig2=None):
@@ -35,13 +34,14 @@ def diff_np(input_sig, input_sig2=None):
         return ple_diff, abp_diff
 
 
+# TODO -> data_aggregator에서 degree에 따른 결과가 가지 수가 안맞음
 def diff_channels_aggregator(zero, first=None, second=None):
     zero = np.expand_dims(zero, axis=1)
 
     if first is None:
         # print('zero called')
-        print(np.shape(zero))
-        print(zero)
+        print('channel aggregated ( f ) :', np.shape(zero))
+        # print(zero[0])
         return zero
 
     elif (first is not None) and (second is None):
@@ -49,8 +49,8 @@ def diff_channels_aggregator(zero, first=None, second=None):
         first = np.expand_dims(first, axis=1)
         temp1 = np.concatenate((zero, first), axis=1)
 
-        print(np.shape(temp1))
-        print(temp1)
+        print('channel aggregated ( f + f\' ) :', np.shape(temp1))
+        # print(temp1[0])
         return temp1
     elif (first is not None) and (second is not None):
         # print('second called')
@@ -58,6 +58,7 @@ def diff_channels_aggregator(zero, first=None, second=None):
         second = np.expand_dims(second, axis=1)
         temp2 = np.concatenate((zero, first, second), axis=1)
 
-        print(np.shape(temp2))
+        print('channel aggregated ( f + f\' + f\'\' ) :', np.shape(temp2))
+        # print(temp2[0])
         # print(temp2)
         return temp2
