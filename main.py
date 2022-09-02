@@ -19,7 +19,7 @@ import h5py
 with open('parameter.json') as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
-    orders = json_data.get("parameters").get("in_channels")
+    channels = json_data.get("parameters").get("in_channels")
     hyper_param = json_data.get("hyper_parameters")
     wb = json_data.get("wandb")
 
@@ -37,34 +37,25 @@ torch.manual_seed(125)
 if torch.cuda.is_available():
     torch.cuda.manual_seed_all(125)
 
-''' train data load '''
-root_path = param["root_path"]
+
+
 # TODO TRAIN_PATIENT_RANGE 뿐만 아니라 CUSTOMDATASET에서 TRAIN_DATASET 비율 조정가능하게 변경 Done
-train_patient_range = [0, 2]
 # TODO ORDER랑 TESTORDER 하나로 정리하기 Done
-order = orders["third"]
-'''
-    order selects number of model's input channel
-    orders["zero"] : use 1 channel ( f )
-    orders["first"] : use 1 channel ( f' )
-    orders["second"] : use 1 channel ( f'' )
-    orders["third"] : use 2 channel ( f + f' )
-    orders["fourth"] : use 2 channel ( f + f'' )
-    orders["fifth"] : use 2 channel ( f' + f'' )
-    orders["sixth"] : use 3 channel ( f + f' + f'' )
-'''
-preprocessed_data_path = param["preprocessed_data_path"]
 
-train_ple, train_abp, _ = MIMICdataset.data_aggregator(root_path=root_path, degree=order[1],
-                                                       train=True, percent=0.05)  # 0.05 > 2 patients
-train_dataset = customdataset.CustomDataset(x_data=train_ple, y_data=train_abp)
-train_loader = DataLoader(train_dataset, batch_size=hyper_param["batch_size"], shuffle=False)
+''' train data load '''
+path = param['preprocessed_data_path']+'case(f+f\')_len(2).hdf5'
+channel = channels["third"]
+# TODO use hdf5 file for training Done
+with h5py.File(path, "r") as f:
+    train_ple, train_abp = np.array(f['ple']), np.array(f['abp'])
+    train_dataset = customdataset.CustomDataset(x_data=train_ple, y_data=train_abp)
+    train_loader = DataLoader(train_dataset, batch_size=hyper_param["batch_size"], shuffle=False)
 
-'''   model train     '''
-''' wandb setup '''
+''' model train '''
+''' - wandb setup '''
 wandb.init(project="VBPNet", entity="paperchae")
 wandb.config = wb["config"]
-model = bvp2abp(in_channels=order[0], out_channels=64, kernel_size=hyper_param["kernel_size"]).to(device)
+model = bvp2abp(in_channels=channel[0], out_channels=64, kernel_size=hyper_param["kernel_size"]).to(device)
 
 learning_rate = hyper_param["learning_rate"]
 weight_decay = hyper_param["weight_decay"]
@@ -132,7 +123,6 @@ plt.show()
 PATH = param["save_path"]
 # torch.save(model, PATH + 'model_' + str(order - 1) + '_NegMAE_baseline.pt')
 torch.save(model, PATH + 'model_110_NegMAE_newmodel_temp.pt')
-# torch.save(model.state_dict(), PATH + 'model_state_dict.pt')
 torch.save({'model': model.state_dict(), 'optimizer': optimizer.state_dict()}, PATH + 'all.tar')
 
 # TODO 1. 혈압기기와 기준기기의 차이의 정도에 따라 모델의 등급이 나뉘는 것 찾아보기
