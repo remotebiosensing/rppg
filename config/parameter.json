@@ -1,0 +1,47 @@
+{
+  "wandb": {
+    "config": {
+      "project": "VBPNet",
+      "entity": "paperchae",
+      "learning_rate": 0.01,
+      "weight_decay": 0.005,
+      "epochs": 200,
+      "batch_size": 64
+    }
+  },
+  "parameters": {
+    "root_path": "/home/paperc/PycharmProjects/VBPNet/dataset/",
+    "save_path": "/home/paperc/PycharmProjects/VBPNet/weights/",
+    "model_path": "/home/paperc/PycharmProjects/VBPNet/weights/",
+    "dataset_path": {
+      "mimic": ["mimic-database-1.0.0/", "BPNet_mimic/"],
+      "uci": ["uci-database/", "BPNet_uci/"]
+    },
+    "in_channels": {
+      "zero": [1, 0, "f"],
+      "first": [1, 1, "f'"],
+      "second": [1, 2, "f''"],
+      "third": [2, 3, "f+f'"],
+      "fourth": [2, 4, "f+f''"],
+      "fifth": [2, 5, "f'+f''"],
+      "sixth": [3, 6, "f+f'+f''"]
+    },
+    "out_channels": 32,
+    "chunk_size": 750,
+    "sampling_rate": {
+      "base": 125,
+      "30": 30,
+      "60": 60
+    },
+    "train_ratio": 0.7,
+    "validation_ratio": 0.9
+  },
+  "hyper_parameters": {
+    "learning_rate": 0.01,
+    "weight_decay": 0.005,
+    "gamma": 0.99,
+    "epochs": 200,
+    "batch_size": 16,
+    "kernel_size": 3
+  }
+}
