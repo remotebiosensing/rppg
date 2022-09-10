@@ -1,0 +1,38 @@
+import json
+import h5py
+
+with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
+    json_data = json.load(f)
+    param = json_data.get("parameters")
+    root_path = json_data.get("parameters").get("root_path")  # mimic uci containing folder
+    data_path = json_data.get("parameters").get("dataset_path")  # raw mimic uci selection
+    orders = json_data.get("parameters").get("in_channels")
+    sampling_rate = json_data.get("parameters").get("sampling_rate")
+
+order = orders["third"]
+
+
+def selector(dataset="mimic", degree=order[1]):
+    read_path = root_path + data_path[dataset][0]
+    write_path = root_path + data_path[dataset][1]
+    if dataset == "mimic":
+        import MIMICdataset
+        train_abp, train_ple, data_len = MIMICdataset.data_aggregator(root_path=read_path, degree=degree,
+                                                                      train=True, percent=0.05)  # 0.05 -> 2 patients
+        print("mimic dataset selected")
+    else:  # uci
+        import UCIdataset
+        train_abp, train_ple, data_len = UCIdataset.data_aggregator(root_path=read_path, degree=degree,
+                                                                    train=True, percent=0.25)  # 0.25 -> 3000 patients (total 12000 patient)
+        print("uci dataset selected")
+
+    dset = h5py.File(write_path + "case(" + str(order[-1]) + ")_len(" + str(data_len) +
+                     ")_" + str(int(param["chunk_size"] / 125) * sampling_rate["60"]) + ".hdf5", "w")
+    if len(train_ple) == len(train_abp):
+        dset['ple'] = train_ple
+        dset['abp'] = train_abp
+    dset.close()
+
+
+selector("uci")
+
