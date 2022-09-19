@@ -1,82 +1,23 @@
 import torch
 import torch.nn as nn
 
-import json
+
+class Amplitude_module(nn.Module):
+    def __init__(self):
+        super(Amplitude_module, self).__init__()
+
+        # self.dbp = nn.AdaptiveAvgPool1d(1)  # dbp
+        self.sbp = nn.AdaptiveAvgPool1d(1)  # sbp
+        self.amp = nn.AdaptiveAvgPool1d(1)  # amplitude of abp
+        # self.mbp = nn.Linear(360, 1)  # mbp
 
 
-class Amplitude_module_1D(nn.Module):
-    def __init__(self, in_channels):
-        super(Amplitude_module_1D, self).__init__()
-        self.in_channel = in_channels
-        # 1D Convolution 3 size kernel (1@7500 -> 32@7500)
-        self.enconv = torch.nn.Sequential(
-            nn.Conv1d(in_channels=in_channels, out_channels=32,
-                      kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            # nn.MaxPool1d(2),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            nn.MaxPool1d(2),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            # nn.MaxPool1d(2)
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            nn.MaxPool1d(2)
-        )
-        self.deconv = torch.nn.Sequential(
-            nn.ConvTranspose1d(in_channels=32, out_channels=32,
-                               kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ConvTranspose1d(in_channels=32, out_channels=32,
-                               kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ELU(),
-            nn.ConvTranspose1d(in_channels=32, out_channels=32,
-                               kernel_size=3, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ConvTranspose1d(in_channels=32, out_channels=16,
-                               kernel_size=3, stride=1),
-            nn.BatchNorm1d(16),
-            nn.ELU(),
-            nn.ConvTranspose1d(in_channels=16, out_channels=16,
-                               kernel_size=3, stride=1),
-            nn.BatchNorm1d(16),
-            nn.ConvTranspose1d(in_channels=16, out_channels=8,
-                               kernel_size=3, stride=1),
-            nn.BatchNorm1d(8),
-            nn.ELU(),
-            nn.ConvTranspose1d(in_channels=8, out_channels=8,
-                               kernel_size=3, stride=1),
-            nn.BatchNorm1d(8),
-            nn.ConvTranspose1d(in_channels=8, out_channels=1,
-                               kernel_size=3, stride=1),
-            nn.BatchNorm1d(1),
-            nn.ELU()
-        )
+    def forward(self, linear_out):
+        sbp = self.sbp(linear_out)
+        '''
+        to reduce load of model 
+        amp is set dependent variable of sbp
+        '''
+        amp = self.amp(sbp)
 
-    # TODO FORWARD안에 FEATURE 앞에다가 DATALOADER(__GETITEM__())에서 얻은 크기 정보 추가
-    def forward(self, ple_input):
-        # ple_input = torch.reshape(ple_input, (-1, self.in_channel, 360))  # [ batch , channel, size]
-        at1 = self.enconv(ple_input)
-        at2 = self.deconv(at1)
-        return at1, at2
+        return sbp, amp
