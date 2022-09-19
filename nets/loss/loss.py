@@ -1,10 +1,27 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 '''
 np.shape(predictions) = torch.Size([64,7500])
 np.shape(targets) = torch.Size([64,7500])
 '''
+
+
+def r(predictions, targets):
+    x_bar = (1 / len(predictions)) * np.sum(predictions)
+    # print('x_bar :', x_bar)
+    y_bar = (1 / len(targets)) * np.sum(targets)
+    # print('y_bar :', y_bar)
+    Sxx = 0
+    Syy = 0
+    Sxy = 0
+    for x, y in zip(predictions, targets):
+        Sxx += pow(x - x_bar, 2)
+        Syy += pow(y - y_bar, 2)
+        Sxy += (x - x_bar) * (y - y_bar)
+
+    return Sxy / (np.sqrt(Sxx) * np.sqrt(Syy))
 
 
 def rmse_Loss(predictions, targets):
@@ -19,11 +36,14 @@ def rmse_Loss(predictions, targets):
 
 def fft_Loss(predictions, targets):
     predictions = torch.squeeze(predictions)
-    global fft
+    # global fft
+    rst = 0
 
     for i in range(predictions.shape[0]):
-        fft = torch.nn.MSELoss(torch.fft.fft(predictions[i]), torch.fft.fft(targets[i]))
-    return fft
+        rst += torch.nn.MSELoss(torch.fft.fft(predictions[i]), torch.fft.fft(targets[i]))
+
+    rst /= predictions.shape[0]
+    return rst
 
 
 def Neg_Pearson_Loss(predictions, targets):
@@ -40,10 +60,8 @@ def Neg_Pearson_Loss(predictions, targets):
     # print('after squeeze', predictions.shape)
     # Pearson correlation can be performed on the premise of normalization of input data
     predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
-    # targets = np.reshape(targets, (2, 1, 7500))
     targets = (targets - torch.mean(targets)) / torch.std(targets)
 
-    # for i in range(predictions.shape[0]):
     for i in range(predictions.shape[0]):
         sum_x = torch.sum(predictions[i])  # x
         sum_y = torch.sum(targets[i])  # y
