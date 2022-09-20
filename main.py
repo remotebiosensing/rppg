@@ -1,8 +1,8 @@
 import os
 import sys
 
-import torch.optim as optim
 import torch
+import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from preprocessing import customdataset
@@ -50,12 +50,12 @@ dataset = "uci"
 samp_rate = sampling_rate["60"]
 channel = channels["sixth"]
 out_channel = param['out_channels']
-write_path = root_path + data_path[dataset][1]
+read_path = root_path + data_path[dataset][1]
 
-with h5py.File(write_path + "case(" + str(channel[-1]) + ")_len(" + str(3) +
-               ")_" + str(int(param["chunk_size"] / 125) * samp_rate) + "fft.hdf5", "r") as f:
-    train_ple, train_abp = np.array(f['ple']), np.array(f['abp'])
-    train_dataset = customdataset.CustomDataset(x_data=train_ple, y_data=train_abp)
+with h5py.File(read_path + "case(" + str(channel[-1]) + ")_len(" + str(3) +
+               ")_" + str(int(param["chunk_size"] / 125) * samp_rate) + "_09_size_factor2.hdf5", "r") as f:
+    train_ple, train_abp, train_size = np.array(f['ple']), np.array(f['abp']), np.array(f['size'])
+    train_dataset = customdataset.CustomDataset(x_data=train_ple, y_data=train_abp, size_factor=train_size)
     train_loader = DataLoader(train_dataset, batch_size=hyper_param["batch_size"], shuffle=True)
 
 ''' model train '''
@@ -96,9 +96,11 @@ for epoch in range(hyper_param["epochs"]):
     cost_sum = 0
     with tqdm(train_loader, desc='Train', total=len(train_loader), leave=True) as train_epochs:
         idx = 0
-        for X_train, Y_train in train_epochs:
+        for X_train, Y_train, s, a in train_epochs:
             idx += 1
-            hypothesis = torch.squeeze(model(X_train))
+            hypothesis = torch.squeeze(model(X_train)[0])
+            pred_s = torch.squeeze(model(X_train)[1])
+            pred_a = torch.squeeze(model(X_train)[2])
             optimizer.zero_grad()
 
             '''Negative Pearson Loss'''
@@ -110,25 +112,34 @@ for epoch in range(hyper_param["epochs"]):
             '''FFT Loss'''
             # cost2 = loss2(torch.fft.fft(hypothesis), torch.fft.fft(Y_train))
             '''MAE Loss'''
-            # cost2 = loss2(pred_size, S)
+            # cost2 = loss2(hypothesis, Y_train)
+            '''DBP Loss'''
+            # d_cost = loss2(pred_d, d)
+            '''SBP Loss'''
+            s_cost = loss2(pred_s, s)
+            '''Amplitude Loss'''
+            a_cost = loss2(pred_a, a)
+            '''MBP Loss'''
+            # m_cost = loss2(pred_m, m)
+            # TODO test while training every 10 epoch + wandb graph
             if idx == 1 and epoch % 10 == 0:
                 h = hypothesis[0].cpu().detach()
                 y = Y_train[0].cpu().detach()
-                plt.subplot(2,1,1)
+                plt.subplot(2, 1, 1)
                 plt.plot(y)
                 plt.title("Target")
                 plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.70)
 
                 # plt.plot((h - h.min()) * (y.max() - y.min()))
-                plt.subplot(2,1,2)
+                plt.subplot(2, 1, 2)
                 plt.plot(h)
                 plt.title("Prediction")
                 plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.70)
-
+                wandb.log({"Prediction": wandb.Image(plt)})
                 plt.show()
 
             '''Total Loss'''
-            cost = cost1# * cost2
+            cost = cost1 * (s_cost + a_cost)  # + d_cost
             cost.backward()
             optimizer.step()
 
@@ -137,10 +148,14 @@ for epoch in range(hyper_param["epochs"]):
             avg_cost = cost_sum / idx
             train_epochs.set_postfix(loss=avg_cost.item())
             wandb.log({"Loss": cost,
-                       "Negative Pearson Loss": cost1},step=epoch)
-                       # "MAE Loss": cost2}, step=epoch)
-                       # "FFT Loss": cost2}, step=epoch)
-                       # "RMSE Loss":cost2},step=epoch)
+                       "Negative Pearson Loss": cost1,  # },step=epoch)
+                       "Systolic Loss": s_cost,
+                       "Amplitude Loss": a_cost}, step=epoch)
+            # "Diastolic Loss": d_cost}, step=epoch)
+            # "Mean Loss": m_cost}, step=epoch)
+            # "MAE Loss": cost2}, step=epoch)
+            # "FFT Loss": cost2}, step=epoch)
+            # "RMSE Loss":cost2},step=epoch)
 
         scheduler.step()
         costarr.append(avg_cost.__float__())
@@ -154,10 +169,10 @@ plt.show()
 
 # model save
 torch.save(model, param["save_path"] + 'model_' + str(channel[1]) + '_NegMAE_' + dataset + '_lr_' + str(
-    param["learning_rate"]) + 'fft.pt')
+    hyper_param["learning_rate"]) + '_size_factor(sbp+amp).pt')
 # torch.save({'model': model.state_dict(), 'optimizer': optimizer.state_dict()}, PATH + 'all.tar')
 
 # TODO 1. 혈압기기와 기준기기의 차이의 정도에 따라 모델의 등급이 나뉘는 것 찾아보기
 # TODO 2. PPNET 참고하여 평가지표 확인하기
-# TODO 3. SAMPLING RATE 에 따른 차이 확인
-# TODO 4. READRECORD() 순서는 [ABP,PLE] / 나머지 순서 다 맞추기
+# TODO 3. SAMPLING RATE 에 따른 차이 확인 done
+# TODO 4. READRECORD() 순서는 [ABP,PLE] / 나머지 순서 다 맞추기 done
