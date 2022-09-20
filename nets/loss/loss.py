@@ -58,7 +58,9 @@ def Neg_Pearson_Loss(predictions, targets):
     # print('before squeeze', predictions.shape)
     predictions = torch.squeeze(predictions, 1)
     # print('after squeeze', predictions.shape)
-    # Pearson correlation can be performed on the premise of normalization of input data
+    '''
+    Pearson correlation can be performed on the premise of normalization of input data
+    '''
     predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
     targets = (targets - torch.mean(targets)) / torch.std(targets)
 

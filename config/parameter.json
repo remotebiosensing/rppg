@@ -26,22 +26,23 @@
       "fifth": [2, 5, "f'+f''"],
       "sixth": [3, 6, "f+f'+f''"]
     },
-    "out_channels": 32,
+    "out_channels": 16,
     "chunk_size": 750,
     "sampling_rate": {
       "base": 125,
       "30": 30,
-      "60": 60
+      "60": 60,
+      "120": 120
     },
     "train_ratio": 0.7,
     "validation_ratio": 0.9
   },
   "hyper_parameters": {
-    "learning_rate": 0.01,
-    "weight_decay": 0.005,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0005,
     "gamma": 0.99,
     "epochs": 200,
-    "batch_size": 16,
+    "batch_size": 4096,
     "kernel_size": 3
   }
 }

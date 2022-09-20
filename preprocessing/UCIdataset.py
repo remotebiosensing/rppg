@@ -1,17 +1,9 @@
 import numpy as np
 import mat73
-import json
 import os
 import preprocessing.utils.signal_utils as su
 import preprocessing.utils.math_module as mm
 
-
-# with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
-#     json_data = json.load(f)
-#     param = json_data.get("parameters")
-#     chunk_size = json_data.get("parameters").get("chunk_size")
-#
-# p = '/home/paperc/PycharmProjects/VBPNet/dataset/uci-database/'
 
 def data_aggregator(root_path, degree=0, train=True, percent=0.75, samp_rate=60):
     # print(root_path)

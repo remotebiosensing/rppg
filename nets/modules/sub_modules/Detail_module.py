@@ -6,7 +6,6 @@ class Detail_module_1D(nn.Module):
     def __init__(self, in_channels):
         super(Detail_module_1D, self).__init__()
         self.in_channel = in_channels
-        # 1D Convolution 3 size kernel (1@7500 -> 32@7500)
         self.enconv = torch.nn.Sequential(
             nn.Conv1d(in_channels=in_channels, out_channels=32,
                       kernel_size=3, stride=1),
