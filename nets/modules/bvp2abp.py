@@ -23,6 +23,6 @@ class bvp2abp(nn.Module):
         at1, at2 = self.detail_model.forward(ple_input)
         t_out = self.trend_model.forward(ple_input, at1, at2)
         l_out = self.linear_model.forward(t_out)
-        sbp, amp = self.amplitude_model.forward(l_out)
+        dbp, sbp = self.amplitude_model.forward(t_out)
 
-        return l_out, sbp, amp
+        return l_out, dbp, sbp
