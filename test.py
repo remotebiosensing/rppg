@@ -1,116 +1,64 @@
 import os
 import torch
-from torch.utils.data import DataLoader
-from preprocessing import MIMICdataset, customdataset
 from matplotlib import pyplot as plt
-import numpy as np
-from preprocessing.utils import math_module
-from scipy import signal
+from tqdm import tqdm
 import json
+import wandb
 
-with open('/home/paperc/PycharmProjects/BPNET/parameter.json') as f:
+with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
-    orders = json_data.get("parameters").get("in_channels")
-    test_orders = json_data.get("parameters").get("test_channels")
+    channels = json_data.get("parameters").get("in_channels")
     sampling_rate = json_data.get("parameters").get("sampling_rate")
 
-
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.manual_seed(125)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(125)
+else:
+    print("cuda not available")
 
-order = orders["first"]
-# degree = order - 1
-test_order = test_orders["third"]
-degree = test_order - 1
-# test_len = int(param["down_sample"] / 60) * 2
-test_len = int(param["chunk_size"] / 125) * 2
 
-def model_test():
-    root_path = '/home/paperc/PycharmProjects/BPNET/dataset/mimic-database-1.0.0/'
-
-    # t_path2 = '472/47200003'
-    # t_path2 = '039/03900011'
-    t_path2 = '055/05500100'
-    test_record = MIMICdataset.read_record(root_path + t_path2)
-    print(np.shape(test_record))
-    chunk_num = 10
-
-    if degree == 0:
-        test_ple_total, test_abp = MIMICdataset.signal_slicing(signals=test_record, chunk_num=chunk_num)
-    elif degree == 1:
-        test_ple, test_abp = MIMICdataset.signal_slicing(signals=test_record, chunk_num=chunk_num)
-        test_ple_first = math_module.diff_np(test_ple)
-        test_ple_total = test_ple_first
-    elif degree == 2:
-        test_ple, test_abp = MIMICdataset.signal_slicing(signals=test_record, chunk_num=chunk_num)
-        test_ple_first = math_module.diff_np(test_ple)
-        test_ple_second = math_module.diff_np(test_ple_first)
-        test_ple_total = test_ple_second
-    elif degree == 3:
-        test_ple, test_abp = MIMICdataset.signal_slicing(signals=test_record, chunk_num=chunk_num)
-        test_ple_first = math_module.diff_np(test_ple)
-
-        test_ple_total = math_module.diff_channels_aggregator(test_ple, test_ple_first)
-        test_abp = signal.resample(test_abp, int(param["chunk_size"] / 125) * sampling_rate["60"])
-    elif degree == 4:
-        test_ple, test_abp = MIMICdataset.signal_slicing(signals=test_record, chunk_num=chunk_num)
-        test_ple_first = math_module.diff_np(test_ple)
-        test_ple_second = math_module.diff_np(test_ple_first)
-
-        test_ple_total = math_module.diff_channels_aggregator(test_ple, test_ple_second)
-    elif degree == 5:
-        test_ple, test_abp = MIMICdataset.signal_slicing(signals=test_record, chunk_num=chunk_num)
-        test_ple_first = math_module.diff_np(test_ple)
-        test_ple_second = math_module.diff_np(test_ple_first)
-
-        test_ple_total = math_module.diff_channels_aggregator(test_ple_first, test_ple_second)
-    else:
-        test_ple, test_abp = MIMICdataset.signal_slicing(signals=test_record, chunk_num=chunk_num)
-        test_ple_first = math_module.diff_np(test_ple)
-        test_ple_second = math_module.diff_np(test_ple_first)
-
-        test_ple_total = math_module.diff_channels_aggregator(test_ple, test_ple_first, test_ple_second)
-
-    print('test_ple shape :', np.shape(test_ple_total))
-    print('test_abp shape :', np.shape(test_abp))
-
-    test_dataset = customdataset.CustomDataset(x_data=test_ple_total[0:2], y_data=test_abp[0:2])
-    test_loader = DataLoader(test_dataset, batch_size=10, shuffle=False)
-
+def test(model, test_loader, loss_n, loss_d, loss_s, idx):
     dataiter = iter(test_loader)
-    seq, labels = dataiter.__next__()
+    # seq, labels = dataiter.__next__()
+    model.eval()
+    plot_flag = True
+    with tqdm(test_loader, desc='Test', total=len(test_loader), leave=True) as test_epoch:
+        with torch.no_grad():
+            for X_test, Y_test, d, s in test_epoch:
 
-    Model_PATH = param["save_path"]
+                hypothesis = torch.squeeze(model(X_test)[0])
+                pred_d = torch.squeeze(model(X_test)[1])
+                pred_s = torch.squeeze(model(X_test)[2])
 
-    # load_model = torch.load(Model_PATH + 'model_' + str(order - 1) + '_NegMAE_baseline.pt')  # 전체 모델을 통째로 불러옴, 클래스 선언 필수
-    load_model = torch.load(Model_PATH + 'model_110_NegMAE_newmodel_temp.pt')  # 전체 모델을 통째로 불러옴, 클래스 선언 필수
-    # load_model.load_state_dict(torch.load(Model_PATH + 'model_state_dict.pt'))  # state_dict를 불러 온 후, 모델에 저장
+                '''Negative Pearson Loss'''
+                neg_cost = loss_n(hypothesis, Y_test)
+                '''DBP Loss'''
+                d_cost = loss_d(pred_d, d)
+                '''SBP Loss'''
+                s_cost = loss_s(pred_s, s)
+                ''' Total Loss'''
+                cost = neg_cost + d_cost + s_cost
+                test_epoch.set_postfix(loss=cost.item())
+                wandb.log({"Test Loss": cost,
+                           "Test Negative Pearson Loss": neg_cost,
+                           "Test Systolic Loss": s_cost,
+                           "Test Diastolic Loss": d_cost}, step=idx)
+                if plot_flag:
+                    plot_flag = False
+                    h = hypothesis[0].cpu().detach()
+                    y = Y_test[0].cpu().detach()
+                    plt.subplot(2, 1, 1)
+                    plt.plot(y)
+                    plt.title("Target (epoch :" + str(idx) + ")")
+                    plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.70)
 
-    with torch.no_grad():
-        X_test = seq
-        Y_test = labels
+                    plt.subplot(2, 1, 2)
+                    plt.plot(h)
+                    plt.title("Prediction (epoch :" + str(idx) + ")")
+                    plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.70)
+                    wandb.log({"Prediction": wandb.Image(plt)})
+                    plt.show()
 
-        prediction = load_model(X_test)
-
-        print('np.shape(X_test) :', np.shape(X_test))
-        print('np.shape(prediction) :', np.shape(prediction))
-
-        prediction = torch.squeeze(prediction).cpu().numpy()[0][30:test_len + 30]
-        Y_test = Y_test.cpu().numpy()[0][30:test_len + 30]
-
-        time = np.array(range(len(prediction)))
-        fig, ax1 = plt.subplots()
-
-        ax1.plot(time, prediction, color="red")
-        ax1.tick_params(axis='y', labelcolor="red")
-
-        ax2 = ax1.twinx()
-        ax2.plot(time, Y_test, color="blue")
-        ax2.tick_params(axis='y', labelcolor="blue")
-
-        plt.title('F + F\' MAE * Neg_Pearson_Loss prediction')
-        plt.show()
-
-
-model_test()
