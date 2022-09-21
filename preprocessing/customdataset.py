@@ -18,12 +18,17 @@ class CustomDataset(Dataset):
         # self.x_data = torch.reshape(self.x_data, [1, 1, len(self.x_data)])
         x = self.x_data[index].to('cuda')
         y = self.y_data[index].to('cuda')
-        # d = torch.squeeze(self.size[index][0]).to('cuda')
+        '''
+        size[index][0] = np.min(diastolic list) 
+        size[index][1] = np.max(systolic list) 
+        '''
+        d = self.size[index][0].to('cuda')
         s = self.size[index][1].to('cuda')
-        a = (self.size[index][1]-self.size[index][0]).to('cuda')
+
+        # a = (self.size[index][1]-self.size[index][0]).to('cuda')
         '''variable a is dependent variable of s and d'''
         # m = self.size[index][2].to('cuda')
-        return x, y, s, a #d, s, m
+        return x, y, d, s  # , a, s, m
 
     def __len__(self):
         return self.len
