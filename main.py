@@ -33,15 +33,17 @@ bpm_flag = False
 K_Fold_flag = False
 model_save_flag = False
 log_flag = True
+wandb_flag = True
 
-#Define Kfold Cross Validator
+# Define Kfold Cross Validator
 if K_Fold_flag:
     kfold = KFold(n_splits=5, shuffle=True)
 
-wandb.init(project="SeqNet",entity="daeyeolkim")
+if wandb_flag:
+    wandb.init(project="SeqNet", entity="daeyeolkim")
 
 now = datetime.datetime.now()
-os.environ["CUDA_VISIBLE_DEVICES"]="9"
+os.environ["CUDA_VISIBLE_DEVICES"] = "9"
 
 with open('params.json') as f:
     jsonObject = json.load(f)
@@ -60,7 +62,7 @@ TEST FOR LOAD
 """
 Check Model Support
 """
-is_model_support(model_params["name"], model_params["name_comment"],log_flag)
+is_model_support(model_params["name"], model_params["name_comment"], log_flag)
 '''
 Generate preprocessed data hpy file 
 '''
@@ -88,14 +90,12 @@ if __TIME__:
 model = get_model(model_params["name"], log_flag).cuda()
 
 if __MODEL_SUMMARY__:
-    summary(model,model_params["name"], log_flag)
+    summary(model, model_params["name"], log_flag)
 
-torch.save(model.state_dict(),params["model_root_path"] +model_params["name"] +params["dataset_name"]+"W")
-
+torch.save(model.state_dict(), params["model_root_path"] + model_params["name"] + params["dataset_name"] + "W")
 
 if __TIME__:
     log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
-
 
 '''
 Load dataset before using Torch DataLoader
@@ -117,7 +117,7 @@ if not K_Fold_flag:
     val_len = int(np.floor(dataset_len * 0.2))
     test_len = dataset_len - train_len - val_len
 
-    train_dataset, validation_dataset, test_dataset = random_split(dataset, [train_len,val_len,test_len])
+    train_dataset, validation_dataset, test_dataset = random_split(dataset, [train_len, val_len, test_len])
 if __TIME__:
     log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
@@ -138,10 +138,9 @@ if not K_Fold_flag:
     validation_loader = DataLoader(validation_dataset, batch_size=params["train_batch_size"],
                                    shuffle=params["train_shuffle"])
 test_loader = DataLoader(test_dataset, batch_size=params["test_batch_size"],
-                         shuffle=False)#params["test_shuffle"])
+                         shuffle=False)  # params["test_shuffle"])
 if __TIME__:
     log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
-
 
 print("set loss")
 '''
@@ -168,14 +167,14 @@ if __TIME__:
 # optimizer = [optimizer(mod.parameters(),hyper_params["learning_rate"], hyper_params["optimizer"]) for mod in model[0]]
 # scheduler = [lr_scheduler.ExponentialLR(optim,gamma=0.99) for optim in optimizer]
 optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
-scheduler = lr_scheduler.ExponentialLR(optimizer,gamma=0.99)
+scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 
-wandb.config = {
-  "learning_rate": hyper_params["learning_rate"],
-  "epochs": hyper_params["epochs"],
-  "batch_size": params["train_batch_size"]
-}
-
+if wandb_flag:
+    wandb.config = {
+        "learning_rate": hyper_params["learning_rate"],
+        "epochs": hyper_params["epochs"],
+        "batch_size": params["train_batch_size"]
+    }
 
 if __TIME__:
     log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
@@ -193,8 +192,10 @@ if K_Fold_flag:
         train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
         test_subsampler = torch.utils.data.SubsetRandomSampler(test_ids)
 
-        train_loader = DataLoader(dataset,batch_size=params['train_batch_size'],sampler=train_subsampler,shuffle=True)
-        validation_loader = DataLoader(dataset, batch_size=params['train_batch_size'], sampler=test_subsampler,shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=params['train_batch_size'], sampler=train_subsampler,
+                                  shuffle=True)
+        validation_loader = DataLoader(dataset, batch_size=params['train_batch_size'], sampler=test_subsampler,
+                                       shuffle=True)
 
         for epoch in range(hyper_params["epochs"]):
             with tqdm(train_loader, desc="Train ", total=len(train_loader)) as tepoch:
@@ -213,7 +214,7 @@ if K_Fold_flag:
                     # [optim.zero_grad() for optim in optimizer]
                     tepoch.set_description(f"Train Epoch {epoch}")
                     if bpm_flag:
-                        p, bpm ,att= model(inputs)
+                        p, bpm, att = model(inputs)
                     else:
                         # if model[0].__len__() == 1:
                         p = model(inputs)
@@ -222,9 +223,8 @@ if K_Fold_flag:
                         #     p = model[0][0](inputs)
 
                     # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
-                    if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
+                    if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN", "AxisNet"]:
                         loss0 = criterion(p, target)
-
 
                         # loss1 = criterion2(b['bpm'],d['bpm'])
                         # loss1 = criterion2(y,target[:,3:-3])#criterion(torch.gradient(torch.gradient(outputs,dim=1)[0],dim=1)[0],torch.gradient(torch.gradient(target,dim=1)[0],dim=1)[0])
@@ -232,7 +232,7 @@ if K_Fold_flag:
                             loss1 = criterion2(bpm, _bpm)
 
                             bpm_loss += loss1.item()
-                            loss = loss0  + loss1
+                            loss = loss0 + loss1
                         else:
                             loss = loss0
                     else:
@@ -252,7 +252,8 @@ if K_Fold_flag:
 
                     # [optim.step() for optim in optimizer]
                     tepoch.set_postfix(loss=running_loss / tepoch.__len__())
-                wandb.log({"train_loss": running_loss / tepoch.__len__()})
+                if wandb_flag:
+                    wandb.log({"train_loss": running_loss / tepoch.__len__()})
                 plt.clf()
                 # plt.imshow(torch.permute(att[0],(1,2,3,0))[0].cpu().detach().numpy(),aspect='auto',origin='lower',interpolation='none')
                 # plt.savefig('attention_map.png',figsize=(8,8))
@@ -264,7 +265,6 @@ if K_Fold_flag:
                 if bpm_flag:
                     wandb.log({"train_pcc_loss": pcc_loss / tepoch.__len__()})
                     wandb.log({"train_bpm_loss": bpm_loss / tepoch.__len__()})
-
 
             if __TIME__ and epoch == 0:
                 log_info_time("1 epoch training time \t: ", datetime.timedelta(seconds=time.time() - start_time))
@@ -289,7 +289,7 @@ if K_Fold_flag:
                             #     noise_free_map = model[0][1](target)
                             #     p = model[0][0](inputs)
                         # _bpm = torch.reshape(torch.mean(_bpm, axis=1), (-1, 1))
-                        if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
+                        if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN", "AxisNet"]:
                             loss0 = criterion(p, target)
 
                             # loss1 = criterion2(y,target[:,3:-3])#criterion(torch.gradient(torch.gradient(outputs,dim=1)[0],dim=1)[0],torch.gradient(torch.gradient(target,dim=1)[0],dim=1)[0])
@@ -320,7 +320,8 @@ if K_Fold_flag:
                     #                + params["dataset_name"] + "_" + str(epoch) + "_"
                     #                + str(min_val_loss) + '.pth')
                     #     min_val_loss_model = copy.deepcopy(model)
-                wandb.log({"val_loss": running_loss / tepoch.__len__()})
+                if wandb_flag:
+                    wandb.log({"val_loss": running_loss / tepoch.__len__()})
                 if bpm_flag:
                     wandb.log({"val pcc_loss": pcc_loss / tepoch.__len__()})
                     wandb.log({"val_bpm_loss": bpm_loss / tepoch.__len__()})
@@ -329,7 +330,7 @@ if K_Fold_flag:
                 if __TIME__ and epoch == 0:
                     start_time = time.time()
                 # if epoch + 1 == hyper_params["epochs"]:
-                    # model = min_val_loss_model
+                # model = min_val_loss_model
                 with tqdm(test_loader, desc="test ", total=len(test_loader)) as tepoch:
                     # for mod in model[0]:
                     #     mod.eval()
@@ -353,14 +354,14 @@ if K_Fold_flag:
                                 # else:
                                 #     noise_free_map = model[0][1](target)
                                 #     p = model[0][0](inputs)
-                            if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN","AxisNet"]:
+                            if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN", "AxisNet"]:
                                 loss0 = criterion(p, target)
 
                                 if bpm_flag:
                                     bpm_loss = 0.0
                                     loss1 = criterion2(bpm, _bpm)
                                     # print(bpm,_bpm)
-                                    loss = loss0  + loss1
+                                    loss = loss0 + loss1
                                     bpm_loss += loss1.item()
                                 else:
                                     loss = loss0
@@ -376,7 +377,7 @@ if K_Fold_flag:
                             pcc_loss += loss0.item()
                             running_loss += loss.item()
                             tepoch.set_postfix(loss=running_loss / tepoch.__len__())
-                            if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "GCN","AxisNet"]:
+                            if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "GCN", "AxisNet"]:
                                 inference_array.extend(normalize(np.squeeze(p.cpu().numpy()[0])))
                                 target_array.extend(normalize(target.cpu().numpy()[0]))
                             else:
@@ -384,7 +385,8 @@ if K_Fold_flag:
                                 target_array.extend(target[:][0].cpu().numpy())
                             if tepoch.n == 0 and __TIME__:
                                 save_time = time.time()
-                        wandb.log({"test_loss": running_loss / tepoch.__len__()})
+                        if wandb_flag:
+                            wandb.log({"test_loss": running_loss / tepoch.__len__()})
                         if bpm_flag:
                             wandb.log({"test_pcc_loss": pcc_loss / tepoch.__len__()})
                             wandb.log({"test_bpm_loss": bpm_loss / tepoch.__len__()})
@@ -457,8 +459,8 @@ else:
                         bpm_loss += loss1.item()
                         loss = loss0 + loss1
                     else:
-                        loss1 = criterion2(torch.fft.fft(p),torch.fft.fft(target))
-                        loss = loss0* loss1
+                        loss1 = criterion2(torch.fft.fft(p), torch.fft.fft(target))
+                        loss = loss0 * loss1
                 else:
                     loss_0 = criterion(y[:][0], target[:][0])
                     loss_1 = criterion(y[:][1], target[:][1])
@@ -476,7 +478,8 @@ else:
 
                 # [optim.step() for optim in optimizer]
                 tepoch.set_postfix(loss=running_loss / tepoch.__len__())
-            wandb.log({"train_loss": running_loss / tepoch.__len__()})
+            if wandb_flag:
+                wandb.log({"train_loss": running_loss / tepoch.__len__()})
             plt.clf()
             # plt.imshow(torch.permute(att[0],(1,2,3,0))[0].cpu().detach().numpy(),aspect='auto',origin='lower',interpolation='none')
             # plt.savefig('attention_map.png',figsize=(8,8))
@@ -522,7 +525,7 @@ else:
                             loss = loss0 + loss1
                         else:
                             loss1 = criterion2(torch.fft.fft(p), torch.fft.fft(target))
-                            loss = loss0 *  loss1
+                            loss = loss0 * loss1
                     else:
                         loss_0 = criterion(y[:][0], target[:][0])
                         loss_1 = criterion(y[:][1], target[:][1])
@@ -553,7 +556,7 @@ else:
                 wandb.log({"val pcc_loss": pcc_loss / tepoch.__len__()})
                 wandb.log({"val_bpm_loss": bpm_loss / tepoch.__len__()})
 
-        #if epoch + 1 == hyper_params["epochs"] or epoch % 5 == 0:
+        # if epoch + 1 == hyper_params["epochs"] or epoch % 5 == 0:
 
         tmp_test_loss = 100
 
@@ -589,7 +592,6 @@ else:
                         if model_params["name"] in ["PhysNet", "PhysNet_LSTM", "DeepPhys", "GCN", "AxisNet"]:
                             loss0 = criterion(p, target)
 
-
                             if bpm_flag:
                                 bpm_loss = 0.0
                                 loss1 = criterion2(bpm, _bpm)
@@ -598,7 +600,7 @@ else:
                                 bpm_loss += loss1.item()
                             else:
                                 loss1 = criterion2(torch.fft.fft(p), torch.fft.fft(target))
-                                loss = loss0 *loss1
+                                loss = loss0 * loss1
                         else:
                             loss_0 = criterion(y[:][0], target[:][0])
                             loss_1 = criterion(y[:][1], target[:][1])
@@ -620,10 +622,12 @@ else:
                         if tepoch.n == 0 and __TIME__:
                             save_time = time.time()
                     test_loss = running_loss / tepoch.__len__()
-                    wandb.log({"test_loss": running_loss / tepoch.__len__()})
+                    if wandb_flag:
+                        wandb.log({"test_loss": running_loss / tepoch.__len__()})
 
                     if tmp_test_loss > test_loss:
-                        torch.save(model.state_dict(),params["model_root_path"] +model_params["name"] +params["dataset_name"]+"newtrialHH" )
+                        torch.save(model.state_dict(), params["model_root_path"] + model_params["name"] + params[
+                            "dataset_name"] + "newtrialHH")
                         tmp_test_loss = test_loss
 
                     if bpm_flag:
@@ -642,12 +646,12 @@ else:
                 plt.savefig('graph.png', figsize=(16, 4))
 
                 # print(ppg.ppg(inference_array,30,show=False)["heart_rate"])
-
-                wandb.log({
-                    "Graph": [
-                        wandb.Image('graph.png')
-                    ]
-                })
+                if wandb_flag:
+                    wandb.log({
+                        "Graph": [
+                            wandb.Image('graph.png')
+                        ]
+                    })
                 # plt = plot_graph(0,300,target_array,detrend(inference_array,100),"filtered")
                 # wandb.log({"filtered":plt})
                 # plt = plot_graph(0,300,np.gradient(np.gradient(target_array[3:-3])),np.gradient(np.gradient(inference_array)),"gradient")
@@ -659,4 +663,3 @@ else:
                 # plt = plot_graph(0,300,np.gradient(np.gradient(target_array[3:-3])),np.gradient(np.gradient(inference_array)),"gradient")
                 # wandb.log({"gradient": plt})
                 # print(np.gradient(target_array)-np.gradient(inference_array).mean(axis=0))
-
