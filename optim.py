@@ -1,9 +1,9 @@
 import torch.optim as opt
 
 from log import log_warning
+import os
 
-
-def optimizers(model_params, learning_rate: float = 1, optim: str = "mse"):
+def optimizer(model_params, learning_rate: float = 1, optim: str = "mse", log_flag: bool = True):
     '''
     call optimizer
     :param model_params: learning target's parameter
@@ -11,8 +11,11 @@ def optimizers(model_params, learning_rate: float = 1, optim: str = "mse"):
     :param optim: optimizer
     :return: selected optimizer object
     '''
+    if log_flag:
+        print("========= optimizer() in" + os.path.basename(__file__))
+
     if optim == "adam":
-        return opt.Adam(model_params, learning_rate)
+        return opt.Adam(model_params, learning_rate,weight_decay=0.00005)
     elif optim == "sgd":
         return opt.SGD(model_params, learning_rate)
     elif optim == "rms_prop":

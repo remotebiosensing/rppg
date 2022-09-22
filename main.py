@@ -163,7 +163,6 @@ if __TIME__:
 '''
 Setting Optimizer
 '''
-print("set optim")
 if __TIME__:
     start_time = time.time()
 # optimizer = [optimizer(mod.parameters(),hyper_params["learning_rate"], hyper_params["optimizer"]) for mod in model[0]]
