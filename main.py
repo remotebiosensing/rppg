@@ -87,10 +87,9 @@ if __TIME__:
 # model = [get_model(model_params["name"])]
 model = get_model(model_params["name"], log_flag).cuda()
 
-print("summary")
 if __MODEL_SUMMARY__:
+    summary(model,model_params["name"], log_flag)
 
-    summary(model,model_params["name"])
 torch.save(model.state_dict(),params["model_root_path"] +model_params["name"] +params["dataset_name"]+"W")
 
 

@@ -58,12 +58,15 @@ def is_model_support(model_name, model_list, log_flag):
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
 
 
-def summary(model, model_name):
+def summary(model, model_name, log_flag):
     """
     :param model: torch.nn.module class
     :param model_name: implemented model name
     :return: model
     """
+    if log_flag:
+        print("========= summary() in" + os.path.basename(__file__))
+
     log_info("=========================================")
     log_info(model_name)
     log_info("=========================================")
