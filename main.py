@@ -64,7 +64,6 @@ is_model_support(model_params["name"], model_params["name_comment"],log_flag)
 '''
 Generate preprocessed data hpy file 
 '''
-print("preprocessing")
 if __PREPROCESSING__:
     if __TIME__:
         start_time = time.time()
@@ -73,7 +72,8 @@ if __PREPROCESSING__:
                   model_name=model_params["name"],
                   data_root_path=params["data_root_path"],
                   dataset_name=params["dataset_name"],
-                  train_ratio=params["train_ratio"])
+                  train_ratio=params["train_ratio"],
+                  log_flag=log_flag)
     if __TIME__:
         log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
 
