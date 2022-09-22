@@ -42,13 +42,14 @@ def get_model(model_name: str = "DeepPhys"):
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
 
 
-def is_model_support(model_name, model_list):
+def is_model_support(model_name, model_list, log_flag):
     """
     :param model_name: model name
     :param model_list: implemented model list
     :return: model
     """
-    print("========= model support check ========= ")
+    if log_flag:
+        print("========= model support check ========= ")
     if not (model_name in model_list):
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
