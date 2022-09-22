@@ -100,7 +100,6 @@ if __TIME__:
 '''
 Load dataset before using Torch DataLoader
 '''
-print("Data Loader")
 if __TIME__:
     start_time = time.time()
 

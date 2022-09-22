@@ -1,20 +1,19 @@
 import h5py
 import numpy as np
-import os
 
 from dataset.DeepPhysDataset import DeepPhysDataset
 from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
-from dataset.MetaPhysDataset import MetaPhysDataset
-import random
+from dataset.GCNDataset import GCNDataset
+from dataset.AxisNetDataset import AxisNetDataset
+from utils.funcs import load_list_of_dicts
+import os
 
-def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
+def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
                    model_name: str = "DeepPhys",
                    dataset_name: str = "UBFC",
                    option: str = "train",
-                   num_shots: int = 6,
-                   num_test_shots:int =2,
-                   unsupervised: int = 0
+                   log_flag: bool = True
                    ):
     '''
     :param save_root_path: save file destination path
@@ -23,10 +22,17 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
     :param option:[train, test]
     :return: dataset
     '''
-    if model_name == "MMAML_Phys":
-        model_name = "MetaPhysNet"
+    if log_flag:
+        print("========= dataset_loader() in" + os.path.basename(__file__))
 
-    hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
+    cnt = 0
+    flag = True
+    name = model_name
+    if model_name == "GCN" or model_name == "GCN_TEST":
+        name = "PhysNet"
+    hpy_train_file = h5py.File(save_root_path + name + "_" + dataset_name + "_" + "train" + ".hdf5", "r")
+    hpy_test_file = h5py.File(save_root_path + name + "_" + dataset_name + "_" + "test" + ".hdf5", "r")
+    graph_file = save_root_path + model_name + "_" + dataset_name + "_" + option + ".pkl"
 
     if model_name in ["DeepPhys", "MTTS"]:
         appearance_data = []
@@ -37,19 +43,58 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
             appearance_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
             motion_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, :3])
             target_data.extend(hpy_file[key]['preprocessed_label'])
+
         hpy_file.close()
+
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name in ["PhysNet", "PhysNet_LSTM"]:
+    elif model_name in ["PhysNet", "PhysNet_LSTM","GCN"]:
         video_data = []
         label_data = []
-        for key in hpy_file.keys():
-            video_data.extend(hpy_file[key]['preprocessed_video'])
-            label_data.extend(hpy_file[key]['preprocessed_label'])
-        hpy_file.close()
+        bpm_data = []
+        cnt = 0
+        # for key in hpy_train_file.keys():
+        #     cnt += 1
+        #     if len(hpy_train_file[key]['preprocessed_video']) == len(hpy_train_file[key]['preprocessed_label']):
+        #         video_data.extend(hpy_train_file[key]['preprocessed_video'])
+        #         label_data.extend(hpy_train_file[key]['preprocessed_label'])
+                # bpm_data.extend(hpy_train_file[key]['preprocessed_hr'])
 
-        dataset = PhysNetDataset(video_data=np.asarray(video_data),
+            # if option == "test" or flag :
+            # if cnt == 4:
+                # break
+        # hpy_train_file.close()
+        for key in hpy_test_file.keys():
+            cnt += 1
+            # if cnt <cflag:
+            #     continue
+            # if cnt < cflag:
+            #     continue
+            # if cnt > cflag:
+            #     break
+            if len(hpy_test_file[key]['preprocessed_video'] )== len(hpy_test_file[key]['preprocessed_label']):
+                video_data.extend(hpy_test_file[key]['preprocessed_video'])
+                label_data.extend(hpy_test_file[key]['preprocessed_label'])
+                # bpm_data.extend(hpy_test_file[key]['preprocessed_hr'])
+            if cnt == 4:
+                break
+            # if cnt == cflag:
+            #     break
+
+            # if option == "test" or flag :
+            #     break
+        hpy_test_file.close()
+        if model_name in ["GCN"]:
+            dataset = GCNDataset(video_data=np.asarray(video_data),
+                                 label_data=np.asarray(label_data),
+                                 bpm_data = np.asarray(bpm_data)
+                                 )
+        elif model_name in ["AxisNet"]:
+            dataset = AxisNetDataset(video_data=np.asarray(video_data),
+                                     label_data=np.asarray(label_data))
+        else:
+            dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data))
 
     elif model_name in ["PPNet"]:
@@ -84,47 +129,26 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy_dataset/",
         dataset = PPNetDataset(face_data=np.asarray(face_data),
                                mask_data=np.asarray(mask_data),
                                target=np.asarray(target_data))
-
-    elif model_name == "MetaPhys":
-        appearance_data = []
-        motion_data = []
-        target_data = []
-
-        for key in hpy_file.keys(): #subject1, subject10, ...
-            appearance_data.append(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
-            motion_data.append(hpy_file[key]['preprocessed_video'][:, :, :, :3])
-            target_data.append(hpy_file[key]['preprocessed_label'][:])
-        hpy_file.close()
-
-        dataset = MetaPhysDataset(num_shots,
-                                  num_test_shots,
-                                  option,
-                                  unsupervised,
-                                  frame_depth=10,
-
-                                  appearance_data=np.asarray(appearance_data),
-                                  motion_data=np.asarray(motion_data),
-                                  target=np.asarray(target_data)
-                                  )
-
-    elif model_name == "MetaPhysNet":
-        hpy_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + option + ".hdf5", "r")
+    elif model_name in ["AxisNet"]:
         video_data = []
         label_data = []
+        ptt_data = []
 
-        keys = list(hpy_file.keys())
-        random_keys = random.sample(keys, len(keys))
-        for key in random_keys: #subject1, subject10, ...
-            video_data.append(hpy_file[key]['preprocessed_video'])
-            label_data.append(hpy_file[key]['preprocessed_label'])
+        for key in hpy_file.keys():
+            video_data.extend(hpy_file[key]['preprocessed_video'])
+            ptt_data.extend(hpy_file[key]['preprocessed_ptt'])
+            label_data.extend(hpy_file[key]['preprocessed_label'])
+        hpy_file.close()
 
-        dataset = MetaPhysDataset(num_shots,
-                                  num_test_shots,
-                                  video_data=np.asarray(video_data[:60]), # 너무 많을 때  개수 제한
-                                  label_data=np.asarray(label_data[:60]),
+        std_shape = (320,472, 3)# ptt_data[0].shape
+        for i in range(len(ptt_data)):
+            if ptt_data[i].shape != std_shape:
+                ptt_data[i] = np.resize(ptt_data[i],std_shape)
 
-                                  option=option,
-                                  unsupervised= unsupervised,
-                                  frame_depth=10
-                                  )
+
+        dataset = AxisNetDataset(video_data=np.asarray(video_data),
+                                 ptt_data = np.asarray(ptt_data),
+                                 label_data=np.asarray(label_data),)
+
+
     return dataset
