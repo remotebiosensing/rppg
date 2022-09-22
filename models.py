@@ -10,7 +10,7 @@ from nets.models.PhysNet import PhysNet
 from nets.models.PhysNet import PhysNet_2DCNN_LSTM
 from nets.models.Seq_GCN import Seq_GCN
 from nets.models.TEST import TEST,TEST2
-
+import os
 NUM_FEATURES = 5
 NUM_CLASSES = 10
 
@@ -18,11 +18,14 @@ def get_ver_model(model_name: str = "DeepPhys", ver:int = 1):
     return TEST2(ver)
 
 
-def get_model(model_name: str = "DeepPhys"):
+def get_model(model_name: str = 'DeepPhys', log_flag:bool = True):
     """
     :param model_name: model name
     :return: model
     """
+    if log_flag:
+        print("========= set model get_model() in"+ os.path.basename(__file__))
+
     if model_name == "DeepPhys":
         return DeepPhys()
     elif model_name == "DeepPhys_DA":
@@ -49,7 +52,7 @@ def is_model_support(model_name, model_list, log_flag):
     :return: model
     """
     if log_flag:
-        print("========= model support check ========= ")
+        print("========= model support check is model support() in" + os.path.basename(__file__))
     if not (model_name in model_list):
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)

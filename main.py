@@ -85,7 +85,7 @@ if __TIME__:
     start_time = time.time()
 
 # model = [get_model(model_params["name"])]
-model = get_model(model_params["name"]).cuda()
+model = get_model(model_params["name"], log_flag).cuda()
 
 print("summary")
 if __MODEL_SUMMARY__:
