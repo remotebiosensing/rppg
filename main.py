@@ -184,6 +184,8 @@ b_start = 1.0
 exp_a = 0.5
 exp_b = 5.0
 
+::
+
 for epoch in range(hyper_params["epochs"]):
     with tqdm(train_loader, desc="Train ", total=len(train_loader)) as tepoch:
         # for mod in model[0]:
