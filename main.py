@@ -1,34 +1,20 @@
-import copy
 import datetime
 import json
-import math
-import time
 import os
-import matplotlib.pyplot as plt
-import numpy as np
+import time
+
 import torch
-from torch.utils.data import DataLoader, random_split
-from tqdm import tqdm
+import wandb
+from sklearn.model_selection import KFold
+from torch.optim import lr_scheduler
 
 from dataset.dataset_loader import dataset_loader, split_data_loader
 from log import log_info_time
 from loss import loss_fn
 from models import is_model_support, get_model, summary
 from optim import optimizer
-from torch.optim import lr_scheduler
-
-from utils.TorchLossComputer import TorchLossComputer
 from utils.dataset_preprocess import preprocessing, dataset_split
-from utils.funcs import normalize, plot_graph, detrend
-from utils.funcs import detrend
-from heartpy import process
-from sklearn.model_selection import KFold
-import config as config
-import wandb
-from utils.image_preprocess import get_haarcascade
-from biosppy import ppg
-import pyVHR
-from utils.train import train_fn,test_fn
+from utils.train import train_fn, test_fn
 
 bpm_flag = False
 K_Fold_flag = False
@@ -113,7 +99,7 @@ dataset = dataset_loader(save_root_path=params["save_root_path"],
 #                               dataset_name=params["dataset_name"],
 #                               option="test")
 if not K_Fold_flag:
-    datasets = dataset_split(dataset,[0.7,0.1,0.2])
+    datasets = dataset_split(dataset, [0.7, 0.1, 0.2])
 if __TIME__:
     log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
@@ -129,7 +115,8 @@ if __TIME__:
 if __TIME__:
     start_time = time.time()
 if not K_Fold_flag:
-    data_loaders = split_data_loader(datasets,params["train_batch_size"],params["train_shuffle"],params["test_shuffle"])
+    data_loaders = split_data_loader(datasets, params["train_batch_size"], params["train_shuffle"],
+                                     params["test_shuffle"])
 
 if __TIME__:
     log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
@@ -169,23 +156,9 @@ Model Training Step
 min_val_loss = 100.0
 min_val_loss_model = None
 
-
-val_loss = 1.0
-test_flag = False
-
-a_start = 0.1
-b_start = 1.0
-exp_a = 0.5
-exp_b = 5.0
-
-#dataloaders
-
-
-
 for epoch in range(hyper_params["epochs"]):
-    train_fn(epoch,model,optimizer,criterion,data_loaders[0],"Train",True)
+    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", True)
     if data_loaders.__len__() == 3:
-        test_fn(epoch,model,optimizer,criterion,data_loaders[1],"Val",True,False)
+        test_fn(epoch, model, optimizer, criterion, data_loaders[1], "Val", True, False)
     if epoch % 10 == 0:
         running_loss = test_fn(epoch, model, optimizer, criterion, data_loaders[-1], "Test", True, True)
-
