@@ -8,6 +8,18 @@ from dataset.GCNDataset import GCNDataset
 from dataset.AxisNetDataset import AxisNetDataset
 from utils.funcs import load_list_of_dicts
 import os
+from torch.utils.data import DataLoader
+
+def split_data_loader(datasets, batch_size, train_shuffle, test_shuffle = False):
+    if datasets.__len__() == 3:
+        train_loader = DataLoader(datasets[0], batch_size=batch_size,shuffle=train_shuffle)
+        validation_loader = DataLoader(datasets[1], batch_size=batch_size,shuffle=test_shuffle)
+        test_loader = DataLoader(datasets[2], batch_size=batch_size, shuffle=test_shuffle)
+        return [train_loader, validation_loader, test_loader]
+    elif datasets.__len__() == 2:
+        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=train_shuffle)
+        test_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=test_shuffle)
+        return [train_loader, test_loader]
 
 def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
                    model_name: str = "DeepPhys",

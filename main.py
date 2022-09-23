@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
-from dataset.dataset_loader import dataset_loader
+from dataset.dataset_loader import dataset_loader, split_data_loader
 from log import log_info_time
 from loss import loss_fn
 from models import is_model_support, get_model, summary
@@ -128,12 +128,8 @@ if __TIME__:
 if __TIME__:
     start_time = time.time()
 if not K_Fold_flag:
-    train_loader = DataLoader(train_dataset, batch_size=params["train_batch_size"],
-                              shuffle=params["train_shuffle"])
-    validation_loader = DataLoader(validation_dataset, batch_size=params["train_batch_size"],
-                                   shuffle=params["train_shuffle"])
-test_loader = DataLoader(test_dataset, batch_size=params["test_batch_size"],
-                         shuffle=False)  # params["test_shuffle"])
+    data_loaders = split_data_loader(datasets,params["train_batch_size"],params["train_shuffle"],params["test_shuffle"])
+
 if __TIME__:
     log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
