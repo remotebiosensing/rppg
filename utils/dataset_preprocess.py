@@ -10,6 +10,19 @@ from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_
     Axis_preprocess_Label
 from utils.funcs import store_as_list_of_dicts, load_list_of_dicts
 from scipy import io
+from torch.utils.data import random_split
+def dataset_split(dataset,ratio):
+    dataset_len = len(dataset)
+    if ratio.__len__() == 3:
+        train_len = int(np.floor(dataset_len * ratio[0]))
+        val_len = int(np.floor(dataset_len * ratio[1]))
+        test_len = dataset_len - train_len - val_len
+
+        return [random_split(dataset, [train_len, val_len, test_len])]
+    elif ratio.__len__() == 2 :
+        train_len = int(np.floor(dataset_len * ratio[0]))
+        test_len = dataset_len - train_len
+        return [random_split(dataset, [train_len, test_len])]
 
 
 def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",

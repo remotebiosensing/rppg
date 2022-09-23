@@ -18,7 +18,7 @@ from optim import optimizer
 from torch.optim import lr_scheduler
 
 from utils.TorchLossComputer import TorchLossComputer
-from utils.dataset_preprocess import preprocessing
+from utils.dataset_preprocess import preprocessing, dataset_split
 from utils.funcs import normalize, plot_graph, detrend
 from utils.funcs import detrend
 from heartpy import process
@@ -112,12 +112,7 @@ dataset = dataset_loader(save_root_path=params["save_root_path"],
 #                               dataset_name=params["dataset_name"],
 #                               option="test")
 if not K_Fold_flag:
-    dataset_len = len(dataset)
-    train_len = int(np.floor(dataset_len * 0.64))
-    val_len = int(np.floor(dataset_len * 0.2))
-    test_len = dataset_len - train_len - val_len
-
-    train_dataset, validation_dataset, test_dataset = random_split(dataset, [train_len, val_len, test_len])
+    datasets = dataset_split(dataset,[0.7,0.1,0.2])
 if __TIME__:
     log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
