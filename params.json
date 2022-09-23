@@ -1,40 +1,44 @@
 {
-    "__TIME__" : 1,
-    "__PREPROCESSING__" : 1,
+    "__TIME__" : 0,
+    "__PREPROCESSING__" : 0,
     "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
         "parallel_criterion_comment" : "TODO need to verification",
-        "set_gpu_device" : "4"
+        "set_gpu_device" : "0"
     },
     "params":
     {
+        "model_root_path": "/media/hdd1/dy/model/",
         "save_root_path": "/media/hdd1/dy/dataset/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "UBFC",
+        "dataset_name": "V4V",
         "dataset_comment" :
                 [
+                    "V4V",
+                    "PURE",
                     "UBFC",
-                    "cuff_less_blood_pressure"
+                    "cuff_less_blood_pressure",
+                    "VIPL_HR"
                 ],
         "checkpoint_path" : "/media/hdd1/dy/checkpoint/",
         "train_ratio": 0.7,
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
-        "train_batch_size" : 100,
+        "train_batch_size" : 200,
         "train_batch_size_comment" :
                 [
                     "PhysNet_LSTM : 8",
                     "PPNET :  100"
                 ],
-        "train_shuffle" : 0,
-        "test_batch_size" : 32,
+        "train_shuffle" : 1,
+        "test_batch_size" : 200,
         "test_shuffle" : 0
     },
     "hyper_params":
     {
-        "loss_fn": "mse",
+        "loss_fn": "neg_pearson",
         "loss_fn_comment":
                [
                    "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
@@ -44,20 +48,21 @@
                    "triplet_margin","triplet_margin_distance",
                    "PPNET : MSE"
                ],
-        "optimizer": "adam",
+        "optimizer": "ada_mw",
         "optimizer_comment":
                 [
                     "adam","sgd","rms_prop","ada_delta","ada_grad","ada_max",
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam",
                     "PPNET : adam"
                 ],
-        "learning_rate": 0.001,
+        "learning_rate": 0.0001,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001",
             "PPNet : lr = 0.001"
         ],
-        "epochs" : 100,
+
+        "epochs" : 30000,
         "epochs_comment" :
                 [
                     "PPNET : 100"
@@ -65,14 +70,16 @@
     },
     "model_params":
     {
-        "name": "RTNet",
+        "name": "GCN",
         "name_comment":
                 [
                     "DeepPhys",
                     "PhysNet",
                     "PhysNet_LSTM",
                     "PPNet",
-                    "RTNet"
+                    "RTNet",
+                    "GCN",
+                    "AxisNet"
                 ]
     }
 }

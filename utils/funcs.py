@@ -3,8 +3,11 @@ import scipy.signal
 from matplotlib import pyplot as plt
 from scipy.signal import butter
 from scipy.sparse import spdiags
-import torch
-import h5py
+import networkx as nx
+import pickle
+
+# from test import load_graph, batch_graphs
+
 
 def detrend(signal, Lambda):
     """detrend(signal, Lambda) -> filtered_signal
@@ -43,68 +46,140 @@ def BPF(input_val, fs=30):
     return scipy.signal.filtfilt(b_pulse, a_pulse, np.double(input_val))
 
 
-def plot_graph(start_point, length, target, inference):
+def plot_graph(start_point, length, target, inference,name):
     plt.rcParams["figure.figsize"] = (14, 5)
     plt.plot(range(len(target[start_point:start_point + length])), target[start_point:start_point + length],
              label='target')
     plt.plot(range(len(inference[start_point:start_point + length])), inference[start_point:start_point + length],
              label='inference')
+    plt.title(name)
     plt.legend(fontsize='x-large')
-    plt.show()
+    # plt.show()
+    return plt
 
 
 def normalize(input_val):
     return (input_val - np.mean(input_val)) / np.std(input_val)
 
-def getdatasets(key,archive):
+def _weight_mean_color(graph, src, dst, n):
+    """Callback to handle merging nodes by recomputing mean color.
 
-  if key[-1] != '/': key += '/'
+    The method expects that the mean color of `dst` is already computed.
 
-  out = []
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    n : int
+        A neighbor of `src` or `dst` or both.
 
-  for name in archive[key]:
+    Returns
+    -------
+    data : dict
+        A dictionary with the `"weight"` attribute set as the absolute
+        difference of the mean color between node `dst` and `n`.
+    """
 
-    path = key + name
-
-    if isinstance(archive[path], h5py.Dataset):
-      out += [path]
-    else:
-       out += getdatasets(path,archive)
-
-  return out
-
-def make_mixed_dataset(h5py_data, new_h5py_data):
+    diff = graph.nodes[dst]['mean color'] - graph.nodes[n]['mean color']
+    diff = np.linalg.norm(diff)
+    return {'weight': diff}
 
 
-    # open HDF5-files
-    #data     = h5py.File('/media/hdd1/yj/dataset2/MetaPhysNet_V4V_train.hdf5','r')
-    #new_data = h5py.File('/media/hdd1/yj/dataset2/MetaPhysNet_all_train.hdf5','a')
-    data     = h5py.File(h5py_data,'r')
-    new_data = h5py.File(new_h5py_data,'a') #all
+def merge_mean_color(graph, src, dst):
+    """Callback called before merging two nodes of a mean color distance graph.
 
-    # read as much datasets as possible from the old HDF5-file
-    datasets = getdatasets('/',data)
+    This method computes the mean color of `dst`.
 
-    # get the group-names from the lists of datasets
-    groups = list(set([i[::-1].split('/',1)[1][::-1] for i in datasets]))
-    groups = [i for i in groups if len(i)>0]
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    """
+    graph.nodes[dst]['total color'] += graph.nodes[src]['total color']
+    graph.nodes[dst]['pixel count'] += graph.nodes[src]['pixel count']
+    graph.nodes[dst]['mean color'] = (graph.nodes[dst]['total color'] /
+                                      graph.nodes[dst]['pixel count'])
+def weight_boundary(graph, src, dst, n):
+    """
+    Handle merging of nodes of a region boundary region adjacency graph.
 
-    # sort groups based on depth
-    idx    = np.argsort(np.array([len(i.split('/')) for i in groups]))
-    groups = [groups[i] for i in idx]
+    This function computes the `"weight"` and the count `"count"`
+    attributes of the edge between `n` and the node formed after
+    merging `src` and `dst`.
 
-    # create all groups that contain dataset that will be copied
-    for group in groups:
-      new_data.create_group(group)
 
-    # copy datasets
-    for path in datasets:
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    n : int
+        A neighbor of `src` or `dst` or both.
 
-      # - get group name
-      group = path[::-1].split('/',1)[1][::-1]
+    Returns
+    -------
+    data : dict
+        A dictionary with the "weight" and "count" attributes to be
+        assigned for the merged node.
 
-      # - minimum group name
-      if len(group) == 0: group = '/'
+    """
+    default = {'weight': 0.0, 'count': 0}
 
-      # - copy data
-      data.copy(path, new_data[group])
+    count_src = graph[src].get(n, default)['count']
+    count_dst = graph[dst].get(n, default)['count']
+
+    weight_src = graph[src].get(n, default)['weight']
+    weight_dst = graph[dst].get(n, default)['weight']
+
+    count = count_src + count_dst
+    return {
+        'count': count,
+        'weight': (count_src * weight_src + count_dst * weight_dst)/count
+    }
+
+
+def merge_boundary(graph, src, dst):
+    """Call back called before merging 2 nodes.
+
+    In this case we don't need to do any computation here.
+    """
+    pass
+
+
+def store_as_list_of_dicts(filename, *graphs):
+    list_of_dicts = graphs# [nx.to_dict_of_dicts(graph) for graph in graphs]
+
+    with open(filename, 'wb') as f:
+        pickle.dump(list_of_dicts, f)
+
+
+def load_list_of_dicts(filename, create_using=nx.Graph):
+    with open(filename, 'rb') as f:
+        list_of_dicts = pickle.load(f)
+
+    # graphs_h = []
+    # graphs_edges = []
+
+    graphs = []
+
+    for tup in list_of_dicts:
+
+        for graph_list in tup:
+            print(str(len(graphs))+"/"+str(len(tup)))
+            batches = []
+            for graph in graph_list:
+                h,edges = load_graph(create_using(graph))
+                batches.append((h,edges))
+                del h,edges
+                # print(str(len(batches))+'/'+str(len(graph_list)))
+            h,adj,src, tft, Msrc, Mtgt, Mgraph = batch_graphs(batches)
+            del batches
+            graphs.append((h,adj,src,tft,Msrc, Mtgt,Mgraph))
+
+
+    return graphs
