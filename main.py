@@ -153,8 +153,7 @@ if __TIME__:
 '''
 Model Training Step
 '''
-min_val_loss = 100.0
-min_val_loss_model = None
+tmp_running_loss = 100
 
 for epoch in range(hyper_params["epochs"]):
     train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", True)
@@ -162,3 +161,8 @@ for epoch in range(hyper_params["epochs"]):
         test_fn(epoch, model, optimizer, criterion, data_loaders[1], "Val", True, False)
     if epoch % 10 == 0:
         running_loss = test_fn(epoch, model, optimizer, criterion, data_loaders[-1], "Test", True, True)
+
+    if tmp_running_loss > running_loss:
+        torch.save(model.state_dict(), params["model_root_path"] + model_params["name"] + params[
+            "dataset_name"] + "newtrialHH")
+        tmp_running_loss = running_loss
