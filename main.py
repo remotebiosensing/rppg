@@ -139,8 +139,8 @@ Setting Loss Function
 '''
 if __TIME__:
     start_time = time.time()
-criterion = loss_fn(hyper_params["loss_fn"])
-criterion2 = loss_fn("L1")
+criterion = loss_fn(hyper_params["loss_fn"], log_flag)
+criterion2 = loss_fn("L1", log_flag)
 
 # if torch.cuda.is_available():
 # TODO: implement parallel training
