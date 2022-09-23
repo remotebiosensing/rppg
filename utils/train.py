@@ -64,3 +64,4 @@ def test_fn(epoch, model, criterion, dataloaders, step:str = "Test" , wandb_flag
                         wandb.Image('graph.png')
                     ]
                 })
+        return running_loss
