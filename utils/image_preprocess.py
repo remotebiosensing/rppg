@@ -1,18 +1,13 @@
-import multiprocessing
 import os
-import networkx as nx
-from networkx.readwrite import json_graph
+
 import cv2
+import mediapipe as mp
 import numpy as np
-from tqdm import tqdm
 from face_recognition import face_locations, face_landmarks
 from skimage.util import img_as_float
-import mediapipe as mp
-import config as config
-from skimage.segmentation import slic
-from skimage.future import graph
 # from test import plot_graph_from_image,get_graph_from_image
 from sklearn import preprocessing
+from tqdm import tqdm
 
 
 def Deepphys_preprocess_Video(path, flag):
@@ -281,7 +276,6 @@ def generate_Floatimage(frame):
     :return: float value frame [0 ~ 1.0]
     '''
     dst = img_as_float(frame)
-    # 왜 있지??
     dst = cv2.cvtColor(dst.astype('float32'), cv2.COLOR_BGR2RGB)
     dst[dst > 1] = 1
     dst[dst < 0] = 0

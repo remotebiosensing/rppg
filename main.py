@@ -91,12 +91,8 @@ dataset = dataset_loader(save_root_path=params["save_root_path"],
                          model_name=model_params["name"],
                          dataset_name=params["dataset_name"],
                          option="train")
-# test_dataset = dataset_loader(save_root_path=params["save_root_path"],
-#                               model_name=model_params["name"],
-#                               dataset_name=params["dataset_name"],
-#                               option="test")
 if not K_Fold_flag:
-    datasets = dataset_split(dataset,[0.7,0.1,0.2])
+    datasets = dataset_split(dataset, [0.7, 0.1, 0.2])
 if __TIME__:
     log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
@@ -112,7 +108,8 @@ if __TIME__:
 if __TIME__:
     start_time = time.time()
 if not K_Fold_flag:
-    data_loaders = split_data_loader(datasets,params["train_batch_size"],params["train_shuffle"],params["test_shuffle"])
+    data_loaders = split_data_loader(datasets, params["train_batch_size"], params["train_shuffle"],
+                                     params["test_shuffle"])
 
 if __TIME__:
     log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
@@ -157,25 +154,13 @@ if __TIME__:
 Model Training Step
 '''
 min_val_loss = 100.0
-min_val_loss_model = None
 
-
-val_loss = 1.0
-test_flag = False
-
-a_start = 0.1
-b_start = 1.0
-exp_a = 0.5
-exp_b = 5.0
-
-#dataloaders
-
+# dataloaders
 
 
 for epoch in range(hyper_params["epochs"]):
-    train_fn(epoch,model,optimizer,criterion,data_loaders[0],"Train",True)
+    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", True)
     if data_loaders.__len__() == 3:
-        test_fn(epoch,model,optimizer,criterion,data_loaders[1],"Val",True,False)
+        test_fn(epoch, model, optimizer, criterion, data_loaders[1], "Val", True, False)
     if epoch % 10 == 0:
         running_loss = test_fn(epoch, model, optimizer, criterion, data_loaders[-1], "Test", True, True)
-
