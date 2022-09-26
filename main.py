@@ -20,7 +20,7 @@ bpm_flag = False
 K_Fold_flag = False
 model_save_flag = False
 log_flag = True
-wandb_flag = True
+wandb_flag = False
 
 # Define Kfold Cross Validator
 if K_Fold_flag:
@@ -66,7 +66,6 @@ if __PREPROCESSING__:
     if __TIME__:
         log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
 
-print("Set Model")
 '''
 Setting Learning Model
 '''
@@ -78,8 +77,6 @@ model = get_model(model_params["name"], log_flag).cuda()
 
 if __MODEL_SUMMARY__:
     summary(model, model_params["name"], log_flag)
-
-torch.save(model.state_dict(), params["model_root_path"] + model_params["name"] + params["dataset_name"] + "W")
 
 if __TIME__:
     log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))

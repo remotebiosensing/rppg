@@ -52,7 +52,7 @@ def is_model_support(model_name, model_list, log_flag):
     :return: model
     """
     if log_flag:
-        print("========= model support check is model support() in" + os.path.basename(__file__))
+        print("========= model support check is model support() in " + os.path.basename(__file__))
     if not (model_name in model_list):
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
