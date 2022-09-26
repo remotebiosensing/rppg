@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 
 
 class MTTSDataset(Dataset):
-    def __init__(self, appearance_data, motion_data, hr_target,rr_target):
+    def __init__(self, appearance_data, motion_data, hr_target, rr_target):
         self.transform = transforms.Compose([transforms.ToTensor()])
         self.a = appearance_data
         self.m = motion_data
@@ -21,8 +21,8 @@ class MTTSDataset(Dataset):
         hr_target = torch.tensor(self.hr_label[index], dtype=torch.float32)
         rr_target = torch.tensor(self.rr_label[index], dtype=torch.float32)
 
-        inputs = torch.stack([appearance_data,motion_data],dim=0)
-        targets = torch.stack([hr_target,rr_target],dim=0)
+        inputs = torch.stack([appearance_data, motion_data], dim=0)
+        targets = torch.stack([hr_target, rr_target], dim=0)
 
         if torch.cuda.is_available():
             inputs = inputs.to('cuda')
