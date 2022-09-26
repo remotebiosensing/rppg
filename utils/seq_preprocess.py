@@ -1,9 +1,7 @@
+import heartpy as hp
 import numpy as np
 from scipy.io import loadmat
-from scipy.signal import find_peaks
-import scipy
-import pandas as pd
-import heartpy as hp
+
 
 def PPNet_preprocess_Mat(path):
     '''
