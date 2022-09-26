@@ -1,12 +1,12 @@
+import higher
+import numpy as np
 import torch
 
 from nets.models.sub_models.AppearanceModel import AppearanceModel_2D
 from nets.models.sub_models.LinearModel import LinearModel
 from nets.models.sub_models.MotionModel import MotionModel_TS
+from utils.funcs import plot_graph, detrend
 
-from utils.funcs import normalize, plot_graph, detrend
-import numpy as np
-import higher
 
 class TSCAN(torch.nn.Module):
     def __init__(self):
@@ -32,9 +32,9 @@ class TSCAN(torch.nn.Module):
         :return:
         original 2d model
         """
-        inputs = torch.chunk(inputs,2,dim=1)
-        self.attention_mask1, self.attention_mask2 = self.appearance_model(torch.squeeze(inputs[0],1))
-        motion_output = self.motion_model(torch.squeeze(inputs[1],1), self.attention_mask1, self.attention_mask2)
+        inputs = torch.chunk(inputs, 2, dim=1)
+        self.attention_mask1, self.attention_mask2 = self.appearance_model(torch.squeeze(inputs[0], 1))
+        motion_output = self.motion_model(torch.squeeze(inputs[1], 1), self.attention_mask1, self.attention_mask2)
         out = self.linear_model(motion_output)
 
         return out
@@ -42,7 +42,8 @@ class TSCAN(torch.nn.Module):
     def get_attention_mask(self):
         return self.attention_mask1, self.attention_mask2
 
-def maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer,optimizer,  num_adapt_steps):
+
+def maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, optimizer, num_adapt_steps):
     model.train()
 
     for batch in tepoch:
@@ -72,6 +73,7 @@ def maml_train(tepoch, model, inner_criterion, outer_criterion, inner_optimizer,
         optimizer.step()
         losses = sum(test_losses) / len(tepoch)
         tepoch.set_postfix(loss=losses)
+
 
 def maml_val(tepoch, model, inner_criterion, outer_criterion, inner_optimizer, num_adapt_steps):
     model.train()
