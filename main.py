@@ -39,8 +39,6 @@ random.seed(random_seed)
 if K_Fold_flag:
     kfold = KFold(n_splits=5, shuffle=True)
 
-if wandb_flag:
-    wandb.init(project="SeqNet", entity="daeyeolkim")
 
 now = datetime.datetime.now()
 os.environ["CUDA_VISIBLE_DEVICES"] = "9"
@@ -54,7 +52,12 @@ with open('params.json') as f:
     params = jsonObject.get("params")
     hyper_params = jsonObject.get("hyper_params")
     model_params = jsonObject.get("model_params")
+    wandb_params = jsonObject.get("wandb")
 #
+
+if wandb_flag:
+    wandb.init(project=wandb_params["project"], entity=wandb_params["entity"])
+
 """
 TEST FOR LOAD
 """
