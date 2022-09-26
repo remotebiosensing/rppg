@@ -1,17 +1,13 @@
-import random
-
-import torch
 import numpy as np
-from torchmeta.utils.data import Task, MetaDataset
+import torch
 import torchvision.transforms as transforms
 from torchmeta.transforms import ClassSplitter
+from torchmeta.utils.data import Task, MetaDataset
 
-import scipy.io
-from scipy.signal import butter
 
 class MetaPhysDataset(MetaDataset):
     def __init__(self, num_shots_tr, num_shots_ts, video_data, label_data,
-                 option='train', unsupervised=0,frame_depth=10,
+                 option='train', unsupervised=0, frame_depth=10,
                  ):
 
         self.transform = transforms.Compose([transforms.ToTensor()])
@@ -22,11 +18,10 @@ class MetaPhysDataset(MetaDataset):
         self.num_shots_ts = num_shots_ts
         self.unsupervised = unsupervised
         self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=num_shots_tr,
-                                                   num_test_per_class=num_shots_ts)
+                                               num_test_per_class=num_shots_ts)
 
         self.video_data = video_data
         self.label = label_data
-
 
     def __getitem__(self, index):
         if torch.is_tensor(index):
@@ -39,7 +34,6 @@ class MetaPhysDataset(MetaDataset):
         for i in range(2):
             vi.append(self.video_data[index][data_len * i:data_len * (i + 1)])
             la.append(self.label[index][data_len * i:data_len * (i + 1)])
-
 
         self.dataset_transform = ClassSplitter(shuffle=False, num_train_per_class=self.num_shots_tr,
                                                num_test_per_class=self.num_shots_ts)
@@ -55,8 +49,8 @@ class MetaPhysDataset(MetaDataset):
 
 
 class PersonTask(Task):
-    def __init__(self, video ,label, num_samples):
-        super(PersonTask, self).__init__(None, None) # Regression task
+    def __init__(self, video, label, num_samples):
+        super(PersonTask, self).__init__(None, None)  # Regression task
         self.transform = transforms.Compose([transforms.ToTensor()])
         self.video = video
         self.label = label
@@ -66,7 +60,6 @@ class PersonTask(Task):
         return len(self.label)
 
     def __getitem__(self, index):
-
         '''
         if index<self.num_samples:
             video_data = np.concatenate((self.video[index], self.video[index + 1]), axis=0)
@@ -84,7 +77,7 @@ class PersonTask(Task):
 
         '''
         video_data = torch.tensor(np.transpose(self.video[index], (0, 4, 1, 2, 3)), dtype=torch.float32)
-        #video_data = torch.tensor(np.transpose(self.video[index], (3, 0, 1, 2)), dtype=torch.float32)
+        # video_data = torch.tensor(np.transpose(self.video[index], (3, 0, 1, 2)), dtype=torch.float32)
         label_data = torch.tensor(self.label[index], dtype=torch.float32)
 
         if torch.cuda.is_available():
@@ -92,4 +85,3 @@ class PersonTask(Task):
             label_data = label_data.to('cuda')
 
         return video_data, label_data
-
