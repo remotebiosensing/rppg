@@ -3,9 +3,7 @@ import torch.nn as nn
 
 from nets.blocks.decoder_blocks import decoder_block
 from nets.blocks.encoder_blocks import encoder_block
-from nets.blocks.blocks import ConvBlock3D
 
-import numpy as np
 
 def conv(ic, oc, k, s, p):
     return nn.Sequential(
@@ -50,7 +48,7 @@ class PhysNetFeatureExtractor(torch.nn.Module):
 
     def forward(self, x):
         [batch, channel, length, width, height] = x.shape
-        #return self.physnet(x).view(-1, length)
+        # return self.physnet(x).view(-1, length)
         return self.physnetfe(x)
 
 
@@ -93,6 +91,7 @@ class ResBlock(nn.Module):
 
         return x
 
+
 class eBlock(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
         super(eBlock, self).__init__()
@@ -108,6 +107,7 @@ class eBlock(nn.Module):
 
         return x
 
+
 class dBlock(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
         super(dBlock, self).__init__()
@@ -122,6 +122,7 @@ class dBlock(nn.Module):
         x = self.relu1(x)
 
         return x
+
 
 class feBlock(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
@@ -140,6 +141,7 @@ class feBlock(nn.Module):
 
         return x
 
+
 class fdBlock(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
         super(fdBlock, self).__init__()
@@ -157,6 +159,7 @@ class fdBlock(nn.Module):
 
         return x
 
+
 class PhysNetClassifier(nn.Module):
     def __init__(self):
         super(PhysNetClassifier, self).__init__()
@@ -169,6 +172,7 @@ class PhysNetClassifier(nn.Module):
         x = self.model(x)
         [batch, channel, length, width, height] = x.shape
         return x.view(-1, length)
+
 
 # Create CNN Model
 class CNNModel(nn.Module):
@@ -198,6 +202,7 @@ class CNNModel(nn.Module):
 
         return out
 
+
 class FiLM(nn.Module):
     def __init__(self):
         super(FiLM, self).__init__()
@@ -205,7 +210,7 @@ class FiLM(nn.Module):
         dim_question = 11
         # Linear에서 나온 결과의 절반은 beta, 절반은 gamma
         # beta, gamma 모두 ResBlock 하나당 n_channels개씩 feed
-        #self.film_generator = nn.Linear(dim_question, 2 * n_res_blocks * n_channels)
+        # self.film_generator = nn.Linear(dim_question, 2 * n_res_blocks * n_channels)
         self.film_generator = CNNModel()
 
         self.fc1 = nn.Linear(1024, 16 * 2)
@@ -216,12 +221,12 @@ class FiLM(nn.Module):
 
         #        self.feature_extractor = FeatureExtractor()
 
-        #self.res_blocks = nn.ModuleList()
-#        for _ in range(n_res_blocks):
-#            self.res_blocks.append(ResBlock(n_channels + 2, n_channels))
+        # self.res_blocks = nn.ModuleList()
+        #        for _ in range(n_res_blocks):
+        #            self.res_blocks.append(ResBlock(n_channels + 2, n_channels))
 
-#        self.n_res_blocks = n_res_blocks
-        #self.n_channels = n_channels
+        #        self.n_res_blocks = n_res_blocks
+        # self.n_channels = n_channels
 
         self.blocks = nn.ModuleList()
         self.blocks.append(feBlock(3, 16, [1, 5, 5], [1, 1, 1], [0, 2, 2]))
@@ -243,14 +248,13 @@ class FiLM(nn.Module):
 
         self.classifier = PhysNetClassifier()
 
-    def forward(self, x): #(image, question)
+    def forward(self, x):  # (image, question)
         batch_size = x.size(0)
 
-        #x_feature = self.feature_extractor(x)
-       # film_vector, n_channels = self.film_generator(x)
-       # film_vector = film_vector.view(batch_size, 2, n_channels)
-            #batch_size, self.n_res_blocks, 2, self.n_channels)
-
+        # x_feature = self.feature_extractor(x)
+        # film_vector, n_channels = self.film_generator(x)
+        # film_vector = film_vector.view(batch_size, 2, n_channels)
+        # batch_size, self.n_res_blocks, 2, self.n_channels)
 
         '''
         d = x.size(2)
@@ -306,7 +310,7 @@ class FiLM(nn.Module):
                 x = block(x, beta, gamma)
 
             else:
-                x= block(x)
+                x = block(x)
         # feature = x
         x = self.classifier(x)
 
@@ -316,5 +320,6 @@ class FiLM(nn.Module):
 def make_model(model_dict):
     return FiLM(model_dict['n_res_blocks'], model_dict['n_classes'], model_dict['n_channels'])
 
-if __name__ =='__main__':
+
+if __name__ == '__main__':
     FiLM()
