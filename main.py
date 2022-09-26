@@ -1,8 +1,10 @@
 import datetime
 import json
 import os
+import random
 import time
 
+import numpy as np
 import torch
 import wandb
 from sklearn.model_selection import KFold
@@ -21,6 +23,16 @@ K_Fold_flag = False
 model_save_flag = False
 log_flag = True
 wandb_flag = False
+random_seed = 0
+
+# for Reproducible model
+torch.manual_seed(random_seed)
+torch.cuda.manual_seed(random_seed)
+torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+np.random.seed(random_seed)
+random.seed(random_seed)
 
 # Define Kfold Cross Validator
 if K_Fold_flag:
@@ -110,7 +122,7 @@ if __TIME__:
     start_time = time.time()
 
 data_loaders = split_data_loader(datasets, params["train_batch_size"], params["train_shuffle"],
-                                     params["test_shuffle"])
+                                 params["test_shuffle"])
 
 if __TIME__:
     log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
