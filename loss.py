@@ -1,19 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
-import numpy as np
+
 from log import log_warning
-import os
 
 
-def loss_fn(loss_fn: str = "mse",log_flag: bool=True):
+def loss_fn(loss_fn: str = "mse"):
     """
     :param loss_fn: implement loss function for training
     :return: loss function module(class)
     """
-    if log_flag:
-        print("========= loss_fn() in" + os.path.basename(__file__))
-
     if loss_fn == "mse":
         return loss.MSELoss()
     elif loss_fn == "L1":
@@ -74,8 +70,6 @@ def neg_Pearson_Loss(predictions, targets):
     :return: negative pearson loss
     '''
     rst = 0
-    targets = targets[:,:]
-    predictions = torch.squeeze(predictions)
     # Pearson correlation can be performed on the premise of normalization of input data
     predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
     targets = (targets - torch.mean(targets)) / torch.std(targets)
@@ -95,10 +89,6 @@ def neg_Pearson_Loss(predictions, targets):
     rst = rst / predictions.shape[0]
     return rst
 
-def peak_mse(predictions,targets):
-    rst = 0
-    targets = targets[:, :]
-
 
 class NegPearsonLoss(nn.Module):
     def __init__(self):
@@ -106,10 +96,3 @@ class NegPearsonLoss(nn.Module):
 
     def forward(self, predictions, targets):
         return neg_Pearson_Loss(predictions, targets)
-
-class fftLoss(nn.Module):
-    def __init__(self):
-        super(fftLoss,self).__init__()
-
-    def forward(self,predictions,targets):
-        return torch.nn.MSELoss(torch.fft.fft(predictions,dim=1),torch.fft.fft(targets,dim=1))

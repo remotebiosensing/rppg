@@ -15,6 +15,7 @@ class GCNDataset(Dataset):
         self.label = label_data
         # self.bpm = bpm_data
 
+
     def __getitem__(self, index):
         if torch.is_tensor(index):
             index = index.tolist()
@@ -22,6 +23,7 @@ class GCNDataset(Dataset):
         video_data = torch.tensor(np.transpose(self.video_data[index], (3, 0, 1, 2)), dtype=torch.float32)
         label_data = torch.tensor(self.label[index], dtype=torch.float32)
         # bpm_data = torch.tensor(self.bpm[index],dtype=torch.float32)
+
 
         if torch.cuda.is_available():
             video_data = video_data.to('cuda')
