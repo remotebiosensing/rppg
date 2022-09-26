@@ -1,16 +1,18 @@
-import tensorflow as tf
-import numpy as np
 import math
+import numpy as np
+import tensorflow as tf
+
+
 class Facedetect:
     def __init__(self):
-        #blazenet input
+        # blazenet input
         self.INPUT_H = 128
         self.INPUT_W = 128
-        #blazenet hyper param
+        # blazenet hyper param
         self.NUM_BOXES = 896
         self.NUM_COORDS = 16
         self.BYTE_SIZE_OF_FLOAT = 4
-        self.strides = [8,16,16,16]
+        self.strides = [8, 16, 16, 16]
         self.ASPECT_RATIOS_SIZE = 1
         self.MIN_SCALE = 0.3
         self.MAX_SCALE = 0.8
@@ -34,7 +36,6 @@ class Facedetect:
         self.floating_model = False
         if self.input_details[0]['dtype'] == np.float32:
             self.floating_model = True
-
 
     def calscale(self, min_scale, max_scale, stride_index, num_strides):
         return min_scale + (max_scale - min_scale) * stride_index / (num_strides - 1)
@@ -69,7 +70,8 @@ class Facedetect:
             scales = []
 
             last_same_stride_layer = layer_id
-            while (last_same_stride_layer < len(self.strides) and self.strides[last_same_stride_layer] == self.strides[layer_id]):
+            while (last_same_stride_layer < len(self.strides) and self.strides[last_same_stride_layer] == self.strides[
+                layer_id]):
                 scale = self.calscale(self.MIN_SCALE, self.MAX_SCALE, last_same_stride_layer, len(self.strides))
                 for aspect_ratio_id in range(self.ASPECT_RATIOS_SIZE):
                     aspect_ratios.append(1.0)
@@ -77,7 +79,8 @@ class Facedetect:
                 if len(self.strides) - 1 == last_same_stride_layer:
                     scale_next = 1.0
                 else:
-                    scale_next = self.calscale(self.MIN_SCALE, self.MAX_SCALE, last_same_stride_layer + 1, len(self.strides))
+                    scale_next = self.calscale(self.MIN_SCALE, self.MAX_SCALE, last_same_stride_layer + 1,
+                                               len(self.strides))
                 scales.append(math.sqrt(scale * scale_next))
                 aspect_ratios.append(1.0)
                 last_same_stride_layer = last_same_stride_layer + 1
@@ -122,9 +125,8 @@ class Facedetect:
                 break
             remained = []
             candidates = []
-            location = detection#detection[0:4]
+            location = detection  # detection[0:4]
             del location[4]
-
 
             for i in range(len(indexed_scores)):
                 rest_location = detections[indexed_scores[i][0]][0:4]
@@ -161,10 +163,10 @@ class Facedetect:
         return output_locations
 
     def detect(self, img):
-        input_data = np.expand_dims(img,axis=0)
+        input_data = np.expand_dims(img, axis=0)
         if self.floating_model:
-            input_data = np.float32(input_data)/127.5-1
-        self.interpreter.set_tensor(self.input_details[0]['index'],input_data)
+            input_data = np.float32(input_data) / 127.5 - 1
+        self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
         self.interpreter.invoke()
         detected_boxes = self.interpreter.get_tensor(self.output_details[0]['index'])
         detected_scores = self.interpreter.get_tensor(self.output_details[1]['index'])
@@ -176,7 +178,7 @@ class Facedetect:
                 score = -100
             if score > 100:
                 score = 100
-            score = 1/(1+math.exp(-1*score))
+            score = 1 / (1 + math.exp(-1 * score))
             if score <= 0.4:
                 continue
 
@@ -207,14 +209,14 @@ class Facedetect:
             for j in range(4, 16, 2):
                 pos_x = detected_boxes[0][i][j] / self.X_SCALE * self.anchors[i][2] + self.anchors[i][0]
                 pos_x = pos_x * width_test
-                pos_y = detected_boxes[0][i][j+1] / self.Y_SCALE * self.anchors[i][3] + self.anchors[i][1]
+                pos_y = detected_boxes[0][i][j + 1] / self.Y_SCALE * self.anchors[i][3] + self.anchors[i][1]
                 pos_y = pos_y * height_test
                 box.append(pos_x)
                 box.append(pos_y)
 
             detections.append(box)
 
-        #print(detections)
+        # print(detections)
 
         index_list = []
         for i in range(len(detections)):
