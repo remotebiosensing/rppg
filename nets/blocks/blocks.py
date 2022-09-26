@@ -1,5 +1,6 @@
 import torch
 
+
 class ConvBlock2D(torch.nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, stride, padding):
         super(ConvBlock2D, self).__init__()
@@ -104,7 +105,7 @@ class TSM(torch.nn.Module):
 
 
 class TSM_Block(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size,padding):
+    def __init__(self, in_channels, out_channels, kernel_size, padding):
         super().__init__()
         self.tsm1 = TSM()
         self.t_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
