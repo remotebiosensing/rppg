@@ -175,6 +175,6 @@ min_val_loss = 100.0
 for epoch in range(hyper_params["epochs"]):
     train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train",wandb_flag)
     if data_loaders.__len__() == 3:
-        test_fn(epoch, model, optimizer, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
+        _ = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
     if epoch % 10 == 0:
-        running_loss = test_fn(epoch, model, optimizer, criterion, data_loaders[-1], "Test", True, save_img_flag)
+        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag )
