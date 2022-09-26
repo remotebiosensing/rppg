@@ -5,7 +5,7 @@
     "options":{
         "parallel_criterion" : 1,
         "parallel_criterion_comment" : "TODO need to verification",
-        "set_gpu_device" : "4"
+        "set_gpu_device" : "6"
     },
     "params":
     {
@@ -65,14 +65,15 @@
     },
     "model_params":
     {
-        "name": "RTNet",
+        "name": "GCN",
         "name_comment":
                 [
                     "DeepPhys",
                     "PhysNet",
                     "PhysNet_LSTM",
                     "PPNet",
-                    "RTNet"
+                    "RTNet",
+                    "GCN"
                 ]
     }
 }

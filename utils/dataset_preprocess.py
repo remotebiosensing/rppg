@@ -5,11 +5,11 @@ import h5py
 import numpy as np
 from torch.utils.data import random_split
 
-from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
-    GCN_preprocess_Video, Axis_preprocess_Video
+from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video
+    # GCN_preprocess_Video, Axis_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
-from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
-    Axis_preprocess_Label
+from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label
+    # , GCN_preprocess_Label, Axis_preprocess_Label
 
 
 def dataset_split(dataset, ratio):
