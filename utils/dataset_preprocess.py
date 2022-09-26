@@ -29,6 +29,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                   data_root_path: str = "/media/hdd1/",
                   dataset_name: str = "UBFC",
                   train_ratio: float = 0.8,
+                  divide_flag: bool = True,
+                  fixed_position:bool = True,
                   log_flag: bool = True):
     """
     :param save_root_path: save file destination path
@@ -36,6 +38,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     :param data_root_path: data set root path
     :param dataset_name: data set name(ex. UBFC, COFACE)
     :param train_ratio: data split [ train ratio : 1 - train ratio]
+    :param divide_flag : True : divide by number, False : divide by subject
+    :param fixed_position: True : fixed position, False : face tracking
     :return:
     """
 
