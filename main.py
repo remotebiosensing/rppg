@@ -91,8 +91,9 @@ dataset = dataset_loader(save_root_path=params["save_root_path"],
                          model_name=model_params["name"],
                          dataset_name=params["dataset_name"],
                          option="train")
-if not K_Fold_flag:
-    datasets = dataset_split(dataset, [0.7, 0.1, 0.2])
+
+datasets = dataset_split(dataset, [0.7, 0.1, 0.2])
+
 if __TIME__:
     log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
@@ -107,8 +108,8 @@ if __TIME__:
 '''
 if __TIME__:
     start_time = time.time()
-if not K_Fold_flag:
-    data_loaders = split_data_loader(datasets, params["train_batch_size"], params["train_shuffle"],
+
+data_loaders = split_data_loader(datasets, params["train_batch_size"], params["train_shuffle"],
                                      params["test_shuffle"])
 
 if __TIME__:

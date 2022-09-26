@@ -303,9 +303,10 @@ class TEST(nn.Module):
         out_5 = self.out_conv1d(out_4)
         out = torch.squeeze(out_5)
         # out = self.linear(out)
-        return out,[main_1,main_2,main_3,main_4,main_5,main_6,main_7],\
-               [bvp_1,bvp_2,bvp_3,bvp_4],[ptt_1,ptt_2,ptt_3,ptt_4],[att,out_att],\
-               [out_1,out_2,out_3,out_4,out_5]
+        return out
+            # ,[main_1,main_2,main_3,main_4,main_5,main_6,main_7],\
+            #    [bvp_1,bvp_2,bvp_3,bvp_4],[ptt_1,ptt_2,ptt_3,ptt_4],[att,out_att],\
+            #    [out_1,out_2,out_3,out_4,out_5]
 
 
 class SpatialAttention(nn.Module):

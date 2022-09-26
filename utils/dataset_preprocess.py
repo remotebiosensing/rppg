@@ -17,11 +17,11 @@ def dataset_split(dataset, ratio):
         val_len = int(np.floor(dataset_len * ratio[1]))
         test_len = dataset_len - train_len - val_len
 
-        return [random_split(dataset, [train_len, val_len, test_len])]
+        return random_split(dataset, [train_len, val_len, test_len])
     elif ratio.__len__() == 2:
         train_len = int(np.floor(dataset_len * ratio[0]))
         test_len = dataset_len - train_len
-        return [random_split(dataset, [train_len, test_len])]
+        return random_split(dataset, [train_len, test_len])
 
 
 def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
