@@ -21,9 +21,10 @@ from utils.train import train_fn, test_fn
 bpm_flag = False
 K_Fold_flag = False
 model_save_flag = False
-log_flag = True
+log_flag = False
 wandb_flag = False
 random_seed = 0
+save_img_flag = False
 
 # for Reproducible model
 torch.manual_seed(random_seed)
@@ -172,8 +173,8 @@ min_val_loss = 100.0
 
 
 for epoch in range(hyper_params["epochs"]):
-    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", True)
+    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train",wandb_flag)
     if data_loaders.__len__() == 3:
-        test_fn(epoch, model, optimizer, criterion, data_loaders[1], "Val", True, False)
+        test_fn(epoch, model, optimizer, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
     if epoch % 10 == 0:
-        running_loss = test_fn(epoch, model, optimizer, criterion, data_loaders[-1], "Test", True, True)
+        running_loss = test_fn(epoch, model, optimizer, criterion, data_loaders[-1], "Test", True, save_img_flag)
