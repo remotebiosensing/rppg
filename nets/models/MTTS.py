@@ -30,13 +30,13 @@ class MTTS(torch.nn.Module):
         :return:
         original 2d model
         """
-        inputs = torch.chunk(inputs,2,dim=1)
-        self.attention_mask1, self.attention_mask2 = self.appearance_model(torch.squeeze(inputs[0],1))
-        motion_output = self.motion_model(torch.squeeze(inputs[1],1), self.attention_mask1, self.attention_mask2)
+        inputs = torch.chunk(inputs, 2, dim=1)
+        self.attention_mask1, self.attention_mask2 = self.appearance_model(torch.squeeze(inputs[0], 1))
+        motion_output = self.motion_model(torch.squeeze(inputs[1], 1), self.attention_mask1, self.attention_mask2)
         hr_out = self.linear_model(motion_output)
         rr_out = self.linear_model(motion_output)
 
-        return [hr_out,rr_out]
+        return [hr_out, rr_out]
 
     def get_attention_mask(self):
         return self.attention_mask1, self.attention_mask2
