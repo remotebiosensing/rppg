@@ -82,6 +82,7 @@ if __PREPROCESSING__:
                   face_detect_algorithm=wandb_params["face_detect_algorithm"],
                   divide_flag=wandb_params["divide_flag"],
                   fixed_position=wandb_params["fixed_position"],
+                  time_length=wandb_params["time_length"],
                   log_flag=log_flag)
 
     # save_root_path: str = "/media/hdd1/dy_dataset/",
