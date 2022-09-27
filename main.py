@@ -50,6 +50,7 @@ with open('params.json') as f:
     __MODEL_SUMMARY__ = jsonObject.get("__MODEL_SUMMARY__")
     options = jsonObject.get("options")
     params = jsonObject.get("params")
+    preprocessing_prams = jsonObject.get("preprocessing_params")
     hyper_params = jsonObject.get("hyper_params")
     model_params = jsonObject.get("model_params")
     wandb_params = jsonObject.get("wandb")
@@ -76,9 +77,24 @@ if __PREPROCESSING__:
     preprocessing(save_root_path=params["save_root_path"],
                   model_name=model_params["name"],
                   data_root_path=params["data_root_path"],
-                  dataset_name=params["dataset_name"],
+                  dataset_name=wandb_params["dataset_name"],
                   train_ratio=params["train_ratio"],
+                  face_detect_algorithm=wandb_params["face_detect_algorithm"],
+                  divide_flag=wandb_params["divide_flag"],
+                  fixed_position=wandb_params["fixed_position"],
                   log_flag=log_flag)
+
+    # save_root_path: str = "/media/hdd1/dy_dataset/",
+    # model_name: str = "DeepPhys",
+    # data_root_path: str = "/media/hdd1/",
+    # dataset_name: str = "UBFC",
+    # train_ratio: float = 0.8,
+    # face_detect_algorithm: int = 0,
+    # divide_flag: bool = True,
+    # fixed_position: bool = True,
+    # log_flag: bool = True):
+
+
     if __TIME__:
         log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
 

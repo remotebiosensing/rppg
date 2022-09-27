@@ -1,7 +1,7 @@
 {
     "__TIME__" : 0,
     "__PREPROCESSING__" : 1,
-    "preprocessing_options": {
+    "preprocessing_params": {
         "dataset_name": "V4V",
         "dataset_comment" :
                 [
