@@ -143,6 +143,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                 proc.join()
 
     train = int(len(return_dict.keys()) * train_ratio)  # split dataset
+    train_file_path = save_root_path + model_name + "_" + dataset_name + "_train.hdf5"
+    test_file_path = save_root_path + model_name + "_" + dataset_name + "_test.hdf5"
     dt = h5py.special_dtype(vlen=np.float32)
     train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
 
@@ -220,6 +222,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     :param flag: face detect flag
     :param model_name: select preprocessing method
     :param return_dict: : preprocessed image, label
+
     """
 
     # Video Based
