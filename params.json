@@ -29,7 +29,8 @@
                     "0: face Tracking",
                     "1: fixed Position"
                 ],
-        "time_length": 32
+        "time_length": 32,
+        "image_size": 128
     },
     "__MODEL_SUMMARY__" : 0,
     "options":{

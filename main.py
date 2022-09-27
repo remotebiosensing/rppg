@@ -79,10 +79,11 @@ if __PREPROCESSING__:
                   data_root_path=params["data_root_path"],
                   dataset_name=wandb_params["dataset_name"],
                   train_ratio=params["train_ratio"],
-                  face_detect_algorithm=wandb_params["face_detect_algorithm"],
-                  divide_flag=wandb_params["divide_flag"],
-                  fixed_position=wandb_params["fixed_position"],
-                  time_length=wandb_params["time_length"],
+                  face_detect_algorithm=preprocessing_prams["face_detect_algorithm"],
+                  divide_flag=preprocessing_prams["divide_flag"],
+                  fixed_position=preprocessing_prams["fixed_position"],
+                  time_length=preprocessing_prams["time_length"],
+                  imgae_size=preprocessing_prams["image_size"],
                   log_flag=log_flag)
 
     # save_root_path: str = "/media/hdd1/dy_dataset/",

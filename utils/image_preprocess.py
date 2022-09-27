@@ -10,7 +10,7 @@ from sklearn import preprocessing
 from tqdm import tqdm
 
 
-def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position):
+def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -51,7 +51,7 @@ def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_po
     return True, raw_video
 
 
-def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position):
+def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -155,7 +155,7 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
     return True, split_raw_video
 
 
-def RTNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position):
+def RTNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -206,7 +206,7 @@ def GCN_preprocess_Video(path, flag):
     return True, maps, sliding_window_stride
 
 
-def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position):
+def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
     '''
        :param path: dataset path
        :param flag: face detect flag
