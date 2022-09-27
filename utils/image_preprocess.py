@@ -10,7 +10,7 @@ from sklearn import preprocessing
 from tqdm import tqdm
 
 
-def Deepphys_preprocess_Video(path, flag):
+def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -29,7 +29,7 @@ def Deepphys_preprocess_Video(path, flag):
         ret, frame = cap.read()
         if frame is None:
             break
-        if flag:
+        if face_detect_algorithm:
             rst, crop_frame = faceDetection(frame)
             if not rst:  # can't detect face
                 return False, None
@@ -51,7 +51,7 @@ def Deepphys_preprocess_Video(path, flag):
     return True, raw_video
 
 
-def PhysNet_preprocess_Video(path, flag):
+def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -68,7 +68,7 @@ def PhysNet_preprocess_Video(path, flag):
         raw_video = np.empty((frame_total, set, set, 3))
         j = 0
 
-        if flag == 2:
+        if face_detect_algorithm == 2:
             detector = FaceMeshDetector(maxFaces=2)
 
         mp_face_detection = mp.solutions.face_detection
@@ -79,11 +79,11 @@ def PhysNet_preprocess_Video(path, flag):
                 height, width, channel = frame.shape
                 frame.flags.writeable = False
 
-                if flag == 1:
+                if face_detect_algorithm == 1:
                     rst, crop_frame = faceDetection(frame)
                     if not rst:  # can't detect face
                         return False, None
-                elif flag == 2:
+                elif face_detect_algorithm == 2:
                     f, dot = crop_mediapipe(detector, frame)
                     # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
                     bin_mask = '0011000000000000000100000001001'
@@ -113,7 +113,7 @@ def PhysNet_preprocess_Video(path, flag):
 
         detector = None
 
-        if flag == 2:
+        if face_detect_algorithm == 2:
             detector = FaceMeshDetector(maxFaces=2)
 
         with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
@@ -121,11 +121,11 @@ def PhysNet_preprocess_Video(path, flag):
                 ret, frame = cap.read()
                 if frame is None:
                     break
-                if flag == 1:
+                if face_detect_algorithm == 1:
                     rst, crop_frame = faceDetection(frame)
                     if not rst:  # can't detect face
                         return False, None
-                elif flag == 2:
+                elif face_detect_algorithm == 2:
                     f, dot = crop_mediapipe(detector, frame)
                     # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
                     bin_mask = '0011000000000000000100000001001'
@@ -155,7 +155,7 @@ def PhysNet_preprocess_Video(path, flag):
     return True, split_raw_video
 
 
-def RTNet_preprocess_Video(path, flag):
+def RTNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -172,7 +172,7 @@ def RTNet_preprocess_Video(path, flag):
             ret, frame = cap.read()
             if frame is None:
                 break
-            if flag:  # TODO: make flag == false option
+            if face_detect_algorithm:  # TODO: make flag == false option
                 rst, crop_frame, mask = faceLandmarks(frame)
                 if not rst:  # can't detect face
                     return False, None
@@ -206,7 +206,7 @@ def GCN_preprocess_Video(path, flag):
     return True, maps, sliding_window_stride
 
 
-def Axis_preprocess_Video(path, flag):
+def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position):
     '''
        :param path: dataset path
        :param flag: face detect flag

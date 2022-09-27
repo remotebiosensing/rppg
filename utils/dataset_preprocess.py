@@ -207,7 +207,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
 
-def preprocess_Dataset(path, vid_name, ground_truth_name, flag, model_name, return_dict):
+def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, model_name, return_dict):
     """
     :param path: dataset path
     :param flag: face detect flag
@@ -217,19 +217,18 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, flag, model_name, retu
 
     # Video Based
     if model_name == "DeepPhys":
-        rst, preprocessed_video = Deepphys_preprocess_Video(path + vid_name, flag)
+        rst, preprocessed_video = Deepphys_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag, fixed_position)
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
-        rst, preprocessed_video = PhysNet_preprocess_Video(path + vid_name, flag)
+        rst, preprocessed_video = PhysNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag, fixed_position)
     elif model_name == "RTNet":
-        rst, preprocessed_video = RTNet_preprocess_Video(path + vid_name, flag)
+        rst, preprocessed_video = RTNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag, fixed_position)
     elif model_name == "PPNet":  # Sequence data based
         ppg, sbp, dbp, hr = PPNet_preprocess_Mat(path)
     elif model_name == "GCN":
-        # rst, preprocessed_video, saved_graph = GCN_preprocess_Video(path + "/vid.avi", flag)
-        rst, preprocessed_video, sliding_window_stride = GCN_preprocess_Video(path + vid_name, flag)
+        rst, preprocessed_video, sliding_window_stride = GCN_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag, fixed_position)
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
-            path + vid_name, flag)
+            path + vid_name, face_detect_algorithm, divide_flag, fixed_position)
     # rst,bvp,sliding,frames,ptt
     if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM"]:  # can't detect face
         if not rst:
