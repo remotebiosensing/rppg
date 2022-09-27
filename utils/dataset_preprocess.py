@@ -29,7 +29,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                   data_root_path: str = "/media/hdd1/",
                   dataset_name: str = "UBFC",
                   train_ratio: float = 0.8,
-                  face_detect_algorithm : int = 0,
+                  face_detect_algorithm : int = 1,
                   divide_flag: bool = True,
                   fixed_position:bool = True,
                   log_flag: bool = True):
@@ -108,15 +108,11 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     process = []
 
     # multiprocessing
-    if split_flag == False:
+    if not split_flag:
         for index, data_path in enumerate(data_list):
             proc = multiprocessing.Process(target=preprocess_Dataset,
-                                           args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name, 1,
-                                                 model_name, return_dict))
-            # (path, vid_name, ground_truth_name, flag, model_name, return_dict):
-            # flag 0 : pass
-            # flag 1 : detect face
-            # flag 2 : remove nose
+                                           args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name, face_detect_algorithm,
+                                                 divide_flag, fixed_position, model_name, return_dict))
             process.append(proc)
             proc.start()
 
@@ -130,7 +126,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             for index, data_path in enumerate(data_list[i * 32:(i + 1) * 32]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
                                                args=(
-                                               dataset_root_path + "/" + data_path, vid_name, ground_truth_name, 1,
+                                               dataset_root_path + "/" + data_path, vid_name, ground_truth_name, face_detect_algorithm,
                                                model_name, return_dict))
                 # flag 0 : pass
                 # flag 1 : detect face
@@ -210,31 +206,6 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
             dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
-
-        # train_graph_file = save_root_path + model_name + "_"+dataset_name + "_train.pkl"
-        # test_graph_file = save_root_path + model_name + "_"+dataset_name + "_test.pkl"
-        #
-        # saved_graph = []
-        # for index, data_path in enumerate(return_dict.keys()[:train]):
-        #     dset = train_file.create_group(data_path)
-        #     dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-        #     dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        #     saved_graph.extend(return_dict[data_path]['preprocessed_graph'])
-        # train_file.close()
-        #
-        # store_as_list_of_dicts(train_graph_file,saved_graph)
-        #
-        # saved_graph = []
-        # test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
-        # for index, data_path in enumerate(return_dict.keys()[train:]):
-        #     dset = test_file.create_group(data_path)
-        #     dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-        #     dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        #     saved_graph.extend(return_dict[data_path]['preprocessed_graph'])
-        # test_file.close()
-        #
-        # store_as_list_of_dicts(test_graph_file, saved_graph)
-
 
 def preprocess_Dataset(path, vid_name, ground_truth_name, flag, model_name, return_dict):
     """
