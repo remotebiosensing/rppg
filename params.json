@@ -1,6 +1,35 @@
 {
     "__TIME__" : 0,
     "__PREPROCESSING__" : 1,
+    "preprocessing_options": {
+        "dataset_name": "V4V",
+        "dataset_comment" :
+                [
+                    "V4V",
+                    "PURE",
+                    "UBFC",
+                    "cuff_less_blood_pressure",
+                    "VIPL_HR"
+                ],
+        "face_detect_algorithm" : 1,
+        "face_detect_algorithm_comment" :
+                [
+                    "1: face_recognition_algorithm",
+                    "2: FaceMeshDetector"
+                ],
+        "divide_flag": 1,
+        "divide_flag_comment":
+                [
+                    "0: divide by subject",
+                    "1: divide by number"
+                ],
+        "fixed_position": 1,
+        "fixed_position_comment":
+                [
+                    "0: face Tracking",
+                    "1: fixed Position"
+                ]
+    },
     "__MODEL_SUMMARY__" : 0,
     "options":{
         "parallel_criterion" : 1,
@@ -12,15 +41,6 @@
         "model_root_path": "/media/hdd1/dy/model/",
         "save_root_path": "/media/hdd1/dy/dataset/",
         "data_root_path": "/media/hdd1/",
-        "dataset_name": "V4V",
-        "dataset_comment" :
-                [
-                    "V4V",
-                    "PURE",
-                    "UBFC",
-                    "cuff_less_blood_pressure",
-                    "VIPL_HR"
-                ],
         "checkpoint_path" : "/media/hdd1/dy/checkpoint/",
         "train_ratio": 0.7,
         "train_ratio_comment" : "generate train dataset using train_ratio",
