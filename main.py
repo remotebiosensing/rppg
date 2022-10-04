@@ -77,13 +77,13 @@ if __PREPROCESSING__:
     preprocessing(save_root_path=params["save_root_path"],
                   model_name=model_params["name"],
                   data_root_path=params["data_root_path"],
-                  dataset_name=wandb_params["dataset_name"],
+                  dataset_name=preprocessing_prams["dataset_name"],
                   train_ratio=params["train_ratio"],
                   face_detect_algorithm=preprocessing_prams["face_detect_algorithm"],
                   divide_flag=preprocessing_prams["divide_flag"],
                   fixed_position=preprocessing_prams["fixed_position"],
                   time_length=preprocessing_prams["time_length"],
-                  imgae_size=preprocessing_prams["image_size"],
+                  img_size=preprocessing_prams["image_size"],
                   log_flag=log_flag)
 
     # save_root_path: str = "/media/hdd1/dy_dataset/",

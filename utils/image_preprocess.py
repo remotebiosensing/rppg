@@ -65,7 +65,7 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
         data = os.listdir(path)[:-1]
         data.sort()
         frame_total = len(data)
-        raw_video = np.empty((frame_total, set, set, 3))
+        raw_video = np.empty((frame_total, img_size, img_size, 3))
         j = 0
 
         if face_detect_algorithm == 2:
@@ -96,7 +96,7 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
                 else:
                     crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
-                crop_frame = cv2.resize(crop_frame, dsize=(set, set), interpolation=cv2.INTER_AREA)
+                crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
                 crop_frame = generate_Floatimage(crop_frame)
 
                 raw_video[j] = crop_frame
@@ -107,7 +107,7 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        raw_video = np.empty((frame_total, set, set, 3))
+        raw_video = np.empty((frame_total, img_size, img_size, 3))
 
         j = 0
 
@@ -138,7 +138,7 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
                 else:
                     crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
-                crop_frame = cv2.resize(crop_frame, dsize=(set, set), interpolation=cv2.INTER_AREA)
+                crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
                 crop_frame = generate_Floatimage(crop_frame)
 
                 raw_video[j] = crop_frame
@@ -146,7 +146,7 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
                 pbar.update(1)
             cap.release()
 
-    split_raw_video = np.zeros((((frame_total - 22) // 10), 32, set, set, 3))
+    split_raw_video = np.zeros((((frame_total - 22) // 10), 32, img_size, img_size, 3))
     index = 0
     for x in range(((frame_total - 22) // 10)):
         split_raw_video[x] = raw_video[index:index + 32]

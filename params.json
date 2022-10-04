@@ -92,7 +92,7 @@
     },
     "model_params":
     {
-        "name": "GCN",
+        "name": "PhysNet",
         "name_comment":
                 [
                     "DeepPhys",

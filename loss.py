@@ -97,10 +97,10 @@ def neg_Pearson_Loss(predictions, targets):
     return rst
 
 
+
 def peak_mse(predictions, targets):
     rst = 0
     targets = targets[:, :]
-
 
 class NegPearsonLoss(nn.Module):
     def __init__(self):
