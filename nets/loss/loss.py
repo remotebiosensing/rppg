@@ -28,8 +28,7 @@ def Systolic_Loss(predictions, targets):
     predictions = torch.squeeze(predictions)
     rst = 0
     for i in range(predictions.shape[0]):
-        rst += torch.abs((targets[i] - predictions[i]) / 120)
-        # rst +=l
+        rst += torch.abs((targets[i] - predictions[i]) / targets[i])
     rst /= predictions.shape[0]
     return rst
 
@@ -38,7 +37,7 @@ def Diastolic_Loss(predictions, targets):
     predictions = torch.squeeze(predictions)
     rst = 0
     for i in range(predictions.shape[0]):
-        rst += torch.abs((targets[i] - predictions[i]) / 60)
+        rst += torch.abs((targets[i] - predictions[i]) / targets[i])
     rst /= predictions.shape[0]
     return rst
 
@@ -125,7 +124,7 @@ class rmseLoss(nn.Module):
 
 class sbpLoss(nn.Module):
     def __init__(self):
-        super(sbpLoss,self).__init__()
+        super(sbpLoss, self).__init__()
 
     def forward(self, predictions, targets):
         return Systolic_Loss(predictions, targets)
