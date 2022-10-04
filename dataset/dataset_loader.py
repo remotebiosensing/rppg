@@ -47,14 +47,20 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
 
     train_file = save_root_path + name + "_" + dataset_name + "_" + "train" + ".hdf5"
     test_file = save_root_path + name + "_" + dataset_name + "_" + "test" + ".hdf5"
+    if os.path.isfile(train_file):
+        print("train dataset exist")
+    else:
+        print("Need to preprocess/train")
+    if os.path.isfile(test_file):
+        print("test dataset exist")
+    else:
+        print("Need to preprocess/test")
+
     hpy_train_file = h5py.File(train_file, "r")
     hpy_test_file = h5py.File(test_file, "r")
 
     print("train file size : ", os.path.getsize(train_file)/1024/1024,'MB')
     print("test file size : ", os.path.getsize(test_file)/1024/1024,'MB')
-
-
-    graph_file = save_root_path + model_name + "_" + dataset_name + "_" + option + ".pkl"
 
     if model_name in ["DeepPhys", "MTTS"]:
         appearance_data = []
