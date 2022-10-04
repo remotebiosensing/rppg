@@ -4,10 +4,7 @@ from sklearn import preprocessing
 import matplotlib.pyplot as plt
 from nets.loss.loss import r
 
-
 import json
-
-
 
 with open("/home/paperc/PycharmProjects/VBPNet/config/parameter.json") as f:
     json_data = json.load(f)
@@ -54,7 +51,7 @@ def down_sampling(in_signal, sampling_rate=60):
 
 def scaler(input_sig):
     input_sig = np.reshape(input_sig, (-1, 1))
-    scaled_output = preprocessing.MinMaxScaler(feature_range=(0, 1)).fit_transform(input_sig)
+    scaled_output = preprocessing.MinMaxScaler(feature_range=(0, 3)).fit_transform(input_sig)
     return np.squeeze(scaled_output)
 
 
@@ -67,14 +64,14 @@ def peak_detection(in_signal):
     return peaks, prop["peak_heights"], len(peaks)
 
 
-def get_systolic_blood_pressure(input_sig):
+def get_systolic(input_sig):
     x = np.squeeze(input_sig)
-    mean = np.mean(x)
-    _, prop = signal.find_peaks(x, height=mean, distance=30)
-    return np.mean(prop["peak_heights"])
+    _, prop = signal.find_peaks(x, height=np.max(input_sig)-np.std(input_sig), distance=30)
+    sbp = prop["peak_heights"]
+    return sbp
 
 
-def get_diastolic_blood_pressure(input_sig):
+def get_diastolic(input_sig):
     Fs = 60
     T = 1 / Fs
 
@@ -93,7 +90,28 @@ def get_diastolic_blood_pressure(input_sig):
     for i, idx in enumerate(range(int(len(input_sig) / cycle_len))):
         cycle_min = np.min(input_sig[i * cycle_len:(i + 1) * cycle_len])
         dbp.append(cycle_min)
-    return np.mean(dbp)
+    return dbp
+
+
+def signal_quality_checker(input_sig, is_abp):
+    s = get_systolic(input_sig)
+    d = get_diastolic(input_sig)
+    s_std = np.std(s)
+    d_std = np.std(d)
+    systolic_n = len(s)
+    diastolic_n = len(d)
+    systolic_mean = np.mean(s)
+    diastolic_mean = np.mean(d)
+    if is_abp:
+        if (np.abs(systolic_n - diastolic_n) > 2) or (s_std > 5) or (d_std > 5) or (np.abs(systolic_mean-diastolic_mean)<20):
+            return False
+        else:
+            return True
+    else:
+        if (np.abs(systolic_n - diastolic_n) > 2) or (s_std > 0.5) or (d_std > 0.5):
+            return False
+        else:
+            return True
 
 
 def get_mean_blood_pressure(dbp, sbp):
@@ -107,65 +125,34 @@ def get_mean_blood_pressure(dbp, sbp):
 # TODO IF STD(PEAK) IS MUCH LARGER THAN PRIOR SLICE, THEN DROP
 
 
-def dicrotic_fft(input_sig):
+def frequency_checker(input_sig):
     '''
     https://lifelong-education-dr-kim.tistory.com/4
     '''
     Fs = 60
     T = 1 / Fs
-    # end_time = 1
-    # time = np.linspace(0, end_time, Fs)
+
     abnormal_cnt = 0
     flag = False
 
-    # plt.subplot(4, 1, 1)
-    # plt.plot(input_sig)
-    # plt.title("original signal")
-    # plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.70)
-
-    s_fft = np.fft.fft(input_sig)  # 추후 IFFT를 위해 abs를 취하지 않은 값을 저장한다.
-    amplitude = abs(s_fft) * (2 / len(s_fft))  # 2/len(s)을 곱해줘서 원래의 amp를 구한다.
+    s_fft = np.fft.fft(input_sig)
+    amplitude = abs(s_fft) * (2 / len(s_fft))
     frequency = np.fft.fftfreq(len(s_fft), T)
-
-    # plt.subplot(4, 1, 2)
-    # plt.xlim(0, 30)
-    # plt.stem(frequency, amplitude)
-    # plt.grid(True)
-    # plt.title("fft result")
-    # plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.70)
 
     # # Dicrotic Notch amplify
     fft_freq = frequency.copy()
     dicrotic_peak_index0 = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
-    # # dicrotic_peak_index1 = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
-    # # dicrotic_peak_index2 = amplitude[:int(len(amplitude) / 2)].argsort()[-3]
     peak_freq = fft_freq[dicrotic_peak_index0]
-    #
-    # fft_2x = s_fft.copy()
-    # # fft_2x[dicrotic_peak_index0] *= 2.0
-    # # fft_2x[dicrotic_peak_index1] *= 0.8
-    # # fft_2x[dicrotic_peak_index2] *= 1.6
-    # amplitude_2x = abs(fft_2x) * (2 / len(fft_2x))
-    # plt.subplot(4, 1, 3)
-    # plt.xlim(0, 30)
-    # plt.stem(frequency, amplitude_2x)
-    # plt.grid(True)
-    # plt.title("Dicrotic Notch amplified")
-    # filtered_data = np.fft.ifft(fft_2x)
-    # plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.70)
 
     cycle_len = round(Fs / peak_freq)
-    # cycle_min = int(np.where(np.min(input[:cycle_len])))
-    # plt.subplot(4, 1, 4)
-    # plt.plot(filtered_data)
-    # start = np.argmin(filtered_data[:cycle])
+
     for i in range(int(len(input_sig) / cycle_len)):
         if i == 0:
             cycle = input_sig[i * cycle_len:(i + 1) * cycle_len]
         else:
             cycle = input_sig[(i - 1) * cycle_len:i * cycle_len]
         corr = r(cycle, input_sig[i * cycle_len:(i + 1) * cycle_len])
-        if corr < 0.9:
+        if corr < 0.7:
             abnormal_cnt += 1
     if abnormal_cnt > 1:
         flag = True
@@ -177,7 +164,7 @@ def dicrotic_fft(input_sig):
     #
     # plt.show()
     # print("break point")
-    return input_sig, flag
+    return flag
 
 
 def chebyshev2(input_sig, low, high, sr):
@@ -208,26 +195,39 @@ def signal_slicing(rawdata, sampling_rate, fft=True):
             abp, ple = sig_spliter(data)
             abp = down_sampling(np.squeeze(abp), sampling_rate)
             ple = down_sampling(np.squeeze(ple), sampling_rate)
-            ple, abnormal_flag = dicrotic_fft(ple)
 
             p_abp, pro_abp = signal.find_peaks(abp, height=np.max(abp) - np.std(abp), distance=30)
-            pp_abp, ppro_abp = signal.find_peaks(abp, height=np.mean(abp) + np.std(abp))
             p_ple, pro_ple = signal.find_peaks(ple, height=np.mean(ple), distance=30)
 
-            if not ((np.mean(ple) == (0.0 or np.nan)) or (np.mean(abp) == 80.0) or
-                    (len(p_abp) < 7) or (len(p_ple) == 0) or
-                    (len(p_abp) - len(p_ple) > 2) or (np.std(pro_abp["peak_heights"]) > 5) or
-                    (np.mean(pro_abp["peak_heights"]) > 160) or (len(pp_abp) > 15)):
-
-                if abnormal_flag is False:
-                    abp_list.append(abp)
-                    ple_list.append(ple)
+            if not ((np.mean(ple) == (0.0 or np.nan)) or
+                    (np.mean(abp) == 80.0) or
+                    (len(p_abp) < 5) or
+                    (len(p_ple) < 5) or
+                    (len(p_abp) - len(p_ple) >= 1) or
+                    (signal_quality_checker(abp, is_abp=True) is False) or
+                    (signal_quality_checker(ple, False) is False)):
+                if (not frequency_checker(abp)) and (not frequency_checker(ple)):
+                    # abp_list.append(abp)
+                    # ple_list.append(scaler(ple))
                     temp = np.empty(3)
-                    temp[0] = get_diastolic_blood_pressure(abp)
-                    temp[1] = get_systolic_blood_pressure(abp)
+                    temp[0] = np.mean(get_diastolic(abp))
+                    temp[1] = np.mean(get_systolic(abp))
                     temp[2] = get_mean_blood_pressure(temp[0], temp[1])
-                    size_list.append(temp)
-                    cnt += 1
+                    '''AHA'''
+                    # '''Normal'''
+                    # if (temp[1] < 120) and (temp[0] < 80):
+                    # '''Elevated'''
+                    # if (120 <= temp[1] < 130) and (temp[0] < 80):
+                    # '''Hypertension Stage 1'''
+                    # if (130 <= temp[1] < 140) or (80 <= temp[0] < 90):
+                    # '''Hypertension Stage 2'''
+                    # if (140 <= temp[1]) or (90 <= temp[0]):
+                    '''Hypertensive Crisis'''
+                    if (180 <= temp[1]) or (120 <= temp[0]):
+                        abp_list.append(abp)
+                        ple_list.append(ple)
+                        size_list.append(temp)
+                        cnt += 1
                 else:
                     abnormal_cnt += 1
                     # plt.plot(ple)
@@ -249,13 +249,22 @@ def signal_slicing(rawdata, sampling_rate, fft=True):
                     (len(p_abp) - len(p_ple) > 2) or (np.std(pro_abp["peak_heights"]) > 5) or
                     (np.mean(pro_abp["peak_heights"]) > 160) or (len(pp_abp) > 15)):
                 cnt += 1
-                abp_list.append(abp)
-                ple_list.append(ple)
-                temp = np.empty(2)
-                temp[0] = get_diastolic_blood_pressure(abp)
-                temp[1] = get_systolic_blood_pressure(abp)
-                # temp[2] = get_mean_blood_pressure(temp[0], temp[1])
-                size_list.append(temp)
+                # abp_list.append(abp)
+                # ple_list.append(ple)
+                temp = np.empty(3)
+                temp[0] = get_diastolic(abp)
+                temp[1] = get_systolic(abp)
+                temp[2] = get_mean_blood_pressure(temp[0], temp[1])
+                '''Normal'''
+                if (temp[1] < 120) and (temp[0] < 80):
+                    abp_list.append(abp)
+                    ple_list.append(scaler(ple))
+                    size_list.append(temp)
+                # if 120 <= temp[1] < 130 and temp[0] < 80:             '''Elevated'''
+                # if 130 <= temp[1] < 140 or 80 <= temp[0] < 90:        '''Hypertension Stage 1'''
+                # if 140 <= temp[1] or 90 <= temp[0]:                   '''Hypertension Stage 2'''
+                # if 180 <= temp[1] and 120 <= temp[0]:                 '''Hypertensive Crisis'''
+
         print(cnt, '/', len(rawdata))
     return abp_list, ple_list, size_list
 
