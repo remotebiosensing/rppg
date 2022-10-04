@@ -6,11 +6,15 @@ import json
 import torch.optim as optim
 import matplotlib.pyplot as plt
 import numpy as np
+import torch.nn as nn
 
 from test import test
 
 with open('config/parameter.json') as f:
-    hyper_param = json.load(f).get("hyper_parameters")
+    json_data = json.load(f)
+    param = json_data.get("parameters")
+    hyper_param = json_data.get("hyper_parameters")
+    channels = json_data.get("parameters").get("in_channels")
 
 
 def train(model, device, train_loader, test_loader, epochs):
@@ -34,13 +38,12 @@ def train(model, device, train_loader, test_loader, epochs):
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=hyper_param["gamma"])
 
     print('batchN :', train_loader.__len__())
-
-    costarr = []
+    model_save_cnt = 0
+    cost_arr = []
+    test_cost_arr = []
     for epoch in range(epochs):
         avg_cost = 0
         cost_sum = 0
-        if epoch % 10 == 0:
-            test(model=model, test_loader=test_loader, loss_n=loss_neg, loss_d=loss_d, loss_s=loss_s, idx=epoch)
 
         with tqdm(train_loader, desc='Train', total=len(train_loader), leave=True) as train_epochs:
             idx = 0
@@ -57,34 +60,53 @@ def train(model, device, train_loader, test_loader, epochs):
                 d_cost = loss_d(pred_d, d)
                 '''SBP Loss'''
                 s_cost = loss_s(pred_s, s)
-                '''Amplitude Loss'''
-                '''MBP Loss'''
-                # m_cost = loss2(pred_m, m)
-                # TODO test while training every 10 epoch + wandb graph
-
 
                 '''Total Loss'''
-                cost = neg_cost + d_cost + s_cost  # + d_cost
+                cost = neg_cost + d_cost + s_cost
                 cost.backward()
                 optimizer.step()
 
-                # avg_cost += cost / train_loader.__len__()
                 cost_sum += cost
                 avg_cost = cost_sum / idx
-                train_epochs.set_postfix(loss=avg_cost.item())
+                train_epochs.set_postfix(_=avg_cost.item(), n=neg_cost.item(), d=d_cost.item(), s=s_cost.item())
                 wandb.log({"Train Loss": cost,
                            "Train Negative Pearson Loss": neg_cost,  # },step=epoch)
                            "Train Systolic Loss": s_cost,
                            "Train Diastolic Loss": d_cost}, step=epoch)
 
             scheduler.step()
-            costarr.append(avg_cost.__float__())
-        if epoch % 10 == 0:
-            test(model=model, test_loader=test_loader, loss_n=loss_neg, loss_d=loss_d, loss_s=loss_s, idx=epoch)
+            # train loss array
+            cost_arr.append(avg_cost.__float__())
+        if epoch % 1 == 0:
+            test_c = test(model=model, test_loader=test_loader, loss_n=loss_neg, loss_d=loss_d, loss_s=loss_s, idxx=epoch)
+            test_idx = epoch + 1
+            # test loss array
+            test_cost_arr.append(test_c.__float__())
+            # if current test loss < prev test loss:
+            #   save model
+            if test_idx == 1:
+                test_prev_c = test_c
+            else:
+                test_prev_c = test_cost_arr[-2]
+            # save the model only when train and test loss are lower than prior epoch
+            if (cost.__float__() < avg_cost.__float__()) and (test_c.__float__() < test_prev_c.__float__()):
+                print('current train cost :', cost.__float__(), '/ avg_cost :', avg_cost.__float__(), ' >> trained :',
+                      avg_cost.__float__() - cost.__float__())
+                print('current test cost :', test_c.__float__(), '/ prev test cost :', test_prev_c.__float__(),
+                      ' >> trained :', test_prev_c.__float__() - test_c.__float__())
+                dataset = 'uci'
+                channel = channels['sixth']
+                torch.save(model,
+                           param["save_path"] + 'model_' + dataset + '_(' + str(channel[-1]) + ')_checker_shuffled_test.pt')
+                model_save_cnt += 1
+    print('model saved cnt :', model_save_cnt)
+    print('cost :', cost_arr[-1])
 
-    print('cost :', costarr[-1])
-
-    t_val = np.array(range(len(costarr)))
-    plt.plot(t_val, costarr)
-    plt.title('NegPearsonLoss * MAELoss')
+    t_val = np.array(range(len(cost_arr)))
+    plt.title('Neg Pearson corr + SBP modMAE + DBP modMAE')
+    plt.plot(t_val, cost_arr, label='Train loss')
+    plt.plot(t_val, test_cost_arr, linestyle='--', label='Test loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
     plt.show()
