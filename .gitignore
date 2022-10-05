@@ -3,7 +3,8 @@ dataset/
 graph/
 wandb/
 weights/
-workspace.xml
+lib/
+bin/
 .idea/
 *.xml
 *.iml
