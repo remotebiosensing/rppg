@@ -213,6 +213,19 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
             dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
+    elif model_name in ["RhythmNet"]:
+        for index, data_path in enumerate(return_dict.keys()[:train]):
+            dset = train_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            # dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        train_file.close()
+
+        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[train:]):
+            dset = test_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            # dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        test_file.close()
 
 
 def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
