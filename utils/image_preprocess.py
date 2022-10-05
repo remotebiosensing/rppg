@@ -45,7 +45,7 @@ def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_po
         raw_video[j, :, :, :3], raw_video[j, :, :, -3:] = preprocess_Image(prev_frame, crop_frame)
         prev_frame = crop_frame
         j += 1
-    raw_video[:, :, :, 3] = video_normalize(raw_video[:, :, :, 3])
+    raw_video[:, :, :, :3] = video_normalize(raw_video[:, :, :, :3])
     cap.release()
 
     return True, raw_video
@@ -301,7 +301,9 @@ def normalize_Image(frame):
     :param frame: image
     :return: normalized_frame
     '''
-    return frame / np.std(frame)
+    if frame is not np.all(frame == 0):
+        frame = frame / np.std(frame)
+    return frame
 
 
 def preprocess_Image(prev_frame, crop_frame):
@@ -322,7 +324,8 @@ def ci99(motion_diff):
 
 
 def video_normalize(channel):
-    channel /= np.std(channel)
+    if channel is not np.all(channel == 0):
+        channel /= np.std(channel)
     return channel
 
 

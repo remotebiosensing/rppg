@@ -70,6 +70,8 @@ is_model_support(model_params["name"], model_params["name_comment"], log_flag)
 '''
 Generate preprocessed data hpy file 
 '''
+
+print(model_params["name"])
 if __PREPROCESSING__:
     if __TIME__:
         start_time = time.time()
@@ -123,7 +125,7 @@ if __TIME__:
 
 dataset = dataset_loader(save_root_path=params["save_root_path"],
                          model_name=model_params["name"],
-                         dataset_name=params["dataset_name"],
+                         dataset_name=preprocessing_prams["dataset_name"],
                          option="train")
 
 datasets = dataset_split(dataset, [0.7, 0.1, 0.2])
@@ -189,13 +191,19 @@ if __TIME__:
 Model Training Step
 '''
 min_val_loss = 100.0
-
+min_test_loss = 100.0
 # dataloaders
 
 
 for epoch in range(hyper_params["epochs"]):
     train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train",wandb_flag)
     if data_loaders.__len__() == 3:
-        _ = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
-    if epoch % 10 == 0:
+        val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
+    if min_val_loss > val_loss:
+        min_val_loss = val_loss
         running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag )
+        if min_test_loss >running_loss:
+            min_test_loss = running_loss
+            torch.save(model.state_dict(),params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"])
+    # if epoch % 10 == 0:
+
