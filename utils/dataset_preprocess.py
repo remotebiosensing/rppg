@@ -124,10 +124,10 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             proc.join()
     else:
         loop = len(data_list) // 32
-        loop = 1
+        loop = 5
 
         for i in range(loop):
-            for index, data_path in enumerate(data_list[i * 1:(i + 1) * 1]):
+            for index, data_path in enumerate(data_list[i * 32:(i + 1) * 32]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
                                                args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
                                                      face_detect_algorithm, divide_flag, fixed_position, time_length,
