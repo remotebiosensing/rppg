@@ -222,12 +222,12 @@ def signal_slicing(rawdata, sampling_rate, fft=True):
                     # if (130 <= temp[1] < 140) or (80 <= temp[0] < 90):
                     # '''Hypertension Stage 2'''
                     # if (140 <= temp[1]) or (90 <= temp[0]):
-                    '''Hypertensive Crisis'''
-                    if (180 <= temp[1]) or (120 <= temp[0]):
-                        abp_list.append(abp)
-                        ple_list.append(ple)
-                        size_list.append(temp)
-                        cnt += 1
+                    # '''Hypertensive Crisis'''
+                    # if (180 <= temp[1]) or (120 <= temp[0]):
+                    abp_list.append(abp)
+                    ple_list.append(ple)
+                    size_list.append(temp)
+                    cnt += 1
                 else:
                     abnormal_cnt += 1
                     # plt.plot(ple)
@@ -256,10 +256,10 @@ def signal_slicing(rawdata, sampling_rate, fft=True):
                 temp[1] = get_systolic(abp)
                 temp[2] = get_mean_blood_pressure(temp[0], temp[1])
                 '''Normal'''
-                if (temp[1] < 120) and (temp[0] < 80):
-                    abp_list.append(abp)
-                    ple_list.append(scaler(ple))
-                    size_list.append(temp)
+                # if (temp[1] < 120) and (temp[0] < 80):
+                abp_list.append(abp)
+                ple_list.append(scaler(ple))
+                size_list.append(temp)
                 # if 120 <= temp[1] < 130 and temp[0] < 80:             '''Elevated'''
                 # if 130 <= temp[1] < 140 or 80 <= temp[0] < 90:        '''Hypertension Stage 1'''
                 # if 140 <= temp[1] or 90 <= temp[0]:                   '''Hypertension Stage 2'''
