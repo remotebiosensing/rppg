@@ -72,8 +72,9 @@ def main():
     train(model=model, device=DEVICE, train_loader=train_loader, test_loader=test_loader, epochs=hyper_param["epochs"])
 
 
+if __name__ == "__main__":
+    main()
 
-main()
 
 # branch test
 # merge test
