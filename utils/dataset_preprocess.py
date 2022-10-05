@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import random_split
 
 from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
-    GCN_preprocess_Video, Axis_preprocess_Video
+    GCN_preprocess_Video, Axis_preprocess_Video, RhythmNet_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
 from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
     Axis_preprocess_Label
@@ -243,6 +243,10 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
             path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)
+    elif model_name == "RhythmNet":
+        rst, preprocessed_video = RhythmNet_preprocess_Video(path, face_detect_algorithm, divide_flag,
+                                                             fixed_position, time_length)
+
     # rst,bvp,sliding,frames,ptt
     if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM"]:  # can't detect face
         if not rst:
