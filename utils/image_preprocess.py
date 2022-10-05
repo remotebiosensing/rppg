@@ -217,6 +217,9 @@ def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_positi
     # bvp,sliding,frames,ptt
     return True, maps, sliding_window_stride, num_frames, stacked_ptts
 
+def RhythmNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
+    return preprocess_video_to_st_maps(path, time_length)
+
 
 def faceLandmarks(frame):
     '''
@@ -749,7 +752,7 @@ def get_frames_and_video_meta_data(video_path, meta_data_only=False):
     return frames, frameRate, sliding_window_stride
 
 
-def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
+def preprocess_video_to_st_maps(video_path, clip_size=256):
     frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
     num_frames = frames.shape[0]
 
@@ -760,7 +763,7 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
     if num_maps < 0:
         # print(num_maps)
         print(video_path)
-        return None
+        return False, None
 
     # stacked_maps is the all the st maps for a given video (=num_maps) stacked.
     stacked_ptts = np.zeros((num_maps, 5 * 64, frames.shape[2], 3))
@@ -805,7 +808,8 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
             print(f'Shape of img1: {frame.shape}')
             # print(f'bbox: {bbox}')
             print(f'This is at idx: {idx}')
-            exit(666)
+            return False, None
+            # exit(666)
 
         processed_frames[idx, :, :, :] = frame_resized
 
@@ -860,7 +864,8 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
 
         map_index += 1
 
-    return stacked_maps, sliding_window_stride, num_frames, stacked_ptts
+    return True, stacked_maps
+    #, sliding_window_stride, num_frames, stacked_ptts
     # rst,bvp,sliding,frames,ptt
     # return 1,1,num_frames,1
 
