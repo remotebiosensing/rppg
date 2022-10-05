@@ -8,7 +8,7 @@ from utils.signal_utils import read_target_data, calculate_hr, get_hr_data
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
-class DataLoaderRhythmNet(Dataset):
+class RhythmNetDataset(Dataset):
     """
         Dataset class for RhythmNet
     """
