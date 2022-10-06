@@ -18,6 +18,28 @@ from sklearn.preprocessing import minmax_scale
 
 
 def Deepphys_preprocess_Label(path):
+
+    if path.__contains__("label.txt"):
+        cap = cv2.VideoCapture(path[:-9] + "video.mkv")
+        frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        cap.release()
+
+        length = int(frame_total / fps * 1000)
+
+        f = open(path, 'r')
+        f_read = f.read().split('\n')
+        f.close()
+        label = list(map(float, f_read[:-1]))
+        new_label = label[:length:40]
+        label = new_label
+    else:
+        f = open(path, 'r')
+        f_read = f.read().split('\n')
+        label = ' '.join(f_read[0].split()).split()
+        label_hr = ' '.join(f_read[1].split()).split()
+        f.close()
+
     '''
     :param path: label file path
     :return: delta pulse
@@ -25,11 +47,7 @@ def Deepphys_preprocess_Label(path):
     # TODO : need to check length with video frames
     # TODO : need to implement piecewise cubic Hermite interpolation
     # Load input
-    f = open(path, 'r')
-    f_read = f.read().split('\n')
-    label = ' '.join(f_read[0].split()).split()
     label = list(map(float, label))
-
     delta_label = []
     for i in range(len(label) - 1):
         delta_label.append(label[i + 1] - label[i])
@@ -37,9 +55,9 @@ def Deepphys_preprocess_Label(path):
     delta_label /= np.std(delta_label)
     delta_label = np.array(delta_label).astype('float32')
     delta_pulse = delta_label.copy()  # 이거 왜 있지?
-    f.close()
+    split_hr_label = np.zeros(shape=delta_pulse.shape)
 
-    return delta_pulse
+    return delta_pulse,split_hr_label
 
 
 def PhysNet_preprocess_Label(path):
