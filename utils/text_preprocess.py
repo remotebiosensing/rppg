@@ -321,6 +321,8 @@ def Axis_preprocess_Label(path, sliding_window_stride, num_frames, clip_size=256
 def RhythmNet_preprocess_Label(path, time_length=300):
     f = open(path, 'r')
     hr_list = f.read().split('\n')
+    hr_list = [hr.strip() for hr in hr_list if hr != '']
+    hr_list = list(map(float, hr_list))
 
     hr_mean = np.zeros((len(hr_list))//time_length)
     # 프레임 수가 같다고 가정 후 진행
