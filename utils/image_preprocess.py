@@ -1099,4 +1099,4 @@ def RhythmNet_preprocessor(video_path, clip_size):
         stacked_maps[map_index, :, :, :] = spatio_temporal_map
         map_index += 1
 
-    return True, stacked_maps.astype(np.uint8)
+    return True, stacked_maps.astype(np.uint8).transpose((1, 0, 2))
