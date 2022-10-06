@@ -12,7 +12,7 @@ import numpy as np
 from biosppy.signals import bvp
 from scipy.signal import resample_poly
 from sklearn.preprocessing import minmax_scale
-
+import pandas as pd
 
 # local
 
@@ -317,3 +317,13 @@ def Axis_preprocess_Label(path, sliding_window_stride, num_frames, clip_size=256
     f.close()
 
     return split_raw_label
+
+def RhythmNet_preprocess_Label(path, time_length=300):
+    f = open(path, 'r')
+    hr_list = f.read().split('\n')
+
+    hr_mean = np.zeros((len(hr_list))//time_length)
+    # 프레임 수가 같다고 가정 후 진행
+    for i in range((len(hr_list))//time_length):
+        hr_mean[i] = np.mean(hr_list[i*time_length:(i+1)*time_length])
+    return hr_mean
