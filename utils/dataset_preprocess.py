@@ -131,7 +131,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                 proc = multiprocessing.Process(target=preprocess_Dataset,
                                                args=(
                                                    dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                   face_detect_algorithm, divide_flag, fixed_position, time_length, model_name, img_size, return_dict))
+                                                   face_detect_algorithm,
+                                                   model_name, return_dict))
                 # flag 0 : pass
                 # flag 1 : detect face
                 # flag 2 : remove nose
@@ -248,7 +249,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
             return
 
     if model_name == "DeepPhys":
-        preprocessed_label, preprocessed_hr = Deepphys_preprocess_Label(path + ground_truth_name)
+        preprocessed_label = Deepphys_preprocess_Label(path + ground_truth_name)
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         preprocessed_label, preprocessed_hr = PhysNet_preprocess_Label(path + ground_truth_name)
     elif model_name == "GCN":
@@ -260,7 +261,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_label': preprocessed_label,
-                                              'preprocessed_hr' : preprocessed_hr}
+                                              'preprocessed_hr': preprocessed_hr}
     elif model_name in ["PPNet"]:
         return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
     elif model_name in ["GCN"]:

@@ -217,6 +217,8 @@ def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_positi
     # bvp,sliding,frames,ptt
     return True, maps, sliding_window_stride, num_frames, stacked_ptts
 
+def RhythmNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
+    return RhythmNet_preprocessor(path, time_length)
 
 def faceLandmarks(frame):
     '''
@@ -975,3 +977,126 @@ def preprocess_video(video_path, output_shape, clip_size=256):
         map_index += 1
 
     return stacked_maps, num_maps, num_frames
+
+def RhythmNet_preprocessor(video_path, clip_size):
+    frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
+
+    num_frames = frames.shape[0]
+    output_shape = (frames.shape[1], frames.shape[2])
+    num_maps = int((num_frames - clip_size) / sliding_window_stride + 1)
+    if num_maps < 0:
+        # print(num_maps)
+        print(video_path)
+        return False, None
+
+    # stacked_maps is the all the st maps for a given video (=num_maps) stacked.
+    stacked_maps = np.zeros((num_maps, clip_size, 25, 3))
+    # processed_maps will contain all the data after processing each frame, but not yet converted into maps
+    processed_maps = np.zeros((num_frames, 25, 3))
+    # processed_frames = np.zeros((num_frames, output_shape[0], output_shape[1], 3))
+    processed_frames = []
+    map_index = 0
+
+    # Init scaler and detector
+    min_max_scaler = preprocessing.MinMaxScaler()
+    detector = get_haarcascade()
+    eye_detector = get_eye_haarcascade()
+
+    # First we process all the frames and then work with sliding window to save repeated processing for the same frame index
+    for idx, frame in enumerate(frames):
+        # spatio_temporal_map = np.zeros((fr, 25, 3))
+        '''
+           Preprocess the Image
+           Step 1: Use cv2 face detector based on Haar cascades
+           Step 2: Crop the frame based on the face co-ordinates (we need to do 160%)
+           Step 3: Downsample the face cropped frame to output_shape = 36x36
+       '''
+        faces = detector.detectMultiScale(frame, 1.3, 5)
+        if len(faces) is not 0:
+            (x, y, w, d) = faces[0]
+            frame_cropped = frame[y:(y + d), x:(x + w)]
+            eyes = eye_detector.detectMultiScale(frame_cropped, 1.2, 3)
+            # if len(eyes) > 0:
+            #     # for having the same radius in both eyes
+            #     (eye_x, eye_y, eye_w, eye_h) = eyes[0]
+            #     eye_radius = (eye_w + eye_h) // 5
+            #     mask = np.ones(frame_cropped.shape[:2], dtype="uint8")
+            #     for (ex, ey, ew, eh) in eyes[:2]:
+            #         eye_center = (ex + ew // 2, ey + eh // 2)
+            #         # if eye_radius
+            #         cv2.circle(mask, eye_center, eye_radius, 0, -1)
+            #         # eh = int(0.8*eh)
+            #         # ew = int(0.8*ew)
+            #         # cv2.rectangle(mask, (ex, ey), (ex+ew, ey+eh), 0, -1)
+            #
+            #     frame_masked = cv2.bitwise_and(frame_cropped, frame_cropped, mask=mask)
+            # else:
+            #     frame_masked = frame_cropped
+            #     # plot_image(frame_masked)
+
+            frame_masked = frame_cropped
+        else:
+            # The problemis that this doesn't get cropped :/
+            # (x, y, w, d) = (308, 189, 215, 215)
+            # frame_masked = frame[y:(y + d), x:(x + w)]
+
+            # print("face detection failed, image frame will be masked")
+            mask = np.zeros(frame.shape[:2], dtype="uint8")
+            frame_masked = cv2.bitwise_and(frame, frame, mask=mask)
+            # plot_image(frame_masked)
+
+        # frame_cropped = frame[y:(y + d), x:(x + w)]
+
+        try:
+            # frame_resized = cv2.resize(frame_masked, output_shape, interpolation=cv2.INTER_CUBIC)
+            frame_resized = cv2.cvtColor(frame_masked, cv2.COLOR_BGR2YUV)
+
+        except:
+            print('\n--------- ERROR! -----------\nUsual cv empty error')
+            print(f'Shape of img1: {frame.shape}')
+            # print(f'bbox: {bbox}')
+            print(f'This is at idx: {idx}')
+            return False, None
+
+            # exit(666)
+
+        processed_frames.append(frame_resized)
+        # roi_blocks = chunkify(frame_resized)
+        # for block_idx, block in enumerate(roi_blocks):
+        #     avg_pixels = cv2.mean(block)
+        #     processed_maps[idx, block_idx, 0] = avg_pixels[0]
+        #     processed_maps[idx, block_idx, 1] = avg_pixels[1]
+        #     processed_maps[idx, block_idx, 2] = avg_pixels[2]
+
+    # At this point we have the processed maps from all the frames in a video and now we do the sliding window part.
+    for start_frame_index in range(0, num_frames, sliding_window_stride):
+        end_frame_index = start_frame_index + clip_size
+        if end_frame_index > num_frames:
+            break
+        # # print(f"start_idx: {start_frame_index} | end_idx: {end_frame_index}")
+        spatio_temporal_map = np.zeros((clip_size, 25, 3))
+        #
+        # spatio_temporal_map = processed_maps[start_frame_index:end_frame_index, :, :]
+
+        for idx, frame in enumerate(processed_frames[start_frame_index:end_frame_index]):
+            roi_blocks = chunkify(frame)
+            for block_idx, block in enumerate(roi_blocks):
+                avg_pixels = cv2.mean(block)
+                spatio_temporal_map[idx, block_idx, 0] = avg_pixels[0]
+                spatio_temporal_map[idx, block_idx, 1] = avg_pixels[1]
+                spatio_temporal_map[idx, block_idx, 2] = avg_pixels[2]
+
+        for block_idx in range(spatio_temporal_map.shape[1]):
+            # Not sure about uint8
+            fn_scale_0_255 = lambda x: (x * 255.0).astype(np.uint8)
+            scaled_channel_0 = min_max_scaler.fit_transform(spatio_temporal_map[:, block_idx, 0].reshape(-1, 1))
+            spatio_temporal_map[:, block_idx, 0] = fn_scale_0_255(scaled_channel_0.flatten())
+            scaled_channel_1 = min_max_scaler.fit_transform(spatio_temporal_map[:, block_idx, 1].reshape(-1, 1))
+            spatio_temporal_map[:, block_idx, 1] = fn_scale_0_255(scaled_channel_1.flatten())
+            scaled_channel_2 = min_max_scaler.fit_transform(spatio_temporal_map[:, block_idx, 2].reshape(-1, 1))
+            spatio_temporal_map[:, block_idx, 2] = fn_scale_0_255(scaled_channel_2.flatten())
+
+        stacked_maps[map_index, :, :, :] = spatio_temporal_map
+        map_index += 1
+
+    return True, stacked_maps.astype(np.uint8)
