@@ -1,13 +1,13 @@
-import wandb
-from tqdm import tqdm
-import torch
-from nets.loss import loss
 import json
-import torch.optim as optim
+
 import matplotlib.pyplot as plt
 import numpy as np
-import torch.nn as nn
+import torch
+import torch.optim as optim
+import wandb
+from tqdm import tqdm
 
+from nets.loss import loss
 from test import test
 
 with open('config/parameter.json') as f:
@@ -18,6 +18,8 @@ with open('config/parameter.json') as f:
 
 
 def train(model, device, train_loader, test_loader, epochs):
+    ''' - wandb setup '''
+    wandb.init(project="VBPNet", entity="paperchae")
     if torch.cuda.is_available():
         model = model.to(device)
         loss_neg = loss.NegPearsonLoss().to(device)
@@ -78,7 +80,8 @@ def train(model, device, train_loader, test_loader, epochs):
             # train loss array
             cost_arr.append(avg_cost.__float__())
         if epoch % 1 == 0:
-            test_c = test(model=model, test_loader=test_loader, loss_n=loss_neg, loss_d=loss_d, loss_s=loss_s, idxx=epoch)
+            test_c = test(model=model, test_loader=test_loader, loss_n=loss_neg, loss_d=loss_d, loss_s=loss_s,
+                          idxx=epoch)
             test_idx = epoch + 1
             # test loss array
             test_cost_arr.append(test_c.__float__())
@@ -97,7 +100,8 @@ def train(model, device, train_loader, test_loader, epochs):
                 dataset = 'uci'
                 channel = channels['sixth']
                 torch.save(model,
-                           param["save_path"] + 'model_' + dataset + '_(' + str(channel[-1]) + ')_checker_shuffled_test.pt')
+                           param["save_path"] + 'model_' + dataset + '_(' + str(
+                               channel[-1]) + ')_checker_shuffled_test.pt')
                 model_save_cnt += 1
     print('model saved cnt :', model_save_cnt)
     print('cost :', cost_arr[-1])
