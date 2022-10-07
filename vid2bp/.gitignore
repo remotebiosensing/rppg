@@ -1,0 +1,13 @@
+# 디폴트 무시된 파일
+dataset/
+graph/
+wandb/
+weights/
+lib/
+bin/
+.idea/
+*.xml
+*.iml
+__pycache__/
+preprocessing/__pycache__
+preprocessing/utils/__pycache__
