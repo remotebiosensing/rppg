@@ -1,12 +1,11 @@
 import os
 
+import config
 import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
 
 from log import log_warning
-
-import config
 
 
 def loss_fn(loss_fn: str = "mse", log_flag: bool = True):
@@ -19,6 +18,8 @@ def loss_fn(loss_fn: str = "mse", log_flag: bool = True):
 
     if loss_fn == "mse":
         return loss.MSELoss()
+    elif loss_fn == "fft":
+        return fftLoss()
     elif loss_fn == "L1":
         return loss.L1Loss()
     elif loss_fn == "neg_pearson":
@@ -99,10 +100,10 @@ def neg_Pearson_Loss(predictions, targets):
     return rst
 
 
-
 def peak_mse(predictions, targets):
     rst = 0
     targets = targets[:, :]
+
 
 class NegPearsonLoss(nn.Module):
     def __init__(self):
@@ -117,7 +118,13 @@ class fftLoss(nn.Module):
         super(fftLoss, self).__init__()
 
     def forward(self, predictions, targets):
-        return torch.nn.MSELoss(torch.fft.fft(predictions, dim=1), torch.fft.fft(targets, dim=1))
+        neg = neg_Pearson_Loss(predictions, targets)
+        loss_func = nn.L1Loss()
+        predictions = torch.fft.fft(predictions, dim=1,norm="forward")
+        targets = torch.fft.fft(targets, dim=1,norm="forward")
+        loss = loss_func(predictions, targets)
+        return loss + neg
+
 
 class RhythmNetLoss(nn.Module):
     def __init__(self, weight=100.0):
@@ -135,7 +142,7 @@ class RhythmNetLoss(nn.Module):
         l1_loss = self.l1_loss(resnet_outputs, target)
         smooth_loss_component = self.smooth_loss(gru_outputs)
 
-        loss = l1_loss + self.lambd*smooth_loss_component
+        loss = l1_loss + self.lambd * smooth_loss_component
         return loss
 
     # Need to write backward pass for this loss function
@@ -149,6 +156,7 @@ class RhythmNetLoss(nn.Module):
                                                                self.gru_outputs_considered,
                                                                self.gru_outputs_considered.shape[0])
         return smooth_loss / self.gru_outputs_considered.shape[0]
+
 
 class RhythmNet_autograd(torch.autograd.Function):
     """
@@ -198,8 +206,8 @@ class RhythmNet_autograd(torch.autograd.Function):
             if hr == hr_t:
                 pass
             else:
-                output = output + (1/ctx.T)*torch.sign(ctx.hr_mean - hr)
+                output = output + (1 / ctx.T) * torch.sign(ctx.hr_mean - hr)
 
-        output = (1/ctx.T - 1)*torch.sign(ctx.hr_mean - hr_t) + output
+        output = (1 / ctx.T - 1) * torch.sign(ctx.hr_mean - hr_t) + output
 
         return output, None, None
