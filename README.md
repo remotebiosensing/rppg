@@ -105,18 +105,24 @@ detector    = media-pipe # use media-pipe, it's proposed ROI option
 ~~~
 * run _1_rppg_assesment.py
 
-* all mask information found at  video.py's make_mask function (./pyVHR/signals/video.py)
+* all mask information found at video.py's make_mask function (./pyVHR/signals/video.py)
 
 ## Contacts
-Dae Yeol Kim, wagon0004@tvstorm.com 
+
+Dae Yeol Kim, wagon0004@tvstorm.com
 
 Jin Soo Kim, wlstn25092303@tvstorm.com
 
 Kwangkee Lee, kwangkeelee@gmail.com
 
+min a Lee, mina1505@kw.ac.kr
+
 ## Funding
- This work was supported by the ICT R&D program of MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
+
+This work was supported by the ICT R&D program of
+MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
 ## reference
+
 1. [ZitongYu/PhysNet](https://github.com/ZitongYu/PhysNet)
 2. [phuselab/pyVHR](https://github.com/phuselab/pyVHR)
