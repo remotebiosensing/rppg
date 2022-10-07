@@ -1,10 +1,6 @@
 import h5py
 import numpy as np
 
-cv = 5
-dpath = '/home/paperc/PycharmProjects/VBPNet/dataset/BPNet_uci/case(P+V+A)_360_train(cv' + str(cv) + ').hdf5'
-
-
 def cv_dataset_reader(path):
     with h5py.File(path, 'r') as f:
         print('dset.keys() :', f.keys())
@@ -20,7 +16,11 @@ def cv_dataset_reader(path):
         # print(f[val])
         # print(type(f[val]))
         group_list = ['train', 'validation']
-        sub_group_list = ['ple', 'abp', 'size']
+        if 'BPNet' in dpath:
+            sub_group_list = ['ple', 'abp', 'size']
+        else:
+            sub_group_list = ['ple', 'abp']
+
         for g in group_list:
             for s in sub_group_list:
                 for l in range(len(f[g + '/' + s])):
@@ -31,6 +31,9 @@ def cv_dataset_reader(path):
         # ds_arr = f[validation_group_key][()]
         # print(np.shape(ds_arr))
 
+
+cv = 1
+dpath = '/home/paperc/PycharmProjects/dataset/Unet_uci/case(P+V+A)_360_train(cv' + str(cv) + ').hdf5'
 
 # cv_dataset_reader(dpath)
 '''
