@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
-from nets.modules.sub_modules.Trend_module import Trend_module_1D
-from nets.modules.sub_modules.Detail_module import Detail_module_1D
-from nets.modules.sub_modules.Linear_module import Linear_module_1D
-from nets.modules.sub_modules.Amplitude_module import Amplitude_module
+from vid2bp.nets.modules.sub_modules.Trend_module import Trend_module_1D
+from vid2bp.nets.modules.sub_modules.Detail_module import Detail_module_1D
+from vid2bp.nets.modules.sub_modules.Linear_module import Linear_module_1D
+from vid2bp.nets.modules.sub_modules.Amplitude_module import Amplitude_module
 
 
 class bvp2abp(nn.Module):
