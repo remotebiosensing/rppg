@@ -11,9 +11,9 @@
   },
   "parameters": {
     "models": ["VBPNet", "Unet"],
-    "root_path": "/home/paperc/PycharmProjects/VBPNet/dataset/",
-    "save_path": "/home/paperc/PycharmProjects/VBPNet/weights/",
-    "model_path": "/home/paperc/PycharmProjects/VBPNet/weights/",
+    "root_path": "/home/paperc/PycharmProjects/dataset/",
+    "save_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
+    "model_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
     "dataset_path": {
       "mimic": ["mimic-database-1.0.0/", "BPNet_mimic/"],
       "uci": ["uci-database/", "BPNet_uci/"],

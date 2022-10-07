@@ -2,7 +2,8 @@ import numpy as np
 from scipy import signal
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
-from nets.loss.loss import r
+from vid2bp.nets.loss.loss import r
+from tqdm import tqdm
 
 import json
 
@@ -66,7 +67,7 @@ def peak_detection(in_signal):
 
 def get_systolic(input_sig):
     x = np.squeeze(input_sig)
-    _, prop = signal.find_peaks(x, height=np.max(input_sig)-np.std(input_sig), distance=30)
+    _, prop = signal.find_peaks(x, height=np.max(input_sig) - np.std(input_sig), distance=30)
     sbp = prop["peak_heights"]
     return sbp
 
@@ -103,7 +104,8 @@ def signal_quality_checker(input_sig, is_abp):
     systolic_mean = np.mean(s)
     diastolic_mean = np.mean(d)
     if is_abp:
-        if (np.abs(systolic_n - diastolic_n) > 2) or (s_std > 5) or (d_std > 5) or (np.abs(systolic_mean-diastolic_mean)<20):
+        if (np.abs(systolic_n - diastolic_n) > 2) or (s_std > 5) or (d_std > 5) or (
+                np.abs(systolic_mean - diastolic_mean) < 20):
             return False
         else:
             return True
@@ -157,13 +159,6 @@ def frequency_checker(input_sig):
     if abnormal_cnt > 1:
         flag = True
 
-    # plt.plot(filtered_data[:cycle], color='indigo')
-    # plt.plot(input_sig)
-    # plt.title("amplified signal")
-    # plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.70)
-    #
-    # plt.show()
-    # print("break point")
     return flag
 
 
@@ -180,7 +175,7 @@ def chebyshev2(input_sig, low, high, sr):
         print("wrong bandwidth.. ")
 
 
-def signal_slicing(rawdata, sampling_rate, fft=True):
+def signal_slicing(model_name, rawdata, sampling_rate, fft=True):
     abp_list = []
     ple_list = []
     size_list = []
@@ -189,7 +184,6 @@ def signal_slicing(rawdata, sampling_rate, fft=True):
         rawdata = np.reshape(rawdata, (-1, chunk_size, 2))
     cnt = 0
     abnormal_cnt = 0
-    from tqdm import tqdm
     if fft is True:
         for data in tqdm(rawdata):
             abp, ple = sig_spliter(data)
@@ -199,7 +193,7 @@ def signal_slicing(rawdata, sampling_rate, fft=True):
             p_abp, pro_abp = signal.find_peaks(abp, height=np.max(abp) - np.std(abp), distance=30)
             p_ple, pro_ple = signal.find_peaks(ple, height=np.mean(ple), distance=30)
 
-            if not ((np.mean(ple) == (0.0 or np.nan)) or
+            if not ((np.mean(ple) == 0.0) or
                     (np.mean(abp) == 80.0) or
                     (len(p_abp) < 5) or
                     (len(p_ple) < 5) or
@@ -207,27 +201,32 @@ def signal_slicing(rawdata, sampling_rate, fft=True):
                     (signal_quality_checker(abp, is_abp=True) is False) or
                     (signal_quality_checker(ple, False) is False)):
                 if (not frequency_checker(abp)) and (not frequency_checker(ple)):
-                    # abp_list.append(abp)
-                    # ple_list.append(scaler(ple))
-                    temp = np.empty(3)
-                    temp[0] = np.mean(get_diastolic(abp))
-                    temp[1] = np.mean(get_systolic(abp))
-                    temp[2] = get_mean_blood_pressure(temp[0], temp[1])
-                    '''AHA'''
-                    # '''Normal'''
-                    # if (temp[1] < 120) and (temp[0] < 80):
-                    # '''Elevated'''
-                    # if (120 <= temp[1] < 130) and (temp[0] < 80):
-                    # '''Hypertension Stage 1'''
-                    # if (130 <= temp[1] < 140) or (80 <= temp[0] < 90):
-                    # '''Hypertension Stage 2'''
-                    # if (140 <= temp[1]) or (90 <= temp[0]):
-                    # '''Hypertensive Crisis'''
-                    # if (180 <= temp[1]) or (120 <= temp[0]):
                     abp_list.append(abp)
                     ple_list.append(ple)
-                    size_list.append(temp)
-                    cnt += 1
+                    if model_name is "VBPNet":
+                        # size_factor = np.empty(3)
+                        # size_factor[0] = np.mean(get_diastolic(abp))
+                        # size_factor[1] = np.mean(get_systolic(abp))
+                        # size_factor[2] = get_mean_blood_pressure(size_factor[0], size_factor[1])
+                        # size_list.append(size_factor)
+                        size_list.append([np.mean(get_diastolic(ple)),
+                                          np.mean(get_systolic(ple)),
+                                          get_mean_blood_pressure(np.mean(get_diastolic(ple)),
+                                                                  np.mean(get_systolic(ple)))])
+                        cnt += 1
+                    elif model_name is "Unet":
+                        cnt += 1
+                    '''AHA'''
+                    # '''Normal'''
+                    # if (size_factor[1] < 120) and (size_factor[0] < 80):
+                    # '''Elevated'''
+                    # if (120 <= size_factor[1] < 130) and (size_factor[0] < 80):
+                    # '''Hypertension Stage 1'''
+                    # if (130 <= size_factor[1] < 140) or (80 <= size_factor[0] < 90):
+                    # '''Hypertension Stage 2'''
+                    # if (140 <= size_factor[1]) or (90 <= size_factor[0]):
+                    # '''Hypertensive Crisis'''
+                    # if (180 <= size_factor[1]) or (120 <= size_factor[0]):
                 else:
                     abnormal_cnt += 1
                     # plt.plot(ple)
@@ -251,38 +250,23 @@ def signal_slicing(rawdata, sampling_rate, fft=True):
                 cnt += 1
                 # abp_list.append(abp)
                 # ple_list.append(ple)
-                temp = np.empty(3)
-                temp[0] = get_diastolic(abp)
-                temp[1] = get_systolic(abp)
-                temp[2] = get_mean_blood_pressure(temp[0], temp[1])
+                size_factor = np.empty(3)
+                size_factor[0] = get_diastolic(abp)
+                size_factor[1] = get_systolic(abp)
+                size_factor[2] = get_mean_blood_pressure(size_factor[0], size_factor[1])
                 '''Normal'''
-                # if (temp[1] < 120) and (temp[0] < 80):
+                # if (size_factor[1] < 120) and (size_factor[0] < 80):
                 abp_list.append(abp)
                 ple_list.append(scaler(ple))
-                size_list.append(temp)
-                # if 120 <= temp[1] < 130 and temp[0] < 80:             '''Elevated'''
-                # if 130 <= temp[1] < 140 or 80 <= temp[0] < 90:        '''Hypertension Stage 1'''
-                # if 140 <= temp[1] or 90 <= temp[0]:                   '''Hypertension Stage 2'''
-                # if 180 <= temp[1] and 120 <= temp[0]:                 '''Hypertensive Crisis'''
+                size_list.append(size_factor)
+                # if 120 <= size_factor[1] < 130 and size_factor[0] < 80:             '''Elevated'''
+                # if 130 <= size_factor[1] < 140 or 80 <= size_factor[0] < 90:        '''Hypertension Stage 1'''
+                # if 140 <= size_factor[1] or 90 <= size_factor[0]:                   '''Hypertension Stage 2'''
+                # if 180 <= size_factor[1] and 120 <= size_factor[0]:                 '''Hypertensive Crisis'''
 
         print(cnt, '/', len(rawdata))
-    return abp_list, ple_list, size_list
 
-# ''' train data load '''
-# path = '/home/paperc/PycharmProjects/VBPNet/dataset/BPNet_mimic/raw.hdf5'
-#
-# # TODO use hdf5 file for training Done
-# import h5py
-# with h5py.File(path, "r") as f:
-#     raw = np.array(f['raw'])
-# abp, ple = sig_spliter(raw)
-# test_abp = np.squeeze(abp[:750])
-
-
-# d = get_diastolic_blood_pressure(test_abp)
-# print(len(d), 'dbp list :', d)
-# s = get_systolic_blood_pressure(test_abp)
-# print(len(s), 'sbp list', s)
-#
-# m = get_mean_blood_pressure(d, s)
-# print(len(m), 'mbp list', m)
+    if model_name is "VBPNet":
+        return abp_list, ple_list, size_list
+    elif model_name is "Unet":
+        return abp_list, ple_list
