@@ -7,7 +7,7 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
-from nets.loss import loss
+from vid2bp.nets.loss import loss
 from test import test
 
 with open('config/parameter.json') as f:

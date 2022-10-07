@@ -3,8 +3,8 @@ import os
 import wfdb
 import numpy as np
 from tqdm import tqdm
-import preprocessing.utils.math_module as mm
-import preprocessing.utils.signal_utils as su
+import vid2bp.preprocessing.utils.math_module as mm
+import vid2bp.preprocessing.utils.signal_utils as su
 from scipy import signal
 import json
 

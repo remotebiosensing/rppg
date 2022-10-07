@@ -4,8 +4,8 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 import json
 import wandb
-import preprocessing.utils.signal_utils as su
-import postprocessing.post_signal_utils as psu
+import vid2bp.preprocessing.utils.signal_utils as su
+import vid2bp.postprocessing.post_signal_utils as psu
 import numpy as np
 
 with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
