@@ -29,7 +29,7 @@
       "sixth": [3, 6, "P+V+A"]
     },
     "out_channels": 16,
-    "chunk_size": 750,
+    "chunk_size": 512,
     "sampling_rate": {
       "base": 125,
       "30": 30,
