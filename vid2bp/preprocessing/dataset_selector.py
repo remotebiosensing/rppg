@@ -9,6 +9,7 @@ with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.js
     orders = json_data.get("parameters").get("in_channels")
     sampling_rate = json_data.get("parameters").get("sampling_rate")
     models = json_data.get("parameters").get("models")
+    chunk_size = json_data.get("parameters").get("chunk_size")
 
 
 def selector(model_name, dataset_name, degree, samp_rate, cv=0):
@@ -23,15 +24,15 @@ def selector(model_name, dataset_name, degree, samp_rate, cv=0):
 
     if dataset_name == "mimic":
         import MIMICdataset
+        save_path = write_path + 'case(' + str(degree[-1]) + ')_' + str(chunk_size)
         print("mimic dataset selected")
 
     else:  # uci
         import UCIdataset
-        print("uci dataset selected")
-        save_path = write_path + 'case(' + str(degree[-1]) + ')_' + str(int(param['chunk_size'] / sampling_rate['base']) * samp_rate)
-        UCIdataset.data_aggregator(model_name, read_path, save_path, degree[1], samp_rate, cv)
+        save_path = write_path + 'case(' + str(degree[-1]) + ')_' + str(chunk_size)
+        UCIdataset.data_aggregator(model_name, read_path, save_path, degree[1], chunk_size, samp_rate, cv)
 
 
-order = orders["zero"]
+order = orders["sixth"]
 samp_rate = sampling_rate["60"]
-selector(model_name="Unet", dataset_name="uci_unet", degree=order, samp_rate=samp_rate, cv=1)
+selector(model_name="BPNet", dataset_name="uci", degree=order, samp_rate=samp_rate, cv=1)
