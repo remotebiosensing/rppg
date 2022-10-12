@@ -10,7 +10,7 @@ class Unet(nn.Module):
         self.maxpool = nn.MaxPool1d(2)
         self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
         self.conv3_1 = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding='same'),
+            nn.Conv1d(in_channels=in_channels, out_channels=64, kernel_size=3, stride=1, padding='same'),
             nn.LeakyReLU(),
             nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding='same'),
             nn.LeakyReLU())  # first conv layer output_shape
