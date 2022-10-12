@@ -8,6 +8,8 @@ from preprocessing import customdataset
 from nets.modules.bvp2abp import bvp2abp
 from nets.modules.unet import Unet
 from train import train
+from validation import validation
+from test import test
 
 import json
 import wandb
@@ -41,26 +43,29 @@ else:
     print("cuda not available")
 
 
-def main(model_name, dataset_name, cross_val=1):
+def main(model_name, dataset_name, in_channel, cross_val=1):
     samp_rate = sampling_rate["60"]
-    channel = channels["zero"]
+    channel = channels[in_channel]
     read_path = root_path + data_path[dataset_name][1]
     # TODO use hdf5 file for training Done
-    if model_name is 'VBPNet':
+    if model_name is 'BPNet':
         model = bvp2abp(in_channels=channel[0])
-        train_filename = read_path + 'shuffled/case(' + str(channel[-1]) + ')_' + \
-                         str(int(param['chunk_size'] / 125) * samp_rate) + "_train.hdf5"
-        test_filename = read_path + 'shuffled/case(' + str(channel[-1]) + ')_' + \
-                        str(int(param['chunk_size'] / 125) * samp_rate) + '_test.hdf5'
+        train_filename = read_path + 'case(' + str(channel[-1]) + ')_' + str(param['chunk_size']) + '_train(cv' + \
+                         str(cross_val) + ').hdf5'
+        test_filename = read_path + 'case(' + str(channel[-1]) + ')_' + str(param['chunk_size']) + '_test.hdf5'
         # TODO make dataset loader function in train_utils
         if os.path.isfile(train_filename) and os.path.isfile(test_filename):
             '''train dataset load'''
             with h5py.File(train_filename, "r") as train_f:
                 print(train_filename)
-                train_ple, train_abp, train_size = np.array(train_f['ple']), np.array(train_f['abp']), np.array(
-                    train_f['size'])
+                train_ple, train_abp, train_size = np.array(train_f['train/ple/0']), np.array(
+                    train_f['train/abp/0']), np.array(train_f['train/size/0'])
                 train_dataset = customdataset.CustomDataset(x_data=train_ple, y_data=train_abp, size_factor=train_size)
                 train_loader = DataLoader(train_dataset, batch_size=hyper_param["batch_size"], shuffle=True)
+                val_ple, val_abp, val_size = np.array(train_f['validation/ple/0']), np.array(
+                    train_f['validation/abp/0']), np.array(train_f['validation/size/0'])
+                val_dataset = customdataset.CustomDataset(x_data=val_ple, y_data=val_abp, size_factor=val_size)
+                val_loader = DataLoader(val_dataset, batch_size=hyper_param["batch_size"], shuffle=True)
 
             '''test dataset load'''
             with h5py.File(test_filename, "r") as test_f:
@@ -70,15 +75,19 @@ def main(model_name, dataset_name, cross_val=1):
                 test_dataset = customdataset.CustomDataset(x_data=test_ple, y_data=test_abp, size_factor=test_size)
                 test_loader = DataLoader(test_dataset, batch_size=hyper_param["batch_size"], shuffle=True)
         else:
-            print("No such file or directory creating new dataset")
+            print("No such file or directory, creating new dataset...")
             import vid2bp.preprocessing.dataset_selector as ds
             ds.selector(model_name, dataset_name, channel, samp_rate, cv=cross_val)
             with h5py.File(train_filename, "r") as train_f:
                 print(train_filename)
-                train_ple, train_abp, train_size = np.array(train_f['ple']), np.array(train_f['abp']), np.array(
-                    train_f['size'])
+                train_ple, train_abp, train_size = np.array(train_f['train/ple/0']), np.array(
+                    train_f['train/abp/0']), np.array(train_f['train/size/0'])
                 train_dataset = customdataset.CustomDataset(x_data=train_ple, y_data=train_abp, size_factor=train_size)
                 train_loader = DataLoader(train_dataset, batch_size=hyper_param["batch_size"], shuffle=True)
+                val_ple, val_abp, val_size = np.array(train_f['validation/ple/0']), np.array(
+                    train_f['validation/abp/0']), np.array(train_f['validation/size/0'])
+                val_dataset = customdataset.CustomDataset(x_data=val_ple, y_data=val_abp, size_factor=val_size)
+                val_loader = DataLoader(val_dataset, batch_size=hyper_param["batch_size"], shuffle=True)
 
             '''test dataset load'''
             with h5py.File(test_filename, "r") as test_f:
@@ -91,7 +100,7 @@ def main(model_name, dataset_name, cross_val=1):
     elif model_name is 'Unet':
         model = Unet(in_channels=channel[0])
         train_filename = read_path + 'case(' + str(channel[-1]) + ')_' + \
-                         str(int(param['chunk_size'] / 125) * samp_rate) + '_train(cv'+str(cross_val)+')256.hdf5'
+                         str(int(param['chunk_size'] / 125) * samp_rate) + '_train(cv' + str(cross_val) + ')256.hdf5'
         test_filename = read_path + 'case(' + str(channel[-1]) + ')_' + \
                         str(int(param['chunk_size'] / 125) * samp_rate) + '_test256.hdf5'
         print(train_filename)
@@ -128,9 +137,10 @@ def main(model_name, dataset_name, cross_val=1):
     else:
         raise ValueError("** model name is not correct, please check supported model name in parameter.json **")
     '''model train'''
-    train(model_n=model_name, model=model.to(DEVICE), device=DEVICE, train_loader=train_loader, test_loader=test_loader,
-          epochs=hyper_param["epochs"])
+    train(model_n=model_name, model=model, device=DEVICE, train_loader=train_loader,
+          validation_loader=val_loader, test_loader=test_loader, epochs=hyper_param["epochs"])
 
 
 if __name__ == '__main__':
-    main(model_name="Unet", dataset_name="uci_unet")
+    # main(model_name="Unet",in_channel='zero', dataset_name="uci_unet")
+    main(model_name="BPNet", dataset_name="uci", in_channel='sixth', cross_val=1)
