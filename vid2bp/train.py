@@ -8,24 +8,28 @@ import wandb
 from tqdm import tqdm
 
 from vid2bp.nets.loss import loss
-from test import test
+from vid2bp.validation import validation
+from vid2bp.test import test
 
-with open('config/parameter.json') as f:
+with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
     hyper_param = json_data.get("hyper_parameters")
     channels = json_data.get("parameters").get("in_channels")
 
 
-def train(model_n, model, device, train_loader, test_loader, epochs):
+def train(model_n, model, device, train_loader, validation_loader, test_loader, epochs):
+    model.train()
     ''' - wandb setup '''
     wandb.init(project="VBPNet", entity="paperchae")
 
     ''' loss function '''
     if model_n == 'Unet':
+        model = model.to(device)
         loss_mse = torch.nn.MSELoss()
         optimizer = optim.Adam(model.parameters(), lr=0.00001)
-    elif model_n == 'VBPNet':
+    elif model_n == 'BPNet':
+        model = model.to(device)
         loss_neg = loss.NegPearsonLoss().to(device)
         loss_d = loss.dbpLoss().to(device)
         loss_s = loss.sbpLoss().to(device)
@@ -41,12 +45,11 @@ def train(model_n, model, device, train_loader, test_loader, epochs):
     print('batchN :', train_loader.__len__())
     model_save_cnt = 0
     cost_arr = []
-    test_cost_arr = []
+    validation_cost_arr = []
     for epoch in range(epochs):
         avg_cost = 0
         cost_sum = 0
         if model_n == 'Unet':
-            model.train()
             with tqdm(train_loader, desc='Train', total=len(train_loader), leave=True) as train_epoch:
                 idx = 0
                 for X_train, Y_train in train_epoch:
@@ -64,8 +67,7 @@ def train(model_n, model, device, train_loader, test_loader, epochs):
                 cost_arr.append(avg_cost.__float__())
             total_loss = loss_mse
 
-        elif model_n == 'VBPNet':
-            model.train()
+        elif model_n == 'BPNet':
             with tqdm(train_loader, desc='Train', total=len(train_loader), leave=True) as train_epochs:
                 idx = 0
                 for X_train, Y_train, d, s in train_epochs:
@@ -99,37 +101,41 @@ def train(model_n, model, device, train_loader, test_loader, epochs):
                 # train loss array
                 cost_arr.append(avg_cost.__float__())
             total_loss = [loss_neg, loss_d, loss_s]
+        # validation
         if epoch % 1 == 0:
-            test_c = test(model_n, model=model, test_loader=test_loader, loss=total_loss, idxx=epoch)
+            val_c = validation(model_n, model=model, validation_loader=validation_loader, loss=total_loss)
 
-            test_idx = epoch + 1
+            val_idx = epoch + 1
             # test loss array
-            test_cost_arr.append(test_c.__float__())
+            validation_cost_arr.append(val_c.__float__())
             # if current test loss < prev test loss:
             #   save model
-            if test_idx == 1:
-                test_prev_c = test_c
+            if val_idx == 1:
+                val_prev_c = val_c
             else:
-                test_prev_c = test_cost_arr[-2]
+                val_prev_c = validation_cost_arr[-2]
             # save the model only when train and test loss are lower than prior epoch
-            if (cost.__float__() < avg_cost.__float__()) and (test_c.__float__() < test_prev_c.__float__()):
+            if (cost.__float__() < avg_cost.__float__()) and (val_c.__float__() < val_prev_c.__float__()):
                 print('current train cost :', cost.__float__(), '/ avg_cost :', avg_cost.__float__(), ' >> trained :',
                       avg_cost.__float__() - cost.__float__())
-                print('current test cost :', test_c.__float__(), '/ prev test cost :', test_prev_c.__float__(),
-                      ' >> trained :', test_prev_c.__float__() - test_c.__float__())
+                print('current test cost :', val_c.__float__(), '/ prev test cost :', val_prev_c.__float__(),
+                      ' >> trained :', val_prev_c.__float__() - val_c.__float__())
                 dataset = 'uci'
                 channel = channels['sixth']
                 torch.save(model,
                            param["save_path"] + 'model_' + dataset + '_(' + str(
-                               channel[-1]) + ')_Unet.pt')
+                               channel[-1]) + ')_' + str(model_n) + '.pt')
                 model_save_cnt += 1
+        # test
+        if epoch % 3 == 0:
+            test(model_n, model=model, test_loader=test_loader, loss=total_loss, idxx=epoch)
     print('model saved cnt :', model_save_cnt)
     print('cost :', cost_arr[-1])
 
     t_val = np.array(range(len(cost_arr)))
     plt.title('Neg Pearson corr + SBP modMAE + DBP modMAE')
     plt.plot(t_val, cost_arr, label='Train loss')
-    plt.plot(t_val, test_cost_arr, linestyle='--', label='Test loss')
+    plt.plot(t_val, validation_cost_arr, linestyle='--', label='Validation loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()

@@ -4,7 +4,7 @@ import h5py
 import matplotlib.pyplot as plt
 import vid2bp.hdf_handler as hdf_handler
 
-with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
+with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
     channels = json_data.get("parameters").get("in_channels")
@@ -13,6 +13,7 @@ with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
     root_path = json_data.get("parameters").get("root_path")  # mimic uci containing folder
     data_path = json_data.get("parameters").get("dataset_path")  # raw mimic uci selection
     sampling_rate = json_data.get("parameters").get("sampling_rate")
+    chunk_size = json_data.get("parameters").get("chunk_size")
 
 dataset = "uci"
 # channel = channels["third"]
@@ -233,12 +234,15 @@ def data_shuffler(model_name, save_path, input_data, cv):
     print('data shuffler called')
     ple = input_data[0]
     abp = input_data[1]
-    if model_name == "VBPNet":
+    if model_name == "BPNet":
         size = input_data[2]
         total_data = [[p, a, s] for p, a, s in zip(ple, abp, size)]
         random.shuffle(total_data)
         total_len = len(total_data)
-        train_val_len = int(total_len * 0.8)
+        if cv == 1:
+            train_val_len = int(total_len * 0.85)
+        else:
+            train_val_len = int(total_len * 0.8)
         shuffled_ple = np.squeeze([n[0] for n in total_data])
         shuffled_abp = np.squeeze([n[1] for n in total_data])
         shuffled_size = np.squeeze([n[2] for n in total_data])
@@ -248,21 +252,21 @@ def data_shuffler(model_name, save_path, input_data, cv):
         shuffled_tr_size, shuffled_te_size = np.split(shuffled_size, [train_val_len])
         print('np.shape(shuffled_tr_ple) :', np.shape(shuffled_tr_ple))
         print('np.shape(shuffled_te_ple) :', np.shape(shuffled_te_ple))
-        print('data shuffle for VBPNet done')
+        print('data shuffle for BPNet done')
         test_dset = h5py.File(save_path + "_test.hdf5", "w")
         test_dset['ple'] = shuffled_te_ple
         test_dset['abp'] = shuffled_te_abp
         test_dset['size'] = shuffled_te_size
-        print('test data for VBPNet saved')
+        print('test data for BPNet saved')
 
-        if cv > 1:
+        if cv >= 1:
             print('cross validation :', cv)
-            k_fold_cv(save_path, [shuffled_tr_ple, shuffled_tr_abp, shuffled_tr_size], cv)
-            print('train data for VBPNet saved')
+            k_fold_cv(model_name, save_path, [shuffled_tr_ple, shuffled_tr_abp, shuffled_tr_size], cv)
+            print('train data for BPNet saved')
 
         else:
             print('not supported fold number')
-    if model_name == "Unet":
+    elif model_name == "Unet":
         total_data = [[p, a] for p, a in zip(ple, abp)]
         random.shuffle(total_data)
         total_len = len(total_data)
@@ -291,7 +295,7 @@ def data_shuffler(model_name, save_path, input_data, cv):
 
 
 def k_fold_cv(model_name, save_path, train_data, cv_n):
-    if model_name == "VBPNet":
+    if model_name == "BPNet":
         ple = train_data[0]
         abp = train_data[1]
         size = train_data[2]
@@ -300,35 +304,39 @@ def k_fold_cv(model_name, save_path, train_data, cv_n):
             ple = ple[:len(ple) - len(ple) % cv_n]
             abp = abp[:len(abp) - len(abp) % cv_n]
             size = size[:len(size) - len(size) % cv_n]
-        if cv_n == 1:
-            ple_folds = ple
-            abp_folds = abp
-            size_folds = size
-        else:
-            ple_folds = np.split(ple, cv_n)
-            abp_folds = np.split(abp, cv_n)
-            size_folds = np.split(size, cv_n)
 
         ple_total, abp_total, size_total = [], [], []
         ple_validation_total, abp_validation_total, size_validation_total = [], [], []
 
-        for idx, (ple_fold, abp_fold, size_fold) in enumerate(zip(ple_folds, abp_folds, size_folds)):
-            ple_temp = []
-            abp_temp = []
-            size_temp = []
-            for i in range(cv_n):
-                if idx != i:
-                    ple_temp.append(ple_folds[i])
-                    abp_temp.append(abp_folds[i])
-                    size_temp.append(size_folds[i])
-                    # print(i)
-            ple_total.append(np.reshape(ple_temp, (-1, 3, 360)))
-            abp_total.append(np.reshape(abp_temp, (-1, 360)))
-            size_total.append(np.reshape(size_temp, (-1, 3)))
+        if cv_n == 1:
+            # normal train validation >> divide train : 80% / validation : 20%
+            # ple_total, abp_total, size_total = ple, abp, size
+            ple_total, ple_validation_total = np.split(ple, [int(len(ple) * 0.8)])
+            abp_total, abp_validation_total = np.split(abp, [int(len(abp) * 0.8)])
+            size_total, size_validation_total = np.split(size, [int(len(size) * 0.8)])
 
-            ple_validation_total.append(ple_fold)
-            abp_validation_total.append(abp_fold)
-            size_validation_total.append(size_fold)
+        else:
+            # n fold cross validation >> divide data into n folds
+            ple_folds = np.split(ple, cv_n)
+            abp_folds = np.split(abp, cv_n)
+            size_folds = np.split(size, cv_n)
+            for idx, (ple_fold, abp_fold, size_fold) in enumerate(zip(ple_folds, abp_folds, size_folds)):
+                ple_temp = []
+                abp_temp = []
+                size_temp = []
+                for i in range(cv_n):
+                    if idx != i:
+                        ple_temp.append(ple_folds[i])
+                        abp_temp.append(abp_folds[i])
+                        size_temp.append(size_folds[i])
+                        # print(i)
+                ple_total.append(np.reshape(ple_temp, (-1, 3, chunk_size)))
+                abp_total.append(np.reshape(abp_temp, (-1, chunk_size)))
+                size_total.append(np.reshape(size_temp, (-1, 3)))
+
+                ple_validation_total.append(ple_fold)
+                abp_validation_total.append(abp_fold)
+                size_validation_total.append(size_fold)
 
         dset = h5py.File(save_path + '_train(cv' + str(cv_n) + ').hdf5', "w")
         t_dset = dset.create_group('train')
@@ -342,14 +350,21 @@ def k_fold_cv(model_name, save_path, train_data, cv_n):
         v_p = v_dset.create_group('ple')
         v_a = v_dset.create_group('abp')
         v_s = v_dset.create_group('size')
-
-        for n in range(cv_n):
-            t_p.create_dataset(name=str(n), data=ple_total[n])
-            t_a.create_dataset(name=str(n), data=abp_total[n])
-            t_s.create_dataset(name=str(n), data=size_total[n])
-            v_p.create_dataset(name=str(n), data=ple_validation_total[n])
-            v_a.create_dataset(name=str(n), data=abp_validation_total[n])
-            v_s.create_dataset(name=str(n), data=size_validation_total[n])
+        if cv_n == 1:
+            t_p.create_dataset(name=str(0), data=ple_total)
+            t_a.create_dataset(name=str(0), data=abp_total)
+            t_s.create_dataset(name=str(0), data=size_total)
+            v_p.create_dataset(name=str(0), data=ple_validation_total)
+            v_a.create_dataset(name=str(0), data=abp_validation_total)
+            v_s.create_dataset(name=str(0), data=size_validation_total)
+        else:
+            for n in range(cv_n):
+                t_p.create_dataset(name=str(n), data=ple_total[n])
+                t_a.create_dataset(name=str(n), data=abp_total[n])
+                t_s.create_dataset(name=str(n), data=size_total[n])
+                v_p.create_dataset(name=str(n), data=ple_validation_total[n])
+                v_a.create_dataset(name=str(n), data=abp_validation_total[n])
+                v_s.create_dataset(name=str(n), data=size_validation_total[n])
 
         print('t_dset.keys() :', t_dset.keys())
         print('t_p.keys() :', t_p.keys())
@@ -363,18 +378,8 @@ def k_fold_cv(model_name, save_path, train_data, cv_n):
             abp = abp[:len(abp) - len(abp) % cv_n]
 
         if cv_n == 1:
-            ple_total = ple
-            abp_total = abp
-
-            dset = h5py.File(save_path + '_train(cv' + str(cv_n) + ').hdf5', "w")
-            t_dset = dset.create_group('train')
-            t_dset.attrs['desc'] = "k-fold cv train dataset"
-            t_p = t_dset.create_group('ple')
-            t_a = t_dset.create_group('abp')
-
-            for n in range(cv_n):
-                t_p.create_dataset(name=str(n), data=ple_total)
-                t_a.create_dataset(name=str(n), data=abp_total)
+            ple_total, ple_validation_total = np.split(ple, [int(len(ple) * 0.8)])
+            abp_total, abp_validation_total = np.split(abp, [int(len(abp) * 0.8)])
 
         else:  # cv_n > 1
             ple_folds = np.split(ple, cv_n)
@@ -390,28 +395,28 @@ def k_fold_cv(model_name, save_path, train_data, cv_n):
                         ple_temp.append(ple_folds[i])
                         abp_temp.append(abp_folds[i])
                         # print(i)
-                ple_total.append(np.reshape(ple_temp, (-1, 360)))
-                abp_total.append(np.reshape(abp_temp, (-1, 360)))
+                ple_total.append(np.reshape(ple_temp, (-1, chunk_size)))
+                abp_total.append(np.reshape(abp_temp, (-1, chunk_size)))
 
                 ple_validation_total.append(ple_fold)
                 abp_validation_total.append(abp_fold)
 
-            dset = h5py.File(save_path + '_train(cv' + str(cv_n) + ').hdf5', "w")
-            t_dset = dset.create_group('train')
-            t_dset.attrs['desc'] = "k-fold cv train dataset"
-            t_p = t_dset.create_group('ple')
-            t_a = t_dset.create_group('abp')
+        dset = h5py.File(save_path + '_train(cv' + str(cv_n) + ').hdf5', "w")
+        t_dset = dset.create_group('train')
+        t_dset.attrs['desc'] = "k-fold cv train dataset"
+        t_p = t_dset.create_group('ple')
+        t_a = t_dset.create_group('abp')
 
-            v_dset = dset.create_group('validation')
-            v_dset.attrs['desc'] = "k-fold cv validation dataset"
-            v_p = v_dset.create_group('ple')
-            v_a = v_dset.create_group('abp')
+        v_dset = dset.create_group('validation')
+        v_dset.attrs['desc'] = "k-fold cv validation dataset"
+        v_p = v_dset.create_group('ple')
+        v_a = v_dset.create_group('abp')
 
-            for n in range(cv_n):
-                t_p.create_dataset(name=str(n), data=ple_total[n])
-                t_a.create_dataset(name=str(n), data=abp_total[n])
-                v_p.create_dataset(name=str(n), data=ple_validation_total[n])
-                v_a.create_dataset(name=str(n), data=abp_validation_total[n])
+        for n in range(cv_n):
+            t_p.create_dataset(name=str(n), data=ple_total[n])
+            t_a.create_dataset(name=str(n), data=abp_total[n])
+            v_p.create_dataset(name=str(n), data=ple_validation_total[n])
+            v_a.create_dataset(name=str(n), data=abp_validation_total[n])
 
         print('t_dset.keys() :', t_dset.keys())
         print('t_p.keys() :', t_p.keys())

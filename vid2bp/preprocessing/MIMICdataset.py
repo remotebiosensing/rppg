@@ -11,7 +11,7 @@ import json
 import h5py
 
 # TODO DRAW GRAPH OF PPG, VPG, APG Done
-with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
+with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
 #     orders = json_data.get("parameters").get("in_channels")

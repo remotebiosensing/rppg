@@ -7,7 +7,8 @@ import vid2bp.preprocessing.utils.train_utils as tu
 
 import json
 
-def data_aggregator(model_name, root_path, save_path, degree=6, samp_rate=60, cv=1):
+
+def data_aggregator(model_name, root_path, save_path, degree=6, chunk_size=1024, samp_rate=60, cv=1):
     print("save_path : ", save_path)
     print("data_aggregator()\nreading dataset..")
     file_list = sorted([data for data in os.listdir(root_path) if data.__contains__("Part")])
@@ -22,14 +23,13 @@ def data_aggregator(model_name, root_path, save_path, degree=6, samp_rate=60, cv
 
     for u in uci_dat:
         ppg, abp, _ = u
-
-        for l in range(int(len(ppg) / 750)):
-            ppg_temp = ppg[l * 750:(l + 1) * 750]
-            abp_temp = abp[l * 750:(l + 1) * 750]
+        for l in range(int(len(ppg) / chunk_size)):  # default chunk size is 1024 (8.192sec) at sampling rate of 125Hz
+            ppg_temp = ppg[l * chunk_size:(l + 1) * chunk_size]
+            abp_temp = abp[l * chunk_size:(l + 1) * chunk_size]
             ppg_total.append(ppg_temp)
             abp_total.append(abp_temp)
 
-    if model_name is "VBPNet":
+    if model_name == "BPNet":
         ppg_total = np.expand_dims(ppg_total, axis=1)
         abp_total = np.expand_dims(abp_total, axis=1)
         sig_total = np.swapaxes(np.concatenate([abp_total, ppg_total], axis=1), 1, 2)
@@ -38,24 +38,25 @@ def data_aggregator(model_name, root_path, save_path, degree=6, samp_rate=60, cv
         if degree in [0, 3, 6]:
             if degree == 0:
                 ple_total = ple  # f
-                print('*** f data aggregation done***')
+                print('*** P data aggregation done***')
 
             elif degree == 3:
                 ple_first = mm.diff_np(ple)  # f'
                 ple_total = mm.diff_channels_aggregator(ple, ple_first)
-                print('*** f & f\' data aggregation done***')
+                print('*** P+V data aggregation done***')
 
             else:
                 ple_first = mm.diff_np(ple)  # f'
                 ple_second = mm.diff_np(ple_first)  # f''
                 ple_total = mm.diff_channels_aggregator(ple, ple_first, ple_second)
-                print('*** f & f\' & f\'\' data aggregation done***')
+                print('*** P+V+A data aggregation done***')
 
             tu.data_shuffler(model_name, save_path, [ple_total, abp, dsm], cv)
 
+
         else:
             print('derivative not supported... goto data_aggregator_sig_processed()')
-    elif model_name is "Unet":
+    elif model_name == "Unet":
         ppg_total = np.expand_dims(ppg_total, axis=1)
         abp_total = np.expand_dims(abp_total, axis=1)
         sig_total = np.swapaxes(np.concatenate([abp_total, ppg_total], axis=1), 1, 2)
@@ -63,4 +64,4 @@ def data_aggregator(model_name, root_path, save_path, degree=6, samp_rate=60, cv
 
         tu.data_shuffler(model_name, save_path, [ple, abp], cv)
     else:
-        print("model name not supported in data_aggregator2()")
+        print("model name not supported in data_aggregator()")
