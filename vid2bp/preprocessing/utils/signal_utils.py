@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 import json
 
-with open("/home/paperc/PycharmProjects/VBPNet/config/parameter.json") as f:
+with open("/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json") as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
     sr = json_data.get("parameters").get("sampling_rate")
@@ -67,7 +67,7 @@ def peak_detection(in_signal):
 
 def get_systolic(input_sig):
     x = np.squeeze(input_sig)
-    _, prop = signal.find_peaks(x, height=np.max(input_sig) - np.std(input_sig), distance=30)
+    _, prop = signal.find_peaks(x, height=np.max(input_sig) - np.std(input_sig))
     sbp = prop["peak_heights"]
     return sbp
 
@@ -103,6 +103,7 @@ def signal_quality_checker(input_sig, is_abp):
     diastolic_n = len(d)
     systolic_mean = np.mean(s)
     diastolic_mean = np.mean(d)
+    # print('sig_quality_checker', systolic_n, diastolic_n)
     if is_abp:
         if (np.abs(systolic_n - diastolic_n) > 2) or (s_std > 5) or (d_std > 5) or (
                 np.abs(systolic_mean - diastolic_mean) < 20):
@@ -131,7 +132,7 @@ def frequency_checker(input_sig):
     '''
     https://lifelong-education-dr-kim.tistory.com/4
     '''
-    Fs = 60
+    Fs = 125
     T = 1 / Fs
 
     abnormal_cnt = 0
@@ -141,7 +142,6 @@ def frequency_checker(input_sig):
     amplitude = abs(s_fft) * (2 / len(s_fft))
     frequency = np.fft.fftfreq(len(s_fft), T)
 
-    # # Dicrotic Notch amplify
     fft_freq = frequency.copy()
     dicrotic_peak_index0 = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
     peak_freq = fft_freq[dicrotic_peak_index0]
@@ -181,40 +181,38 @@ def signal_slicing(model_name, rawdata, sampling_rate, fft=True):
     size_list = []
 
     if np.shape(rawdata[0]) != (chunk_size, 2):
+        print('current shape is not the way intended. please check UCIdataset.py')
         rawdata = np.reshape(rawdata, (-1, chunk_size, 2))
     cnt = 0
     abnormal_cnt = 0
     if fft is True:
         for data in tqdm(rawdata):
             abp, ple = sig_spliter(data)
-            abp = down_sampling(np.squeeze(abp), sampling_rate)
-            ple = down_sampling(np.squeeze(ple), sampling_rate)
-
-            p_abp, pro_abp = signal.find_peaks(abp, height=np.max(abp) - np.std(abp), distance=30)
-            p_ple, pro_ple = signal.find_peaks(ple, height=np.mean(ple), distance=30)
-
-            if not ((np.mean(ple) == 0.0) or
+            abp = np.squeeze(abp)
+            ple = np.squeeze(ple)
+            # abp = down_sampling(abp, sampling_rate)
+            # ple = down_sampling(ple, sampling_rate)
+            p_abp, pro_abp = signal.find_peaks(abp, height=np.max(abp) - np.std(abp))
+            p_ple, pro_ple = signal.find_peaks(ple, height=np.mean(ple))
+            if not (
+                    (np.mean(ple) == 0.0) or
                     (np.mean(abp) == 80.0) or
-                    (len(p_abp) < 5) or
-                    (len(p_ple) < 5) or
-                    (len(p_abp) - len(p_ple) >= 1) or
+                    (len(p_abp) < 3) or
+                    (len(p_ple) < 3) or
+                    (len(p_abp) - len(p_ple) > 1) or
                     (signal_quality_checker(abp, is_abp=True) is False) or
                     (signal_quality_checker(ple, False) is False)):
                 if (not frequency_checker(abp)) and (not frequency_checker(ple)):
+                    # print(len(p_abp), len(p_ple))
                     abp_list.append(abp)
                     ple_list.append(ple)
-                    if model_name is "VBPNet":
-                        # size_factor = np.empty(3)
-                        # size_factor[0] = np.mean(get_diastolic(abp))
-                        # size_factor[1] = np.mean(get_systolic(abp))
-                        # size_factor[2] = get_mean_blood_pressure(size_factor[0], size_factor[1])
-                        # size_list.append(size_factor)
+                    if model_name == "BPNet":
                         size_list.append([np.mean(get_diastolic(ple)),
                                           np.mean(get_systolic(ple)),
                                           get_mean_blood_pressure(np.mean(get_diastolic(ple)),
                                                                   np.mean(get_systolic(ple)))])
                         cnt += 1
-                    elif model_name is "Unet":
+                    elif model_name == "Unet":
                         cnt += 1
                     '''AHA'''
                     # '''Normal'''
@@ -231,9 +229,9 @@ def signal_slicing(model_name, rawdata, sampling_rate, fft=True):
                     abnormal_cnt += 1
                     # plt.plot(ple)
                     # plt.show()
-        print('abnormal : ', abnormal_cnt)
-        print(cnt, '/', len(rawdata))
-    else:
+        print('measuring problem data slices : ', abnormal_cnt)
+        print('passed :', cnt, '/ total :', len(rawdata))
+    else:  # FFT check False
         for data in tqdm(rawdata):
             abp, ple = sig_spliter(data)
             abp = down_sampling(np.squeeze(abp), sampling_rate)
@@ -266,7 +264,7 @@ def signal_slicing(model_name, rawdata, sampling_rate, fft=True):
 
         print(cnt, '/', len(rawdata))
 
-    if model_name is "VBPNet":
+    if model_name == "BPNet":
         return abp_list, ple_list, size_list
-    elif model_name is "Unet":
+    elif model_name == "Unet":
         return abp_list, ple_list
