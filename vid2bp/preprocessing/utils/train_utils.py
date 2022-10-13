@@ -21,6 +21,19 @@ samp_rate = sampling_rate["60"]
 read_path = root_path + data_path[dataset][1]
 
 
+def AHA_criteria():
+    '''AHA'''
+    # '''Normal'''
+    # if (size_factor[1] < 120) and (size_factor[0] < 80):
+    # '''Elevated'''
+    # if (120 <= size_factor[1] < 130) and (size_factor[0] < 80):
+    # '''Hypertension Stage 1'''
+    # if (130 <= size_factor[1] < 140) or (80 <= size_factor[0] < 90):
+    # '''Hypertension Stage 2'''
+    # if (140 <= size_factor[1]) or (90 <= size_factor[0]):
+    # '''Hypertensive Crisis'''
+    # if (180 <= size_factor[1]) or (120 <= size_factor[0]):
+
 def is_learning(cost_arr):
     print(cost_arr)
     flag = True

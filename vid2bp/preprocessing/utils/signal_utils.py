@@ -11,7 +11,7 @@ with open("/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.js
     json_data = json.load(f)
     param = json_data.get("parameters")
     sr = json_data.get("parameters").get("sampling_rate")
-    chunk_size = json_data.get("parameters").get("chunk_size")
+    # chunk_size = json_data.get("parameters").get("chunk_size")
 
 
 def sig_spliter(in_sig):
@@ -46,7 +46,7 @@ def down_sampling(in_signal, sampling_rate=60):
         rst_sig = signal.resample(in_signal, int(param["chunk_size"] / sr["base"]) * sr[str(sampling_rate)])
         return rst_sig
     else:
-        print("not supported sampling rate..")
+        print("not supported sampling rate.. check parameter.json")
         return None
 
 
@@ -72,6 +72,7 @@ def get_systolic(input_sig):
     return sbp
 
 
+# TODO : make get_diastolic() function available for mimic dataset
 def get_diastolic(input_sig):
     Fs = 60
     T = 1 / Fs
@@ -81,9 +82,11 @@ def get_diastolic(input_sig):
     frequency = np.fft.fftfreq(len(s_fft), T)
 
     fft_freq = frequency.copy()
-    dicrotic_peak_index0 = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
-
-    peak_freq = fft_freq[dicrotic_peak_index0]
+    peak_index = amplitude[:int(len(amplitude) / 2)].argsort()[-1]
+    peak_freq = fft_freq[peak_index]
+    if peak_freq == 0:
+        peak_index = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
+        peak_freq = fft_freq[peak_index]
 
     cycle_len = round(Fs / peak_freq)
 
@@ -97,21 +100,16 @@ def get_diastolic(input_sig):
 def signal_quality_checker(input_sig, is_abp):
     s = get_systolic(input_sig)
     d = get_diastolic(input_sig)
-    s_std = np.std(s)
-    d_std = np.std(d)
-    systolic_n = len(s)
-    diastolic_n = len(d)
-    systolic_mean = np.mean(s)
-    diastolic_mean = np.mean(d)
+
     # print('sig_quality_checker', systolic_n, diastolic_n)
     if is_abp:
-        if (np.abs(systolic_n - diastolic_n) > 2) or (s_std > 5) or (d_std > 5) or (
-                np.abs(systolic_mean - diastolic_mean) < 20):
+        if (np.abs(len(s) - len(d)) > 2) or (np.std(s) > 5) or (np.std(d) > 5) or (
+                np.abs(np.mean(s) - np.mean(d)) < 20):
             return False
         else:
             return True
     else:
-        if (np.abs(systolic_n - diastolic_n) > 2) or (s_std > 0.5) or (d_std > 0.5):
+        if (np.abs(len(s) - len(d)) > 2) or (np.std(s) > 0.5) or (np.std(d) > 0.5):
             return False
         else:
             return True
@@ -123,9 +121,6 @@ def get_mean_blood_pressure(dbp, sbp):
     #     mbp.append((2 * d + s) / 3)
     mbp = (2 * dbp + sbp) / 3
     return mbp
-
-
-# TODO IF STD(PEAK) IS MUCH LARGER THAN PRIOR SLICE, THEN DROP
 
 
 def frequency_checker(input_sig):
@@ -143,8 +138,11 @@ def frequency_checker(input_sig):
     frequency = np.fft.fftfreq(len(s_fft), T)
 
     fft_freq = frequency.copy()
-    dicrotic_peak_index0 = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
+    dicrotic_peak_index0 = amplitude[:int(len(amplitude) / 2)].argsort()[-1]
     peak_freq = fft_freq[dicrotic_peak_index0]
+    if peak_freq == 0:
+        peak_index = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
+        peak_freq = fft_freq[peak_index]
 
     cycle_len = round(Fs / peak_freq)
 
@@ -175,94 +173,67 @@ def chebyshev2(input_sig, low, high, sr):
         print("wrong bandwidth.. ")
 
 
-def signal_slicing(model_name, rawdata, sampling_rate, fft=True):
+def signal_slicing(model_name, rawdata, chunk_size, sampling_rate, fft=True):
     abp_list = []
     ple_list = []
     size_list = []
 
     if np.shape(rawdata[0]) != (chunk_size, 2):
+        print(np.shape(rawdata))
         print('current shape is not the way intended. please check UCIdataset.py')
         rawdata = np.reshape(rawdata, (-1, chunk_size, 2))
+        print(np.shape(rawdata))
     cnt = 0
     abnormal_cnt = 0
-    if fft is True:
-        for data in tqdm(rawdata):
-            abp, ple = sig_spliter(data)
-            abp = np.squeeze(abp)
-            ple = np.squeeze(ple)
-            # abp = down_sampling(abp, sampling_rate)
-            # ple = down_sampling(ple, sampling_rate)
-            p_abp, pro_abp = signal.find_peaks(abp, height=np.max(abp) - np.std(abp))
-            p_ple, pro_ple = signal.find_peaks(ple, height=np.mean(ple))
-            if not (
-                    (np.mean(ple) == 0.0) or
-                    (np.mean(abp) == 80.0) or
-                    (len(p_abp) < 3) or
-                    (len(p_ple) < 3) or
-                    (len(p_abp) - len(p_ple) > 1) or
-                    (signal_quality_checker(abp, is_abp=True) is False) or
-                    (signal_quality_checker(ple, False) is False)):
+    for data in tqdm(rawdata):
+        abp, ple = sig_spliter(data)
+        abp = np.squeeze(abp)
+        ple = np.squeeze(ple)
+        p_abp, pro_abp = signal.find_peaks(abp, height=np.max(abp) - np.std(abp))
+        p_ple, pro_ple = signal.find_peaks(ple, height=np.mean(ple))
+
+        if not ((np.mean(ple) == 0.0) or
+                (np.mean(abp) == 80.0) or
+                (len(p_abp) < 3) or
+                (len(p_ple) < 3) or
+                (len(p_abp) - len(p_ple) > 1) or
+                (signal_quality_checker(abp, is_abp=True) is False) or
+                (signal_quality_checker(ple, is_abp=False) is False)):
+            if fft is True:
                 if (not frequency_checker(abp)) and (not frequency_checker(ple)):
-                    # print(len(p_abp), len(p_ple))
+                    abp = down_sampling(abp, sampling_rate)
+                    ple = down_sampling(ple, sampling_rate)
                     abp_list.append(abp)
                     ple_list.append(ple)
                     if model_name == "BPNet":
-                        size_list.append([np.mean(get_diastolic(ple)),
-                                          np.mean(get_systolic(ple)),
-                                          get_mean_blood_pressure(np.mean(get_diastolic(ple)),
-                                                                  np.mean(get_systolic(ple)))])
+                        size_list.append([
+                            np.mean(get_diastolic(ple)),
+                            np.mean(get_systolic(ple)),
+                            get_mean_blood_pressure(np.mean(get_diastolic(ple)),
+                                                    np.mean(get_systolic(ple)))])
                         cnt += 1
                     elif model_name == "Unet":
                         cnt += 1
-                    '''AHA'''
-                    # '''Normal'''
-                    # if (size_factor[1] < 120) and (size_factor[0] < 80):
-                    # '''Elevated'''
-                    # if (120 <= size_factor[1] < 130) and (size_factor[0] < 80):
-                    # '''Hypertension Stage 1'''
-                    # if (130 <= size_factor[1] < 140) or (80 <= size_factor[0] < 90):
-                    # '''Hypertension Stage 2'''
-                    # if (140 <= size_factor[1]) or (90 <= size_factor[0]):
-                    # '''Hypertensive Crisis'''
-                    # if (180 <= size_factor[1]) or (120 <= size_factor[0]):
                 else:
                     abnormal_cnt += 1
-                    # plt.plot(ple)
-                    # plt.show()
-        print('measuring problem data slices : ', abnormal_cnt)
-        print('passed :', cnt, '/ total :', len(rawdata))
-    else:  # FFT check False
-        for data in tqdm(rawdata):
-            abp, ple = sig_spliter(data)
-            abp = down_sampling(np.squeeze(abp), sampling_rate)
-            ple = down_sampling(np.squeeze(ple), sampling_rate)
 
-            p_abp, pro_abp = signal.find_peaks(abp, height=np.max(abp) - np.std(abp), distance=30)
-            pp_abp, ppro_abp = signal.find_peaks(abp, height=np.mean(abp) + np.std(abp))
-            p_ple, pro_ple = signal.find_peaks(ple, height=np.mean(ple), distance=30)
-
-            if not ((np.mean(ple) == (0.0 or np.nan)) or (np.mean(abp) == 80.0) or
-                    (len(p_abp) < 7) or (len(p_ple) == 0) or
-                    (len(p_abp) - len(p_ple) > 2) or (np.std(pro_abp["peak_heights"]) > 5) or
-                    (np.mean(pro_abp["peak_heights"]) > 160) or (len(pp_abp) > 15)):
-                cnt += 1
-                # abp_list.append(abp)
-                # ple_list.append(ple)
-                size_factor = np.empty(3)
-                size_factor[0] = get_diastolic(abp)
-                size_factor[1] = get_systolic(abp)
-                size_factor[2] = get_mean_blood_pressure(size_factor[0], size_factor[1])
-                '''Normal'''
-                # if (size_factor[1] < 120) and (size_factor[0] < 80):
+            else:
+                abp = down_sampling(abp, sampling_rate)
+                ple = down_sampling(ple, sampling_rate)
                 abp_list.append(abp)
-                ple_list.append(scaler(ple))
-                size_list.append(size_factor)
-                # if 120 <= size_factor[1] < 130 and size_factor[0] < 80:             '''Elevated'''
-                # if 130 <= size_factor[1] < 140 or 80 <= size_factor[0] < 90:        '''Hypertension Stage 1'''
-                # if 140 <= size_factor[1] or 90 <= size_factor[0]:                   '''Hypertension Stage 2'''
-                # if 180 <= size_factor[1] and 120 <= size_factor[0]:                 '''Hypertensive Crisis'''
+                ple_list.append(ple)
+                if model_name == "BPNet":
+                    size_list.append([
+                        np.mean(get_diastolic(ple)),
+                        np.mean(get_systolic(ple)),
+                        get_mean_blood_pressure(np.mean(get_diastolic(ple)),
+                                                np.mean(get_systolic(ple)))])
+                    cnt += 1
+                elif model_name == "Unet":
+                    cnt += 1
 
-        print(cnt, '/', len(rawdata))
+    print('measuring problem data slices : ', abnormal_cnt)
+    print('passed :', cnt, '/ total :', len(rawdata))
 
     if model_name == "BPNet":
         return abp_list, ple_list, size_list

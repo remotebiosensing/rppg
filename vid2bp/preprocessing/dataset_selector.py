@@ -1,5 +1,6 @@
 import json
-import h5py
+import vid2bp.preprocessing.utils.math_module as mm
+import vid2bp.preprocessing.utils.train_utils as tu
 
 with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
     json_data = json.load(f)
@@ -25,14 +26,38 @@ def selector(model_name, dataset_name, degree, samp_rate, cv=0):
     if dataset_name == "mimic":
         import MIMICdataset
         save_path = write_path + 'case(' + str(degree[-1]) + ')_' + str(chunk_size)
-        print("mimic dataset selected")
+        print('save_path :', save_path)
+        ple, abp, dsm = MIMICdataset.data_aggregator(model_name, read_path, chunk_size, samp_rate)
 
     else:  # uci
         import UCIdataset
         save_path = write_path + 'case(' + str(degree[-1]) + ')_' + str(chunk_size)
-        UCIdataset.data_aggregator(model_name, read_path, save_path, degree[1], chunk_size, samp_rate, cv)
+        print('save_path :', save_path)
+        ple, abp, dsm = UCIdataset.data_aggregator(model_name, read_path, chunk_size, samp_rate)
+
+    if model_name == 'BPNet':
+        if degree[0] in [1, 2, 3]:
+            if degree[0] == 1:
+                ple_total = ple
+                print('*** P data aggregation done***')
+            elif degree[0] == 2:
+                ple_first = mm.diff_np(ple)
+                ple_total = mm.diff_channels_aggregator(ple, ple_first)
+                print('*** P+V data aggregation done***')
+            else:
+                ple_first = mm.diff_np(ple)
+                ple_second = mm.diff_np(ple_first)
+                ple_total = mm.diff_channels_aggregator(ple, ple_first, ple_second)
+                print('*** P+V+A data aggregation done***')
+            tu.data_shuffler(model_name, save_path, [ple_total, abp, dsm], cv)
+        else:
+            print('not supported derivative ... check MIMIC data_aggregator()')
+    elif model_name == 'Unet':
+        tu.data_shuffler(model_name, save_path, [ple, abp], cv)
+    else:
+        print('not supported model... ')
 
 
-order = orders["sixth"]
+order = orders["second"]
 samp_rate = sampling_rate["60"]
-selector(model_name="BPNet", dataset_name="uci", degree=order, samp_rate=samp_rate, cv=1)
+selector(model_name="BPNet", dataset_name="mimic", degree=order, samp_rate=samp_rate, cv=1)
