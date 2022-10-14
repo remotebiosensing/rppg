@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from nets.blocks.blocks import ETASubNetBlock
+from nets.blocks.ETArPPGBlocks import ETASubNetBlock
 
 
 # define ETA-rPPGNet SubNet
