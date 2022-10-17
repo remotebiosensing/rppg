@@ -11,22 +11,18 @@
   },
   "parameters": {
     "models": ["VBPNet", "Unet"],
-    "root_path": "/home/paperc/PycharmProjects/VBPNet/dataset/",
-    "save_path": "/home/paperc/PycharmProjects/VBPNet/weights/",
-    "model_path": "/home/paperc/PycharmProjects/VBPNet/weights/",
+    "root_path": "/home/paperc/PycharmProjects/dataset/",
+    "save_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
+    "model_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
     "dataset_path": {
       "mimic": ["mimic-database-1.0.0/", "BPNet_mimic/"],
       "uci": ["uci-database/", "BPNet_uci/"],
       "uci_unet": ["uci-database/", "Unet_uci/"]
     },
     "in_channels": {
-      "zero": [1, 0, "P"],
-      "first": [1, 1, "V"],
-      "second": [1, 2, "A"],
-      "third": [2, 3, "P+V"],
-      "fourth": [2, 4, "P+A"],
-      "fifth": [2, 5, "V+A"],
-      "sixth": [3, 6, "P+V+A"]
+      "zeroth": [1, "P"],
+      "first": [2, "P+V"],
+      "second": [3, "P+V+A"]
     },
     "out_channels": 16,
     "chunk_size": 750,

@@ -3,7 +3,7 @@ import torch.nn as nn
 
 import json
 
-with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
+with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
     in_channel = json_data.get("parameters").get("in_channels")
