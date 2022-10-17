@@ -8,8 +8,10 @@ from nets.blocks.ETArPPGBlocks import STBlock, TimeDomainAttention, rPPGgenerato
 
 # define ETA-rPPGNet
 class ETArPPGNet(nn.Module):
-    def __init__(self, N, length):
+    def __init__(self, blocks, length):
         super(ETArPPGNet, self).__init__()
+        self.length = length
+        self.blocks = blocks
         # define ETA-rPPGNet layers
         self.etarppgnet = nn.Sequential(
             STBlock(),
@@ -17,10 +19,10 @@ class ETArPPGNet(nn.Module):
             STBlock(),
             STBlock(),
             TimeDomainAttention(),
-            rPPGgenerator(N, length)
+            rPPGgenerator(self.blocks, self.length)
         )
 
     def forward(self, x):
         x = self.etarppgnet(x)
-        return x
+        return x.view(self.length, -1)
 

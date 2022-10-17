@@ -83,11 +83,11 @@ class STBlock(torch.nn.Module):
         self.conv2 = torch.nn.Conv3d(3, 3, kernel_size=(3, 1, 1))
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
+        x = self.conv1(x)  # (N, C, Block, H, W) -> (N, C, Block, H, W)
+        x = self.conv2(x)  # (N, C, Block, H, W) -> (N, C, Block, H, W)
         # 3d average pooling
-        x = torch.nn.functional.avg_pool3d(x, kernel_size=(1, 2, 2))
-        return x
+        x = torch.nn.functional.avg_pool3d(x, kernel_size=(1, 2, 2))  # (N, C, Block, H, W) -> (N, C, Block, H, W)
+        return x  # (N, C, Block, H, W)
 
 
 class TimeDomainAttention(torch.nn.Module):
@@ -100,38 +100,42 @@ class TimeDomainAttention(torch.nn.Module):
         self.activation = torch.nn.Sigmoid()
 
     def forward(self, d):
-        # Global Average Pooling : (N,C,H,W) -> (N,C,1,1)
+        # Global Average Pooling : (N,C,Block,H,W) -> (N,C,Block,1,1)
         m = self.gap3d(d)
-        # Squeeze : (N,C,1,1) -> (N,C)
+        # Squeeze : (N,C,Block,1,1) -> (N,C,Block)
         m = self.squeeze2(m)
-        # one-dimensional convolution : (N,C) -> (N,C)
+        # one-dimensional convolution : (N,C,Block) -> (N,C,Block)
         m = self.conv1d(m)
-        # 1 + sigmoid activation : (N,C) -> (N,C)
+        # 1 + sigmoid activation : (N,C,Block) -> (N,C,Block)
         m = self.activation(m) + 1
-        # Unsqueeze : (N,C) -> (N,C,1,1)
+        # Unsqueeze : (N,C,,Block) -> (N,C,Block,1,1)
         m = self.unsqueeze2(m)
-        # multiplication : (N,C,1,1) * (N,C,H,W) -> (N,C,H,W)
+        # multiplication : (N,C,Block,1,1) * (N,C,Block,H,W) -> (N,C,Block,H,W)
         d = m * d
         return d
 
 
 class rPPGgenerator(torch.nn.Module):
-    def __init__(self, N, length):
+    def __init__(self, blocks, length):
         super(rPPGgenerator, self).__init__()
         self.length = length
-        self.N = N
-        self.AdaptiveAvgPool3d = torch.nn.AdaptiveAvgPool3d((N, 1, 1))
-        self.conv3d = torch.nn.Conv3d(1, 1, kernel_size=(1, 1, 1))
+        self.blocks = blocks
+        # (N, C, Block, H, W) -> (N, 3, Block, 1, 1)
+        self.AdaptiveAvgPool3d = torch.nn.AdaptiveAvgPool3d((self.blocks, 1, 1))
+        # (N, 3, Block, 1, 1) -> (N, 3, Block, 1, 1)
+        self.conv3d = torch.nn.Conv3d(3, 1, kernel_size=(1, 1, 1))
+        # (N, 3, Block, 1, 1) -> (N, 1, Block, 1, 1)
+        self.squeeze2 = Squeeze2()
 
     def forward(self, x):
         # AdaptiveAvgPool3d
-        x = self.AdaptiveAvgPool3d(x)  # (N, C, 1, 1) -> (N, 1, 1)
+        x = self.AdaptiveAvgPool3d(x)  # (N, C, Block, H, W) -> (N, C, Block, 1, 1)
         # Conv3d
-        x = self.conv3d(x)  # (N, 1, 1) -> (N, 1, 1)
+        x = self.conv3d(x)  # (N, C, Block, 1, 1) -> (N, 1, Block, 1, 1)
         # Squeeze
-        x = torch.squeeze(x, dim=-1)  # (N, 1, 1) -> (N, 1)
+        x = self.squeeze2(x)  # (N, 1, Block, 1, 1) -> (N, 1, Block)
         # Linear interpolation
-        x = torch.nn.functional.interpolate(x, size=(self.length, 1), mode='linear')  # (N, 1) -> (length, 1)
+        x = torch.nn.functional.interpolate(x, size=self.length, mode='linear')  # (N, 1, Block) -> (N, 1, length)
 
         return x
 
