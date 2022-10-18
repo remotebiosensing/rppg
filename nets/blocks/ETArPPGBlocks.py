@@ -54,26 +54,6 @@ class ETASubNetBlock(torch.nn.Module):
         return x
 
 
-class Squeeze2(torch.nn.Module):
-    def __init__(self):
-        super(Squeeze2, self).__init__()
-
-    def forward(self, x):
-        x = torch.squeeze(x, dim=-1)
-        x = torch.squeeze(x, dim=-1)
-        return x
-
-
-class Unsqueeze2(torch.nn.Module):
-    def __init__(self):
-        super(Unsqueeze2, self).__init__()
-
-    def forward(self, x):
-        x = torch.unsqueeze(x, dim=-1)
-        x = torch.unsqueeze(x, dim=-1)
-        return x
-
-
 class STBlock(torch.nn.Module):
     def __init__(self):
         super(STBlock, self).__init__()
@@ -91,23 +71,22 @@ class STBlock(torch.nn.Module):
 class TimeDomainAttention(torch.nn.Module):
     def __init__(self):
         super(TimeDomainAttention, self).__init__()
-        self.gap3d = torch.nn.AdaptiveAvgPool3d(1)
-        self.squeeze2 = Squeeze2()
+        # self.gap3d = torch.nn.AdaptiveAvgPool3d(1)
         self.conv1d = torch.nn.Conv1d(in_channels=3, out_channels=3, kernel_size=5, padding='same')
-        self.unsqueeze2 = Unsqueeze2()
         self.activation = torch.nn.Sigmoid()
 
     def forward(self, d):
+        [N, C, Block, H, W] = d.shape
         # Global Average Pooling : (N,C,Block,H,W) -> (N,C,Block,1,1)
-        m = self.gap3d(d)
+        m = torch.nn.functional.adaptive_avg_pool3d(d, output_size=(Block, 1, 1))
         # Squeeze : (N,C,Block,1,1) -> (N,C,Block)
-        m = self.squeeze2(m)
+        m = m.view(N, C, -1)
         # one-dimensional convolution : (N,C,Block) -> (N,C,Block)
         m = self.conv1d(m)
         # 1 + sigmoid activation : (N,C,Block) -> (N,C,Block)
         m = self.activation(m) + 1
-        # Unsqueeze : (N,C,,Block) -> (N,C,Block,1,1)
-        m = self.unsqueeze2(m)
+        # Unsqueeze : (N,C,Block) -> (N,C,Block,1,1)
+        m = m.view(N, C, Block, 1, 1)
         # multiplication : (N,C,Block,1,1) * (N,C,Block,H,W) -> (N,C,Block,H,W)
         d = m * d
         return d
@@ -123,15 +102,15 @@ class rPPGgenerator(torch.nn.Module):
         # (N, 3, Block, 1, 1) -> (N, 3, Block, 1, 1)
         self.conv3d = torch.nn.Conv3d(3, 1, kernel_size=(1, 1, 1))
         # (N, 3, Block, 1, 1) -> (N, 1, Block, 1, 1)
-        self.squeeze2 = Squeeze2()
 
     def forward(self, x):
+        [N, C, Block, H, W] = x.shape
         # AdaptiveAvgPool3d
         x = self.AdaptiveAvgPool3d(x)  # (N, C, Block, H, W) -> (N, C, Block, 1, 1)
         # Conv3d
         x = self.conv3d(x)  # (N, C, Block, 1, 1) -> (N, 1, Block, 1, 1)
         # Squeeze
-        x = self.squeeze2(x)  # (N, 1, Block, 1, 1) -> (N, 1, Block)
+        x = x.view(N, 1, -1)  # (N, 1, Block, 1, 1) -> (N, 1, Block)
         # Linear interpolation
         x = torch.nn.functional.interpolate(x, size=self.length, mode='linear')  # (N, 1, Block) -> (N, 1, length)
 

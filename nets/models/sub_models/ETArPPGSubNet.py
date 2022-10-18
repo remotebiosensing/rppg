@@ -14,21 +14,16 @@ class ETArPPGNetSubNet(nn.Module):
         super(ETArPPGNetSubNet, self).__init__()
         self.h //= 2  # output height
         self.w //= 2  # output width
-        self.ETASubNetBlock = ETASubNetBlock((self.h, self.w))
+        self.ETASubNetBlock = ETASubNetBlock()
 
     def forward(self, x):
-        # segment set shape : (N, C, t, W, H)
-        # segment shape : (C, t, W, H)
-        # feature maps before transpose : (N, C, H, W)
+        # Input Shape : (N, C, t, H, W)
+        # Output Shape : (N, C, H/2, W/2)
         featuremap = torch.zeros((x.shape[0], self.c, self.h, self.w))
 
         # transform segment to feature map
-        # x : C, t, W, H -> t, C, H, W for convolution
-        x = x.permute(1, 0, 3, 2)
         for i in range(x.shape[0]):
             # concat feature map
             featuremap[i, :, :, :] = self.ETASubNetBlock(x[i])
 
-        # feature maps after transpose : (N, C, W, H)
-        featuremap = featuremap.permute(0, 1, 3, 2)
         return featuremap
