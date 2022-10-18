@@ -5,7 +5,7 @@ import torch.nn as nn
 class Phase1(torch.nn.Module):
     def __init__(self):
         super(Phase2, self).__init__()
-        self.vitamon = nn.Sequential(
+        self.VitaMon = nn.Sequential(
 
             # input(224x224x25)
             nn.Conv2D(input_shape=(224, 224, 25), filters=32, kernel_size=(3, 3)),  # 확인하기
@@ -63,16 +63,16 @@ class Phase1(torch.nn.Module):
         )
 
     def call(self, x):
-        x = self.vitamon(x)
+        x = self.VitaMon(x)
         return x
 
     def summary(self):
-        self.vitamon.summary()
+        self.VitaMon.summary()
 
 class Phase2(torch.nn.Module):
     def __init__(self):
         super(Phase2, self).__init__()
-        self.vitamon = nn.Sequential(
+        self.VitaMon = nn.Sequential(
 
             # input(224x224x7)
             nn.Conv2D(input_shape=(224, 224, 7), filters=32, kernel_size=(3, 3)),  # 확인하기
@@ -111,8 +111,8 @@ class Phase2(torch.nn.Module):
         )
 
     def call(self, x):
-        x = self.vitamon(x)
+        x = self.VitaMon(x)
         return x
 
     def summary(self):
-        self.vitamon.summary()
+        self.VitaMon.summary()

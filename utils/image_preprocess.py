@@ -1102,4 +1102,9 @@ def RhythmNet_preprocessor(video_path, clip_size):
     return True, stacked_maps.astype(np.uint8)
 
 
-def VitaMon_preprocess_Video(path, face_detect_algorithm, )
+def VitaMon_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
+    '''
+         :param path: dataset path
+         :param flag: face detect flag
+         :return:
+    '''
