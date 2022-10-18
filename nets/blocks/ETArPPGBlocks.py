@@ -93,10 +93,9 @@ class TimeDomainAttention(torch.nn.Module):
 
 
 class rPPGgenerator(torch.nn.Module):
-    def __init__(self, blocks, length):
+    def __init__(self, length):
         super(rPPGgenerator, self).__init__()
         self.length = length
-        self.blocks = blocks
         # (N, C, Block, H, W) -> (N, 3, Block, 1, 1)
         self.AdaptiveAvgPool3d = torch.nn.AdaptiveAvgPool3d((self.blocks, 1, 1))
         # (N, 3, Block, 1, 1) -> (N, 3, Block, 1, 1)
@@ -105,8 +104,8 @@ class rPPGgenerator(torch.nn.Module):
 
     def forward(self, x):
         [N, C, Block, H, W] = x.shape
-        # AdaptiveAvgPool3d
-        x = self.AdaptiveAvgPool3d(x)  # (N, C, Block, H, W) -> (N, C, Block, 1, 1)
+        # AdaptiveAvgPool3d (N, C, Block, H, W) -> (N, C, Block, 1, 1)
+        x = torch.nn.functional.adaptive_avg_pool3d(x, output_size=(Block, 1, 1))
         # Conv3d
         x = self.conv3d(x)  # (N, C, Block, 1, 1) -> (N, 1, Block, 1, 1)
         # Squeeze
