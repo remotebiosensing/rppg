@@ -1,56 +1,54 @@
 import torch
 
-class DepthwiseSeparableConv2d(torch.nn.Module):
-    def __init__(self, in_channels, out_channels=1):
-        super(DepthwiseSeparableConv2d, self).__init__()
-        # N, C, H, W
-        self.depthwise_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3,
-                                              padding=1, groups=in_channels)
-        self.pointwise_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1)
+
+class DepthwiseSeparableConv3d(torch.nn.Module):
+    def __init__(self):
+        super(DepthwiseSeparableConv3d, self).__init__()
+        # N, C, t, H, W
+        self.depthwise_conv = torch.nn.Conv3d(in_channels=3, out_channels=3, kernel_size=1, groups=3)
+        self.pointwise_conv = torch.nn.Conv3d(in_channels=3, out_channels=1, kernel_size=1)
 
     def forward(self, x):
         # depthwise convolution
-        x = self.depthwise_conv(x)
+        x = self.depthwise_conv(x)  # (N, C, t, H, W) -> (N, C, t, H, W)
         # average pooling
-        x = torch.nn.functional.avg_pool2d(x, kernel_size=2)
+        x = torch.nn.functional.avg_pool3d(x, kernel_size=1)  # (N, C, t, H, W) -> (N, C, t, H, W)
         # pointwise convolution
-        x = self.pointwise_conv(x)
+        x = self.pointwise_conv(x)  # (N, C, t, H, W) -> (N, 1, t, H, W)
         # softmax
         x = torch.nn.functional.softmax(x, dim=1)
         return x
 
 
 class AttentionAndPooling(torch.nn.Module):
-    def __init__(self, output_shape):
+    def __init__(self):
         super(AttentionAndPooling, self).__init__()
-        self.output_shape = output_shape
 
     def forward(self, attmap, segment):
+        output_size = segment.shape[2:]
         # attmap * segment
-        out = torch.mul(attmap, segment)
+        out = attmap*segment
         # (attmap * segment) + segment
-        out = torch.sum(out, segment)
+        out = out+segment
         # AdaptiveAvgPool2d
-        out = torch.nn.functional.adaptive_avg_pool2d(out, output_size=self.output_shape)
-        # adaptive avg pool2d
-        # Input : (N, C, H, W)
-        # Parameter : output_size(HxW) (tuple)
-        # Output : (N, C, output_shape)
+        out = torch.nn.functional.adaptive_avg_pool3d(out, output_size=output_size)
+        # adaptive avg pool3d
+        # Input : (N, C, t, H, W)
+        # Parameter : output_size(txHxW) (tuple)
+        # Output : (N, C, t, H, W)
         return out
 
 
 class ETASubNetBlock(torch.nn.Module):
-    def __init__(self, output_shape):
+    def __init__(self):
         super(ETASubNetBlock, self).__init__()
-        self.in_channels = 3
-        self.out_channels = 1
         # define ETA-rPPGNet layers
-        self.DepthwiseSeparableConv2d = DepthwiseSeparableConv2d(self.in_channels, self.out_channels)
-        self.AttentionAndPooling = AttentionAndPooling(output_shape)
+        self.DepthwiseSeparableConv3d = DepthwiseSeparableConv3d()
+        self.AttentionAndPooling = AttentionAndPooling()
 
     def forward(self, x):
         # depth-wise separable convolution
-        attmap = self.DepthwiseSeparableConv2d(x)
+        attmap = self.DepthwiseSeparableConv3d(x)
         # attention and pooling
         x = self.AttentionAndPooling(attmap, x)
         return x
