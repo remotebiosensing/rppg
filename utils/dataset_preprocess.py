@@ -272,3 +272,16 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
                                               'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
         # 'preprocessed_graph': saved_graph}
+
+if __name__ == '__main__':
+    preprocessing(save_root_path="/dy_dataset/",
+                  model_name="VitaMon",
+                  data_root_path="/media/hdd1/",
+                  dataset_name="UBFC",
+                  train_ratio=0.8,
+                  face_detect_algorithm=1,
+                  divide_flag=True,
+                  fixed_position=True,
+                  time_length=32,
+                  img_size=32,
+                  log_flag=True)
