@@ -25,3 +25,10 @@ class ETArPPGNet(nn.Module):
     def forward(self, x):
         x = self.etarppgnet(x)
         return x.view(-1, self.length)
+
+if __name__=='__main__':
+    x = torch.randn(2, 3, 32, 128, 128)
+    net = ETArPPGNet(64)
+    y = net(x)
+    print(x.shape)
+    print(y.shape)

@@ -97,7 +97,6 @@ class rPPGgenerator(torch.nn.Module):
         super(rPPGgenerator, self).__init__()
         self.length = length
         # (N, C, Block, H, W) -> (N, 3, Block, 1, 1)
-        self.AdaptiveAvgPool3d = torch.nn.AdaptiveAvgPool3d((self.blocks, 1, 1))
         # (N, 3, Block, 1, 1) -> (N, 3, Block, 1, 1)
         self.conv3d = torch.nn.Conv3d(3, 1, kernel_size=(1, 1, 1))
         # (N, 3, Block, 1, 1) -> (N, 1, Block, 1, 1)
