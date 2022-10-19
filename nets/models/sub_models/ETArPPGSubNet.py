@@ -8,22 +8,26 @@ from nets.blocks.ETArPPGBlocks import ETASubNetBlock
 
 # define ETA-rPPGNet SubNet
 class ETArPPGNetSubNet(nn.Module):
-    def __init__(self, shape):
-        # segment shape : (C, t, W, H)
-        [self.c, self.t, self.h, self.w] = shape
+    def __init__(self):
         super(ETArPPGNetSubNet, self).__init__()
-        self.h //= 2  # output height
-        self.w //= 2  # output width
         self.ETASubNetBlock = ETASubNetBlock()
 
     def forward(self, x):
-        # Input Shape : (N, C, t, H, W)
-        # Output Shape : (N, C, H/2, W/2)
-        featuremap = torch.zeros((x.shape[0], self.c, self.h, self.w))
+        # Input Shape : (N, Block, C, t, H, W)
+        # Output Shape : (N, C, Block, H/2, W/2)
+
+        [N, Block, C, t, H, W] = x.shape
+        featuremap = torch.zeros((N, C, Block, H // 2, W // 2))
 
         # transform segment to feature map
-        for i in range(x.shape[0]):
+        for i in range(Block):
             # concat feature map
-            featuremap[i, :, :, :] = self.ETASubNetBlock(x[i])
+            featuremap[:, :, i, :, :] = self.ETASubNetBlock(x[:, i]).view(-1, C, H // 2, W // 2)
 
         return featuremap
+
+
+if __name__ == '__main__':
+    x = torch.randn(2, 8, 3, 2, 8, 8)
+    net = ETArPPGNetSubNet()
+    y = net(x)

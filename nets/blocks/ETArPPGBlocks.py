@@ -25,17 +25,17 @@ class AttentionAndPooling(torch.nn.Module):
         super(AttentionAndPooling, self).__init__()
 
     def forward(self, attmap, segment):
-        output_size = segment.shape[2:]
+        [N, C, t, H, W] = segment.shape
+        output_size = (1, H // 2, W // 2)
         # attmap * segment
-        out = attmap*segment
+        out = attmap * segment
         # (attmap * segment) + segment
-        out = out+segment
+        out = out + segment
         # AdaptiveAvgPool2d
         out = torch.nn.functional.adaptive_avg_pool3d(out, output_size=output_size)
         # adaptive avg pool3d
         # Input : (N, C, t, H, W)
-        # Parameter : output_size(txHxW) (tuple)
-        # Output : (N, C, t, H, W)
+        # Output : (N, C, 1, H/2, W/2)
         return out
 
 
@@ -114,4 +114,3 @@ class rPPGgenerator(torch.nn.Module):
         x = torch.nn.functional.interpolate(x, size=self.length, mode='linear')  # (N, 1, Block) -> (N, 1, length)
 
         return x
-
