@@ -65,6 +65,8 @@ def loss_fn(loss_fn: str = "mse", log_flag: bool = True):
         return loss.TripletMarginLoss()
     elif loss_fn == "triplet_margin_distance":
         return loss.TripletMarginWithDistanceLoss()
+    elif loss_fn == "RhythmNetLoss":
+        return RhythmNetLoss()
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)

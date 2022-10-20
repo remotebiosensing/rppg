@@ -9,6 +9,7 @@ from dataset.DeepPhysDataset import DeepPhysDataset
 from dataset.GCNDataset import GCNDataset
 from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
+from dataset.RhythmNetDataset import RhythmNetDataset
 
 
 def split_data_loader(datasets, batch_size, train_shuffle, test_shuffle=False):
@@ -67,12 +68,23 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         motion_data = []
         target_data = []
 
-        for key in hpy_file.keys():
-            appearance_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
-            motion_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, :3])
-            target_data.extend(hpy_file[key]['preprocessed_label'])
+        # for key in hpy_train_file.keys():
+        #     appearance_data.extend(hpy_train_file[key]['preprocessed_video'][:, :, :, -3:])
+        #     motion_data.extend(hpy_train_file[key]['preprocessed_video'][:, :, :, :3])
+        #     target_data.extend(hpy_train_file[key]['preprocessed_label'])
+        #
+        # hpy_train_file.close()
 
-        hpy_file.close()
+        for key in hpy_test_file.keys():
+            cnt += 1
+            if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
+                appearance_data.extend(hpy_test_file[key]['preprocessed_video'][:, :, :, -3:])
+                motion_data.extend(hpy_test_file[key]['preprocessed_video'][:, :, :, :3])
+                target_data.extend(hpy_test_file[key]['preprocessed_label'])
+            if cnt == 5:
+                break
+        hpy_test_file.close()
+
 
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
@@ -105,7 +117,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
                 video_data.extend(hpy_test_file[key]['preprocessed_video'])
                 label_data.extend(hpy_test_file[key]['preprocessed_label'])
                 # bpm_data.extend(hpy_test_file[key]['preprocessed_hr'])
-            if cnt == 4:
+            if cnt == 5:
                 break
             # if cnt == cflag:
             #     break
@@ -178,5 +190,26 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         dataset = AxisNetDataset(video_data=np.asarray(video_data),
                                  ptt_data=np.asarray(ptt_data),
                                  label_data=np.asarray(label_data), )
+    elif model_name in ["RhythmNet"]:
+        st_map_data = []
+        target_data = []
+        if option == "train":
+            for key in hpy_train_file.keys():
+                st_map_data.extend(hpy_train_file[key]['preprocessed_video'])
+                target_data.extend(hpy_train_file[key]['preprocessed_label'])
+
+            hpy_train_file.close()
+        elif option == "test":
+            for key in hpy_test_file.keys():
+                cnt += 1
+                if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
+                    st_map_data.extend(hpy_test_file[key]['preprocessed_video'])
+                    target_data.extend(hpy_test_file[key]['preprocessed_label'])
+                if cnt == 5:
+                    break
+            hpy_test_file.close()
+
+        dataset = RhythmNetDataset(st_map_data = np.asarray(st_map_data),
+                                   target_data = np.asarray(target_data))
 
     return dataset

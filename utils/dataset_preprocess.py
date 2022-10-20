@@ -123,11 +123,11 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         for proc in process:
             proc.join()
     else:
-        loop = len(data_list) // 32
-        loop = 1
+        # loop = len(data_list) // 5
+        loop = 20
 
         for i in range(loop):
-            for index, data_path in enumerate(data_list[i * 1:(i + 1) * 1]):
+            for index, data_path in enumerate(data_list[i * 5:(i + 1) * 5]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
                                                args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
                                                      face_detect_algorithm, divide_flag, fixed_position, time_length,
@@ -295,7 +295,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         # 'preprocessed_graph': saved_graph}
 
 if __name__ == '__main__':
-    preprocessing(save_root_path = "/home/najy/dy_dataset/",
+    preprocessing(save_root_path = "/home/najy/dy/dataset/",
                   model_name = "RhythmNet",
                   data_root_path = "/",
                   dataset_name = "V4V",
@@ -304,5 +304,5 @@ if __name__ == '__main__':
                   divide_flag = True,
                   fixed_position = True,
                   time_length= 300,
-                  img_size = 32,
+                  img_size = 36,
                   log_flag = True)

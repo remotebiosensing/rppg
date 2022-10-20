@@ -909,7 +909,7 @@ def preprocess_video(video_path, output_shape, clip_size=256):
     frameRate = cap.get(5)  # frame rate
 
     # Frame dimensions: WxH
-    frame_dims = (int(cap.get(3)), int(cap.get(4)))
+    # frame_dims = (int(cap.get(3)), int(cap.get(4)))
     # Paper mentions a stride of 0.5 seconds = 15 frames
     sliding_window_stride = int(frameRate / 2)
     num_frames = int(cap.get(7))
@@ -982,7 +982,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
 
     num_frames = frames.shape[0]
-    output_shape = (frames.shape[1], frames.shape[2])
+    # output_shape = (frames.shape[1], frames.shape[2])
     num_maps = int((num_frames - clip_size) / sliding_window_stride + 1)
     if num_maps < 0:
         # print(num_maps)
@@ -992,7 +992,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     # stacked_maps is the all the st maps for a given video (=num_maps) stacked.
     stacked_maps = np.zeros((num_maps, clip_size, 25, 3))
     # processed_maps will contain all the data after processing each frame, but not yet converted into maps
-    processed_maps = np.zeros((num_frames, 25, 3))
+    # processed_maps = np.zeros((num_frames, 25, 3))
     # processed_frames = np.zeros((num_frames, output_shape[0], output_shape[1], 3))
     processed_frames = []
     map_index = 0
@@ -1001,7 +1001,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     min_max_scaler = preprocessing.MinMaxScaler()
     detector = get_haarcascade()
     eye_detector = get_eye_haarcascade()
-
+    pbar = tqdm(total=num_frames, position=0, leave=True, desc=video_path+' Detecting Faces')
     # First we process all the frames and then work with sliding window to save repeated processing for the same frame index
     for idx, frame in enumerate(frames):
         # spatio_temporal_map = np.zeros((fr, 25, 3))
@@ -1015,7 +1015,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
         if len(faces) is not 0:
             (x, y, w, d) = faces[0]
             frame_cropped = frame[y:(y + d), x:(x + w)]
-            eyes = eye_detector.detectMultiScale(frame_cropped, 1.2, 3)
+            # eyes = eye_detector.detectMultiScale(frame_cropped, 1.2, 3)
             # if len(eyes) > 0:
             #     # for having the same radius in both eyes
             #     (eye_x, eye_y, eye_w, eye_h) = eyes[0]
@@ -1061,13 +1061,15 @@ def RhythmNet_preprocessor(video_path, clip_size):
             # exit(666)
 
         processed_frames.append(frame_resized)
-        # roi_blocks = chunkify(frame_resized)
-        # for block_idx, block in enumerate(roi_blocks):
-        #     avg_pixels = cv2.mean(block)
-        #     processed_maps[idx, block_idx, 0] = avg_pixels[0]
-        #     processed_maps[idx, block_idx, 1] = avg_pixels[1]
-        #     processed_maps[idx, block_idx, 2] = avg_pixels[2]
-
+        pbar.update(1)
+    pbar.close()
+    # roi_blocks = chunkify(frame_resized)
+    # for block_idx, block in enumerate(roi_blocks):
+    #     avg_pixels = cv2.mean(block)
+    #     processed_maps[idx, block_idx, 0] = avg_pixels[0]
+    #     processed_maps[idx, block_idx, 1] = avg_pixels[1]
+    #     processed_maps[idx, block_idx, 2] = avg_pixels[2]
+    pbar = tqdm(total=num_maps, position=0, leave=True, desc=video_path+' Making STMAPS')
     # At this point we have the processed maps from all the frames in a video and now we do the sliding window part.
     for start_frame_index in range(0, num_frames, sliding_window_stride):
         end_frame_index = start_frame_index + clip_size
@@ -1098,5 +1100,10 @@ def RhythmNet_preprocessor(video_path, clip_size):
 
         stacked_maps[map_index, :, :, :] = spatio_temporal_map
         map_index += 1
+        pbar.update(1)
+    pbar.close()
 
-    return True, stacked_maps.astype(np.uint8).transpose((1, 0, 2))
+    (idx, w, h, c) = stacked_maps.shape
+    stacked_maps = stacked_maps.reshape((idx, h, w, c))
+    stacked_maps = stacked_maps.astype(np.uint8)
+    return True, stacked_maps
