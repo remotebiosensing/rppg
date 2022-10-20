@@ -6,10 +6,10 @@ import numpy as np
 from torch.utils.data import random_split
 
 from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
-    GCN_preprocess_Video, Axis_preprocess_Video
+    GCN_preprocess_Video, Axis_preprocess_Video, RhythmNet_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
 from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
-    Axis_preprocess_Label
+    Axis_preprocess_Label, RhythmNet_preprocess_Label
 
 
 def dataset_split(dataset, ratio):
@@ -35,7 +35,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                   divide_flag: bool = True,
                   fixed_position: bool = True,
                   time_length: int = 32,
-                  img_size:int = 32,
+                  img_size: int = 32,
                   log_flag: bool = True):
     """
     :param save_root_path: save file destination path
@@ -213,6 +213,19 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
             dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
+    elif model_name in ["RhythmNet"]:
+        for index, data_path in enumerate(return_dict.keys()[:train]):
+            dset = train_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        train_file.close()
+
+        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[train:]):
+            dset = test_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        test_file.close()
 
 
 def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
@@ -243,8 +256,12 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
             path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)
+    elif model_name == "RhythmNet":
+        rst, preprocessed_video = RhythmNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
+                                                             fixed_position, time_length)
+
     # rst,bvp,sliding,frames,ptt
-    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM"]:  # can't detect face
+    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "RhythmNet"]:  # can't detect face
         if not rst:
             return
 
@@ -256,6 +273,8 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         preprocessed_label = GCN_preprocess_Label(path + ground_truth_name, sliding_window_stride)
     elif model_name == "AxisNet":
         preprocessed_label = Axis_preprocess_Label(path + ground_truth_name, sliding_window_stride, num_frames)
+    elif model_name == "RhythmNet":
+        preprocessed_label = RhythmNet_preprocess_Label(path + ground_truth_name, time_length)
 
     # ppg, sbp, dbp, hr
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
@@ -270,5 +289,8 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     elif model_name in ["AxisNet"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_ptt': stacked_ptts,
+                                              'preprocessed_label': preprocessed_label}
+    elif model_name in ["RhythmNet"]:
+        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_label': preprocessed_label}
         # 'preprocessed_graph': saved_graph}
