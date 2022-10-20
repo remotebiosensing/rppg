@@ -67,12 +67,23 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         motion_data = []
         target_data = []
 
-        for key in hpy_file.keys():
-            appearance_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
-            motion_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, :3])
-            target_data.extend(hpy_file[key]['preprocessed_label'])
+        # for key in hpy_train_file.keys():
+        #     appearance_data.extend(hpy_train_file[key]['preprocessed_video'][:, :, :, -3:])
+        #     motion_data.extend(hpy_train_file[key]['preprocessed_video'][:, :, :, :3])
+        #     target_data.extend(hpy_train_file[key]['preprocessed_label'])
+        #
+        # hpy_train_file.close()
 
-        hpy_file.close()
+        for key in hpy_test_file.keys():
+            cnt += 1
+            if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
+                appearance_data.extend(hpy_test_file[key]['preprocessed_video'][:, :, :, -3:])
+                motion_data.extend(hpy_test_file[key]['preprocessed_video'][:, :, :, :3])
+                target_data.extend(hpy_test_file[key]['preprocessed_label'])
+            if cnt == 5:
+                break
+        hpy_test_file.close()
+
 
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
@@ -105,7 +116,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
                 video_data.extend(hpy_test_file[key]['preprocessed_video'])
                 label_data.extend(hpy_test_file[key]['preprocessed_label'])
                 # bpm_data.extend(hpy_test_file[key]['preprocessed_hr'])
-            if cnt == 4:
+            if cnt == 5:
                 break
             # if cnt == cflag:
             #     break

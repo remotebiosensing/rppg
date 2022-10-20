@@ -1,0 +1,15 @@
+{
+  "name": "vbpnet",
+  "version": "1.0.0",
+  "dependencies": {
+    "tqdm": "^4.64.0",
+    "wfdb": "^4.0.0",
+    "matplotlib": "^3.5.3",
+    "numpy": "^1.23.1",
+    "torch": "^1.12.1",
+    "wandb": "^0.13.1",
+    "json": "^11.0.0",
+    "scipy": "^1.9.0",
+    "sklearn": "1.1.1"
+  }
+}

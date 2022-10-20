@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import random_split
 
 from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
-    GCN_preprocess_Video, Axis_preprocess_Video, RhythmNet_preprocess_Video
+    GCN_preprocess_Video, Axis_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
 from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
     Axis_preprocess_Label
@@ -35,7 +35,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                   divide_flag: bool = True,
                   fixed_position: bool = True,
                   time_length: int = 32,
-                  img_size: int = 32,
+                  img_size:int = 32,
                   log_flag: bool = True):
     """
     :param save_root_path: save file destination path
@@ -129,9 +129,10 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         for i in range(loop):
             for index, data_path in enumerate(data_list[i * 32:(i + 1) * 32]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
-                                               args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                     face_detect_algorithm, divide_flag, fixed_position, time_length,
-                                                     model_name, img_size, return_dict))
+                                               args=(
+                                                   dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
+                                                   face_detect_algorithm,
+                                                   model_name, return_dict))
                 # flag 0 : pass
                 # flag 1 : detect face
                 # flag 2 : remove nose
@@ -212,19 +213,6 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
             dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
-    elif model_name in ["RhythmNet"]:
-        for index, data_path in enumerate(return_dict.keys()[:train]):
-            dset = train_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            # dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        train_file.close()
-
-        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
-        for index, data_path in enumerate(return_dict.keys()[train:]):
-            dset = test_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            # dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        test_file.close()
 
 
 def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
@@ -255,12 +243,8 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
             path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)
-    elif model_name == "RhythmNet":
-        rst, preprocessed_video = RhythmNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
-                                                             fixed_position, time_length)
-
     # rst,bvp,sliding,frames,ptt
-    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "RhythmNet"]:  # can't detect face
+    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM"]:  # can't detect face
         if not rst:
             return
 
@@ -288,16 +272,3 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
                                               'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
         # 'preprocessed_graph': saved_graph}
-
-if __name__ == '__main__':
-    preprocessing(save_root_path = "/home/najy/dy_dataset/",
-                  model_name = "RhythmNet",
-                  data_root_path = "/",
-                  dataset_name = "VIPL_HR",
-                  train_ratio = 0.8,
-                  face_detect_algorithm = 1,
-                  divide_flag = True,
-                  fixed_position = True,
-                  time_length= 256,
-                  img_size = 32,
-                  log_flag = True)

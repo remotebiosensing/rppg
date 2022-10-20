@@ -1,0 +1,46 @@
+{
+  "wandb": {
+    "config": {
+      "project": "VBPNet",
+      "entity": "paperchae",
+      "learning_rate": 0.01,
+      "weight_decay": 0.005,
+      "epochs": 200,
+      "batch_size": 64
+    }
+  },
+  "parameters": {
+    "models": ["VBPNet", "Unet"],
+    "root_path": "/home/paperc/PycharmProjects/dataset/",
+    "save_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
+    "model_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
+    "dataset_path": {
+      "mimic": ["mimic-database-1.0.0/", "BPNet_mimic/"],
+      "uci": ["uci-database/", "BPNet_uci/"],
+      "uci_unet": ["uci-database/", "Unet_uci/"]
+    },
+    "in_channels": {
+      "zeroth": [1, "P"],
+      "first": [2, "P+V"],
+      "second": [3, "P+V+A"]
+    },
+    "out_channels": 16,
+    "chunk_size": 750,
+    "sampling_rate": {
+      "base": 125,
+      "30": 30,
+      "60": 60,
+      "120": 120
+    },
+    "train_ratio": 0.7,
+    "validation_ratio": 0.9
+  },
+  "hyper_parameters": {
+    "learning_rate": 0.001,
+    "weight_decay": 0.0005,
+    "gamma": 0.99,
+    "epochs": 200,
+    "batch_size": 4096,
+    "kernel_size": 3
+  }
+}

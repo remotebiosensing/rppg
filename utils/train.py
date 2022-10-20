@@ -23,7 +23,8 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step:str = "Train 
 
             tepoch.set_postfix(loss=running_loss / tepoch.__len__())
         if wandb_flag:
-            wandb.log({step + "_loss": running_loss / tepoch.__len__()})
+            wandb.log({step + "_loss": running_loss / tepoch.__len__()},
+                      step=epoch)
 
 
 def test_fn(epoch, model, criterion, dataloaders, step:str = "Test" , wandb_flag:bool = True, save_img:bool = True):
@@ -52,7 +53,8 @@ def test_fn(epoch, model, criterion, dataloaders, step:str = "Test" , wandb_flag
 
                 tepoch.set_postfix(loss=running_loss / tepoch.__len__())
             if wandb_flag:
-                wandb.log({step + "_loss": running_loss / tepoch.__len__()})
+                wandb.log({step + "_loss": running_loss / tepoch.__len__()},
+                          step=epoch)
             if wandb_flag and save_img:
                 plt.clf()
                 plot = plot_graph(0, 300, target_array, inference_array, "original")

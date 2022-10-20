@@ -50,6 +50,8 @@ class TEST2(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
+        self.conv = nn.Conv2d(in_channels=1,out_channels=32,kernel_size=1)
+
     def forward(self,x):
         length = 32
 
@@ -127,7 +129,8 @@ class TEST2(nn.Module):
 
         m13 = rearrange(m11, 'b c l w h -> b c l (w h)')                    #12
 
-        o1 = self.max_vit(m13)                                             #13
+        o1 = self.conv(m13)
+        # o1 = self.max_vit(m13)                                             #13
         o2 = torch.squeeze(o1)                                            #14
         o3 = torch.mean(o2, dim=-1)                                       #15
         out_att = self.be_conv1d(o3)
@@ -135,7 +138,7 @@ class TEST2(nn.Module):
         o5 = self.out_conv1d(o4)                                          #17
         out = torch.squeeze(o5)
 
-        return out,m8,b8,p8
+        return out#,m8,b8,p8
             # ,[m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,m13],\
             #    [p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10],[b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10],\
             #    [o1,o2,o3,o4,o5]
