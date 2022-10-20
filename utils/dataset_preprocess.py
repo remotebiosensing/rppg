@@ -26,28 +26,15 @@ def dataset_split(dataset, ratio):
         return random_split(dataset, [train_len, test_len])
 
 
-def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
-                  model_name: str = "DeepPhys",
-                  data_root_path: str = "/media/hdd1/",
-                  dataset_name: str = "UBFC",
-                  train_ratio: float = 0.8,
-                  face_detect_algorithm: int = 1,
-                  divide_flag: bool = True,
-                  fixed_position: bool = True,
-                  time_length: int = 32,
-                  img_size:int = 32,
-                  log_flag: bool = True):
+def preprocessing(params, model_params, preprossessing_params, log_flag):
     """
-    :param save_root_path: save file destination path
-    :param model_name: select preprocessing method
-    :param data_root_path: data set root path
-    :param dataset_name: data set name(ex. UBFC, COFACE)
-    :param train_ratio: data split [ train ratio : 1 - train ratio]
-    :param face_detect_algorithm: select face_Detect algorithm
-    :param divide_flag : True : divide by number, False : divide by subject
-    :param fixed_position: True : fixed position, False : face tracking
-    :return:
     """
+
+    save_root_path = params["save_root_path"]
+    model_name = model_params["name"]
+    data_root_path = params["data_root_path"]
+    dataset_name = preprossessing_params["dataset_name"]
+    train_ratio = params["train_ratio"]
 
     if log_flag:
         print("=========== preprocessing() in " + os.path.basename(__file__))
@@ -116,7 +103,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         for index, data_path in enumerate(data_list):
             proc = multiprocessing.Process(target=preprocess_Dataset,
                                            args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                 face_detect_algorithm, divide_flag, fixed_position, time_length, model_name, img_size, return_dict))
+                                                 model_name, preprossessing_params, return_dict))
+
             process.append(proc)
             proc.start()
 
@@ -131,8 +119,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                 proc = multiprocessing.Process(target=preprocess_Dataset,
                                                args=(
                                                    dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                   face_detect_algorithm,
-                                                   model_name, return_dict))
+                                                   model_name, preprossessing_params, return_dict))
+
                 # flag 0 : pass
                 # flag 1 : detect face
                 # flag 2 : remove nose
@@ -215,8 +203,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         test_file.close()
 
 
-def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
-                       time_length, model_name, img_size, return_dict):
+def preprocess_Dataset(path, vid_name, ground_truth_name, model_name, preprossessing_params, return_dict):
     """
     :param path: dataset path
     :param flag: face detect flag
@@ -224,6 +211,13 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     :param return_dict: : preprocessed image, label
 
     """
+    face_detect_algorithm = preprossessing_params["face_detect_algorithm"]
+    divide_flag = preprossessing_params["divide_flag"]
+    fixed_position = preprossessing_params["face_detect_position"]
+    time_length = preprossessing_params["time_length"]
+    img_size = preprossessing_params["image_size"]
+    # face_detect_algorithm, divide_flag, fixed_position, time_length, img_size
+
 
     # Video Based
     if model_name == "DeepPhys":
@@ -239,7 +233,8 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         ppg, sbp, dbp, hr = PPNet_preprocess_Mat(path)
     elif model_name == "GCN":
         rst, preprocessed_video, sliding_window_stride = GCN_preprocess_Video(path + vid_name, face_detect_algorithm,
-                                                                              divide_flag, fixed_position, time_length, img_size)
+                                                                              divide_flag, fixed_position, time_length,
+                                                                              img_size)
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
             path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)

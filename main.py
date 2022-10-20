@@ -39,7 +39,6 @@ random.seed(random_seed)
 if K_Fold_flag:
     kfold = KFold(n_splits=5, shuffle=True)
 
-
 now = datetime.datetime.now()
 os.environ["CUDA_VISIBLE_DEVICES"] = "9"
 
@@ -50,7 +49,7 @@ with open('params.json') as f:
     __MODEL_SUMMARY__ = jsonObject.get("__MODEL_SUMMARY__")
     options = jsonObject.get("options")
     params = jsonObject.get("params")
-    preprocessing_prams = jsonObject.get("preprocessing_params")
+    preprocessing_params = jsonObject.get("preprocessing_params")
     hyper_params = jsonObject.get("hyper_params")
     model_params = jsonObject.get("model_params")
     wandb_params = jsonObject.get("wandb")
@@ -76,16 +75,8 @@ if __PREPROCESSING__:
     if __TIME__:
         start_time = time.time()
 
-    preprocessing(save_root_path=params["save_root_path"],
-                  model_name=model_params["name"],
-                  data_root_path=params["data_root_path"],
-                  dataset_name=preprocessing_prams["dataset_name"],
-                  train_ratio=params["train_ratio"],
-                  face_detect_algorithm=preprocessing_prams["face_detect_algorithm"],
-                  divide_flag=preprocessing_prams["divide_flag"],
-                  fixed_position=preprocessing_prams["fixed_position"],
-                  time_length=preprocessing_prams["time_length"],
-                  img_size=preprocessing_prams["image_size"],
+    preprocessing(parmas=params,
+                  preprocessing_prams=preprocessing_params,
                   log_flag=log_flag)
 
     # save_root_path: str = "/media/hdd1/dy_dataset/",
@@ -97,7 +88,6 @@ if __PREPROCESSING__:
     # divide_flag: bool = True,
     # fixed_position: bool = True,
     # log_flag: bool = True):
-
 
     if __TIME__:
         log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
@@ -196,14 +186,15 @@ min_test_loss = 100.0
 
 
 for epoch in range(hyper_params["epochs"]):
-    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train",wandb_flag)
+    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", wandb_flag)
     if data_loaders.__len__() == 3:
-        val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
+        val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag)
     if min_val_loss > val_loss:
         min_val_loss = val_loss
-        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag )
-        if min_test_loss >running_loss:
+        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag)
+        if min_test_loss > running_loss:
             min_test_loss = running_loss
-            torch.save(model.state_dict(),params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"])
+            torch.save(model.state_dict(),
+                       params["model_root_path"] + preprocessing_prams["dataset_name"] + "_" + model_params[
+                           "name"] + "_" + hyper_params["loss_fn"])
     # if epoch % 10 == 0:
-

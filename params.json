@@ -1,8 +1,8 @@
 {
     "__TIME__" : 0,
-    "__PREPROCESSING__" : 1,
+    "__PREPROCESSING__" : 0,
     "preprocessing_params": {
-        "dataset_name": "V4V",
+        "dataset_name": "UBFC",
         "dataset_comment" :
                 [
                     "V4V",
@@ -10,6 +10,13 @@
                     "UBFC",
                     "cuff_less_blood_pressure",
                     "VIPL_HR"
+                ],
+        "face_detect_position_selection_option" : 0,
+        "face_detect_position_selection_comment:":
+                [
+                    "0: position with first detected face",
+                    "1: position with largest detected face",
+                    "2: position with face tracking"
                 ],
         "face_detect_algorithm" : 1,
         "face_detect_algorithm_comment" :
@@ -22,12 +29,6 @@
                 [
                     "0: divide by subject",
                     "1: divide by number"
-                ],
-        "fixed_position": 1,
-        "fixed_position_comment":
-                [
-                    "0: face Tracking",
-                    "1: fixed Position"
                 ],
         "time_length": 32,
         "image_size": 128
