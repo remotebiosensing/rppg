@@ -17,7 +17,7 @@ class RhythmNet(nn.Module):
 
         # resnet o/p -> bs x 1000
         # self.resnet18 = resnet18(pretrained=False)
-        resnet = models.resnet18(pretrained=False)
+        resnet = models.resnet18(pretrained=False) #
         modules = list(resnet.children())[:-1]
 
         self.resnet18 = nn.Sequential(*modules)
@@ -29,7 +29,7 @@ class RhythmNet(nn.Module):
         self.rnn = nn.GRU(input_size=1000, hidden_size=1000, num_layers=1)
         # self.fc = nn.Linear(config.GRU_TEMPORAL_WINDOW, config.GRU_TEMPORAL_WINDOW)
 
-    def forward(self, st_maps, target):
+    def forward(self, st_maps):
         batched_output_per_clip = []
         gru_input_per_clip = []
         hr_per_clip = []
@@ -68,15 +68,15 @@ class RhythmNet(nn.Module):
         # return output_seq, gru_output.squeeze(0), fc_out
         return regression_output, gru_output_seq.squeeze(0)[:6]
 
-    def name(self):
-        return "RhythmNet"
-
-
-if __name__ == '__main__':
-    # cm = RhythmNet()
-    # img = torch.rand(3, 28, 28)
-    # target = torch.randint(1, 20, (5, 5))
-    # x = cm(img)
-    # print(x)
-    resnet18 = models.resnet18(pretrained=False)
-    print(resnet18)
+#     def name(self):
+#         return "RhythmNet"
+#
+#
+# if __name__ == '__main__':
+#     # cm = RhythmNet()
+#     # img = torch.rand(3, 28, 28)
+#     # target = torch.randint(1, 20, (5, 5))
+#     # x = cm(img)
+#     # print(x)
+#     resnet18 = models.resnet18(pretrained=False)
+#     print(resnet18)
