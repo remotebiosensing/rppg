@@ -9,7 +9,7 @@ from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess
     GCN_preprocess_Video, Axis_preprocess_Video, RhythmNet_preprocess_Video, ETArPPGNet_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
 from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
-    Axis_preprocess_Label, RhythmNet_preprocess_Label
+    Axis_preprocess_Label, RhythmNet_preprocess_Label, ETArPPGNet_preprocess_Label
 
 
 def dataset_split(dataset, ratio):
@@ -116,7 +116,8 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         for index, data_path in enumerate(data_list):
             proc = multiprocessing.Process(target=preprocess_Dataset,
                                            args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                 face_detect_algorithm, divide_flag, fixed_position, time_length, model_name, img_size, return_dict))
+                                                 face_detect_algorithm, divide_flag, fixed_position, time_length,
+                                                 model_name, img_size, return_dict))
             process.append(proc)
             proc.start()
 
@@ -124,15 +125,13 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             proc.join()
     else:
         loop = len(data_list) // 32
-        loop = 5
+        loop = 10
 
         for i in range(loop):
-            for index, data_path in enumerate(data_list[i * 32:(i + 1) * 32]):
+            for index, data_path in enumerate(data_list[i * 5:(i + 1) * 5]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
-                                               args=(
-                                                   dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                   face_detect_algorithm,
-                                                   model_name, return_dict))
+                                               args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
+                                                     face_detect_algorithm, model_name, return_dict))
                 # flag 0 : pass
                 # flag 1 : detect face
                 # flag 2 : remove nose
@@ -239,7 +238,8 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         ppg, sbp, dbp, hr = PPNet_preprocess_Mat(path)
     elif model_name == "GCN":
         rst, preprocessed_video, sliding_window_stride = GCN_preprocess_Video(path + vid_name, face_detect_algorithm,
-                                                                              divide_flag, fixed_position, time_length, img_size)
+                                                                              divide_flag, fixed_position, time_length,
+                                                                              img_size)
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
             path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)
@@ -286,3 +286,17 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_label': preprocessed_label}
         # 'preprocessed_graph': saved_graph}
+
+
+if __name__ == "__main__":
+    preprocessing(save_root_path="/home/najy/dy/dataset",
+                  model_name="ETArPPGNet",
+                  data_root_path="/",
+                  dataset_name="UBFC",
+                  train_ratio=0.8,
+                  face_detect_algorithm=3,
+                  divide_flag=True,
+                  fixed_position=True,
+                  time_length=10,
+                  img_size=224,
+                  log_flag=True)
