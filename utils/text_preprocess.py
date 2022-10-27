@@ -350,6 +350,7 @@ def RhythmNet_preprocess_Label(path, time_length=300):
 
 
 def ETArPPGNet_preprocess_Label(path, time_length):
+    time_length *= 30
     f = open(path, 'r')
     f_read = f.read().split('\n')
     label_hr = ' '.join(f_read[1].split()).split()

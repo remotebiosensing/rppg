@@ -11,6 +11,7 @@ from nets.models.PhysNet import PhysNet_2DCNN_LSTM
 from nets.models.Seq_GCN import Seq_GCN
 from nets.models.TEST import TEST,TEST2
 from nets.models.RhythmNet import RhythmNet
+from nets.models.ETArPPGNet import ETArPPGNet
 import os
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -25,7 +26,7 @@ def get_model(model_name: str = 'DeepPhys', log_flag:bool = True):
     :return: model
     """
     if log_flag:
-        print("========= set model get_model() in"+ os.path.basename(__file__))
+        print("========= set model get_model() in "+ os.path.basename(__file__))
 
     if model_name == "DeepPhys":
         return DeepPhys()
@@ -43,6 +44,8 @@ def get_model(model_name: str = 'DeepPhys', log_flag:bool = True):
         return AxisNet(),PhysiologicalGenerator()
     elif model_name == "RhythmNet":
         return RhythmNet()
+    elif model_name == "ETArPPGNet":
+        return ETArPPGNet()
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
