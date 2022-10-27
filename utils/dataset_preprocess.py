@@ -124,14 +124,16 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         for proc in process:
             proc.join()
     else:
-        loop = len(data_list) // 32
-        loop = 10
+        # loop = len(data_list) // 32
+        loop = 2
 
         for i in range(loop):
             for index, data_path in enumerate(data_list[i * 5:(i + 1) * 5]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
-                                               args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                     face_detect_algorithm, model_name, return_dict))
+                                               args=(
+                                                   dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
+                                                   face_detect_algorithm, divide_flag, fixed_position,
+                                                   time_length, model_name, img_size, return_dict))
                 # flag 0 : pass
                 # flag 1 : detect face
                 # flag 2 : remove nose
@@ -251,7 +253,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
                                                               fixed_position, time_length, img_size)
 
     # rst,bvp,sliding,frames,ptt
-    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "RhythmNet"]:  # can't detect face
+    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "RhythmNet", "ETArPPGNet"]:  # can't detect face
         if not rst:
             return
 
@@ -275,21 +277,18 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
                                               'preprocessed_hr': preprocessed_hr}
     elif model_name in ["PPNet"]:
         return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
-    elif model_name in ["GCN"]:
+    elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_label': preprocessed_label}
     elif model_name in ["AxisNet"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
-    elif model_name in ["RhythmNet"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
-                                              'preprocessed_label': preprocessed_label}
         # 'preprocessed_graph': saved_graph}
 
 
 if __name__ == "__main__":
-    preprocessing(save_root_path="/home/najy/dy/dataset",
+    preprocessing(save_root_path="/home/najy/dy/dataset/",
                   model_name="ETArPPGNet",
                   data_root_path="/",
                   dataset_name="UBFC",

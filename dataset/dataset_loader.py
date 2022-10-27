@@ -10,6 +10,7 @@ from dataset.GCNDataset import GCNDataset
 from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
 from dataset.RhythmNetDataset import RhythmNetDataset
+from dataset.ETArPPGNetDataset import ETArPPGNetDataset
 
 
 def split_data_loader(datasets, batch_size, train_shuffle, test_shuffle=False):
@@ -60,8 +61,8 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
     hpy_train_file = h5py.File(train_file, "r")
     hpy_test_file = h5py.File(test_file, "r")
 
-    print("train file size : ", os.path.getsize(train_file)/1024/1024,'MB')
-    print("test file size : ", os.path.getsize(test_file)/1024/1024,'MB')
+    print("train file size : ", os.path.getsize(train_file) / 1024 / 1024, 'MB')
+    print("test file size : ", os.path.getsize(test_file) / 1024 / 1024, 'MB')
 
     if model_name in ["DeepPhys", "MTTS"]:
         appearance_data = []
@@ -84,7 +85,6 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
             if cnt == 5:
                 break
         hpy_test_file.close()
-
 
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
@@ -209,7 +209,29 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
                     break
             hpy_test_file.close()
 
-        dataset = RhythmNetDataset(st_map_data = np.asarray(st_map_data),
-                                   target_data = np.asarray(target_data))
+        dataset = RhythmNetDataset(st_map_data=np.asarray(st_map_data),
+                                   target_data=np.asarray(target_data))
+
+    elif model_name in ["ETArPPGNet"]:
+        video_data = []
+        label_data = []
+        if option == "train":
+            for key in hpy_train_file.keys():
+                video_data.extend(hpy_train_file[key]['preprocessed_video'])
+                label_data.extend(hpy_train_file[key]['preprocessed_label'])
+
+            hpy_train_file.close()
+        elif option == "test":
+            for key in hpy_test_file.keys():
+                cnt += 1
+                if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
+                    video_data.extend(hpy_test_file[key]['preprocessed_video'])
+                    label_data.extend(hpy_test_file[key]['preprocessed_label'])
+                if cnt == 5:
+                    break
+            hpy_test_file.close()
+
+        dataset = ETArPPGNetDataset(video_data=np.asarray(video_data),
+                                    label_data=np.asarray(label_data))
 
     return dataset

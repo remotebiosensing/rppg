@@ -2,7 +2,7 @@
     "__TIME__" : 0,
     "__PREPROCESSING__" : 0,
     "preprocessing_params": {
-        "dataset_name": "V4V",
+        "dataset_name": "UBFC",
         "dataset_comment" :
                 [
                     "V4V",
@@ -11,7 +11,7 @@
                     "cuff_less_blood_pressure",
                     "VIPL_HR"
                 ],
-        "face_detect_algorithm" : 1,
+        "face_detect_algorithm" : 3,
         "face_detect_algorithm_comment" :
                 [
                     "1: face_recognition_algorithm",
@@ -29,8 +29,8 @@
                     "0: face Tracking",
                     "1: fixed Position"
                 ],
-        "time_length": 300,
-        "image_size": 32
+        "time_length": 10,
+        "image_size": 224
     },
     "__MODEL_SUMMARY__" : 0,
     "options":{
@@ -60,7 +60,7 @@
     },
     "hyper_params":
     {
-        "loss_fn": "RhythmNetLoss",
+        "loss_fn": "neg_pearson",
         "loss_fn_comment":
                [
                    "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
@@ -92,7 +92,7 @@
     },
     "model_params":
     {
-        "name": "RhythmNet",
+        "name": "ETArPPGNet",
         "name_comment":
                 [
                     "DeepPhys",
@@ -102,7 +102,8 @@
                     "RTNet",
                     "GCN",
                     "AxisNet",
-                    "RhythmNet"
+                    "RhythmNet",
+                    "ETArPPGNet"
                 ]
     },
     "wandb":
