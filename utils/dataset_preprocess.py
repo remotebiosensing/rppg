@@ -128,7 +128,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         loop = 2
 
         for i in range(loop):
-            for index, data_path in enumerate(data_list[i * 5:(i + 1) * 5]):
+            for index, data_path in enumerate(data_list[i * 3:(i + 1) * 3]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
                                                args=(
                                                    dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
@@ -285,17 +285,3 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
                                               'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
         # 'preprocessed_graph': saved_graph}
-
-
-if __name__ == "__main__":
-    preprocessing(save_root_path="/home/najy/dy/dataset/",
-                  model_name="ETArPPGNet",
-                  data_root_path="/",
-                  dataset_name="UBFC",
-                  train_ratio=0.8,
-                  face_detect_algorithm=3,
-                  divide_flag=True,
-                  fixed_position=True,
-                  time_length=10,
-                  img_size=224,
-                  log_flag=True)

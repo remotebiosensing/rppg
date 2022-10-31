@@ -356,7 +356,7 @@ def ETArPPGNet_preprocess_Label(path, time_length):
     label_hr = ' '.join(f_read[1].split()).split()
     new_hr = list(map(float, label_hr))
     new_hr = np.array(new_hr).astype('float64')
-    new_hr = new_hr[:(len(new_hr)//time_length)*time_length].reshape(-1, 10)
+    new_hr = new_hr[:(len(new_hr)//time_length)*time_length].reshape(-1, time_length)
     f.close()
     return new_hr
 

@@ -201,13 +201,13 @@ min_test_loss = 100.0
 
 
 for epoch in range(hyper_params["epochs"]):
-    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train",wandb_flag)
+    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", wandb_flag)
     if data_loaders.__len__() == 3:
         val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
     if min_val_loss > val_loss:
         min_val_loss = val_loss
         running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag )
-        if min_test_loss >running_loss:
+        if min_test_loss > running_loss:
             min_test_loss = running_loss
             torch.save(model.state_dict(),params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"])
     # if epoch % 10 == 0:

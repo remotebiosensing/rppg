@@ -7,9 +7,9 @@ from nets.blocks.ETArPPGBlocks import ETASubNetBlock
 
 
 # define ETA-rPPGNet SubNet
-class ETArPPGNetSubNet(nn.Module):
+class ETArPPGSubNet(nn.Module):
     def __init__(self):
-        super(ETArPPGNetSubNet, self).__init__()
+        super(ETArPPGSubNet, self).__init__()
         self.ETASubNetBlock = ETASubNetBlock()
 
     def forward(self, x):
@@ -25,9 +25,3 @@ class ETArPPGNetSubNet(nn.Module):
             featuremap[:, :, i, :, :] = self.ETASubNetBlock(x[:, i]).view(-1, C, H // 2, W // 2)
 
         return featuremap
-
-
-if __name__ == '__main__':
-    x = torch.randn(2, 8, 3, 2, 8, 8)
-    net = ETArPPGNetSubNet()
-    y = net(x)

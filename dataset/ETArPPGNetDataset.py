@@ -14,7 +14,7 @@ class ETArPPGNetDataset(Dataset):
         if torch.is_tensor(index):
             index = index.tolist()
 
-        video_data = torch.tensor(np.transpose(self.video_data[index], (4, 0, 1, 2, 3)), dtype=torch.float32)
+        video_data = torch.tensor(np.transpose(self.video_data[index], (0, 4, 1, 2, 3)), dtype=torch.float32)
         label_data = torch.tensor(self.label[index], dtype=torch.float32)
 
         if torch.cuda.is_available():
