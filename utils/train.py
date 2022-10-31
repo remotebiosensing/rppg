@@ -4,16 +4,17 @@ import wandb
 import matplotlib.pyplot as plt
 from utils.funcs import plot_graph
 
-def train_fn(epoch, model, optimizer, criterion, dataloaders, step:str = "Train " , wandb_flag:bool = True):
-    #TODO : Implement multiple loss
-    with tqdm(dataloaders,desc= step, total=len(dataloaders)) as tepoch:
+
+def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = True):
+    # TODO : Implement multiple loss
+    with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.train()
         running_loss = 0.0
         for inputs, target in tepoch:
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
-            outputs, gru_outputs = model(inputs)
-            loss = criterion(outputs, gru_outputs, target)
+            outputs = model(inputs)
+            loss = criterion(outputs, target)
 
             if ~torch.isfinite(loss):
                 continue
@@ -27,11 +28,10 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step:str = "Train 
                       step=epoch)
 
 
-def test_fn(epoch, model, criterion, dataloaders, step:str = "Test" , wandb_flag:bool = True, save_img:bool = True):
-
-    #TODO : Implement multiple loss
-    #TODO : Implement save model function
-    with tqdm(dataloaders,desc= step, total=len(dataloaders)) as tepoch:
+def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag: bool = True, save_img: bool = True):
+    # TODO : Implement multiple loss
+    # TODO : Implement save model function
+    with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.eval()
         running_loss = 0.0
 
@@ -41,8 +41,8 @@ def test_fn(epoch, model, criterion, dataloaders, step:str = "Test" , wandb_flag
         with torch.no_grad():
             for inputs, target in tepoch:
                 tepoch.set_description(step + "%d" % epoch)
-                outputs, gru_outputs = model(inputs)
-                loss = criterion(outputs, gru_outputs, target)
+                outputs = model(inputs)
+                loss = criterion(outputs, target)
 
                 if ~torch.isfinite(loss):
                     continue

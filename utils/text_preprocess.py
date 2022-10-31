@@ -347,3 +347,16 @@ def RhythmNet_preprocess_Label(path, time_length=300):
     for i in range((len(hr_list))//time_length):
         hr_mean[i] = np.mean(hr_list[i*time_length:(i+1)*time_length])
     return hr_mean
+
+
+def ETArPPGNet_preprocess_Label(path, time_length):
+    time_length *= 30
+    f = open(path, 'r')
+    f_read = f.read().split('\n')
+    label_hr = ' '.join(f_read[1].split()).split()
+    new_hr = list(map(float, label_hr))
+    new_hr = np.array(new_hr).astype('float64')
+    new_hr = new_hr[:(len(new_hr)//time_length)*time_length].reshape(-1, time_length)
+    f.close()
+    return new_hr
+

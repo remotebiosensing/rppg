@@ -217,8 +217,74 @@ def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_positi
     # bvp,sliding,frames,ptt
     return True, maps, sliding_window_stride, num_frames, stacked_ptts
 
+
 def RhythmNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
     return RhythmNet_preprocessor(path, time_length)
+
+
+def ETArPPGNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length=10, img_size=224):
+    Blocks = 30
+    crop_length = time_length * Blocks
+    """
+        :param path: video data path
+        :param face_detect_algorithm:
+            0 : no crop
+            1 : manually crop
+            2 : face_recognition crop
+            3 : face_recognition + manually crop
+        :return: face existence, cropped face
+        """
+    cap = cv2.VideoCapture(path)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    raw_video = np.empty((length, img_size, img_size, 3))
+    j = 0
+
+    with tqdm(total=length, position=0, leave=True, desc=path) as pbar:
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if frame is None:
+                break
+
+            if face_detect_algorithm == 0:
+                crop_frame = frame
+            elif face_detect_algorithm == 1:
+                crop_frame = frame[:, int(width / 4):int(width / 4) * 3, :]
+            elif face_detect_algorithm == 2 or face_detect_algorithm == 3:
+                rst, crop_frame = faceDetection(frame)
+                if not rst:
+                    if face_detect_algorithm == 3:  # can't detect face
+                        crop_frame = frame[:, int(width / 4):int(width / 4) * 3, :]
+                    else:
+                        print('No Face exists')
+                        return False, None
+            else:
+                print('Incorrect Mode Number')
+                return False, None
+
+            crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
+            crop_frame = cv2.cvtColor(crop_frame.astype('float32'), cv2.COLOR_BGR2RGB) / 255.
+            # uint8  : 0   - 255
+            # float  : 0.0 - 1
+            crop_frame[crop_frame > 1] = 1
+            crop_frame[crop_frame < 1e-6] = 1e-6
+
+            raw_video[j] = crop_frame
+            j += 1
+            pbar.update(1)
+        cap.release()
+
+    split_raw_video = np.zeros(((length // crop_length), Blocks, time_length, img_size, img_size, 3))
+    index = 0
+    for i in range(length // crop_length):
+        for x in range(Blocks):
+            split_raw_video[i][x] = raw_video[index:index + time_length]
+            index += time_length
+
+    return True, split_raw_video
+
 
 def faceLandmarks(frame):
     '''
@@ -1036,7 +1102,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
 
             frame_masked = frame_cropped
         else:
-            # The problemis that this doesn't get cropped :/
+            # The problems that this doesn't get cropped :/
             # (x, y, w, d) = (308, 189, 215, 215)
             # frame_masked = frame[y:(y + d), x:(x + w)]
 
@@ -1107,3 +1173,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     stacked_maps = stacked_maps.reshape((idx, h, w, c))
     stacked_maps = stacked_maps.astype(np.uint8)
     return True, stacked_maps
+
+
+
+
