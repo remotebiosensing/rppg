@@ -1,4 +1,4 @@
-# Implement Deep Learning based Rppg Model using pytorch
+# Implement Deep Learning based remote-ppg(Rppg) Model using pytorch
 
 ### model list
 
