@@ -335,3 +335,17 @@ def Axis_preprocess_Label(path, sliding_window_stride, num_frames, clip_size=256
     f.close()
 
     return split_raw_label
+
+def Vitamon_preprocess_Label(path, time_length):
+    f = open(path, 'r')
+    f_read = f.read().split('\n')
+    f_read = f_read[1:-1]
+    new_hr = list(map(float, f_read))
+    new_hr = np.array(new_hr).astype('float64')
+    path = path[:-8] + 'video.avi'
+    cap = cv2.VideoCapture(path)
+    length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    new_hr = scipy.signal.resample(new_hr, length)
+    new_hr = new_hr[:(len(new_hr)//time_length)*time_length].reshape(-1, time_length)
+    f.close()
+    return new_hr

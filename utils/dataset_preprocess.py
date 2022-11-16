@@ -143,7 +143,9 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
                 proc.join()
 
     train = int(len(return_dict.keys()) * train_ratio)  # split dataset
+    valid = int(len(return_dict.keys()) * 0.8) #split dataset
     train_file_path = save_root_path + model_name + "_" + dataset_name + "_train.hdf5"
+    valid_file_path = save_root_path + model_name + "_" + dataset_name + "_valid.hdf5"
     test_file_path = save_root_path + model_name + "_" + dataset_name + "_test.hdf5"
     dt = h5py.special_dtype(vlen=np.float32)
     train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
@@ -214,6 +216,27 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
 
+    elif model_name in ["Vitamon"]:
+        train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[:train]):
+            dset = train_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        train_file.close()
+
+        valid_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_valid.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[train:valid]):
+            dset = valid_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        valid_file.close()
+
+        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[valid:]):
+            dset = test_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        test_file.close()
 
 def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
                        time_length, model_name, img_size, return_dict):
@@ -243,8 +266,12 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
             path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)
+    elif model_name == "Vitamon":
+        rst, preprocessed_video = Vitamon_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
+                                                           fixed_position, time_length, img_size)
+
     # rst,bvp,sliding,frames,ptt
-    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM"]:  # can't detect face
+    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "Vitamon"]:  # can't detect face
         if not rst:
             return
 
@@ -256,6 +283,9 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         preprocessed_label = GCN_preprocess_Label(path + ground_truth_name, sliding_window_stride)
     elif model_name == "AxisNet":
         preprocessed_label = Axis_preprocess_Label(path + ground_truth_name, sliding_window_stride, num_frames)
+    elif model_name in ["Vitamon"]:
+        preprocessed_label = Vitamon_preprocess_Label(path + ground_truth_name, time_length)
+
 
     # ppg, sbp, dbp, hr
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
@@ -271,6 +301,39 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
+    elif model_name in ["Vitamon"]:
+        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,def get_model(model_name: str = 'Vitamon', log_flag:bool = True):
+    """
+    :param model_name: model name
+    :return: model
+    """
+    if log_flag:
+        print("========= set model get_model() in "+ os.path.basename(__file__))
+
+    if model_name == "Vitamon":
+        return Vitamon()
+
+    else:
+        log_warning("use implemented model")
+        raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
+
+                                              'preprocessed_label': preprocessed_label}
+
+        def get_model(model_name: str = 'Vitamon', log_flag: bool = True):
+            """
+            :param model_name: model name
+            :return: model
+            """
+            if log_flag:
+                print("========= set model get_model() in " + os.path.basename(__file__))
+
+            if model_name == "Vitamon":
+                return Vitamon()
+
+            else:
+                log_warning("use implemented model")
+                raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
+v
         # 'preprocessed_graph': saved_graph}
 
 if __name__ == '__main__':
