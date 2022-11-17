@@ -6,10 +6,10 @@ import numpy as np
 from torch.utils.data import random_split
 
 from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
-    GCN_preprocess_Video, Axis_preprocess_Video
+    GCN_preprocess_Video, Axis_preprocess_Video, Vitamon_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
 from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
-    Axis_preprocess_Label
+    Axis_preprocess_Label, Vitamon_preprocess_Label
 
 
 def dataset_split(dataset, ratio):
@@ -216,7 +216,7 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
 
-    elif model_name in ["Vitamon"]:
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
         train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
         for index, data_path in enumerate(return_dict.keys()[:train]):
             dset = train_file.create_group(data_path)
@@ -271,7 +271,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
                                                            fixed_position, time_length, img_size)
 
     # rst,bvp,sliding,frames,ptt
-    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "Vitamon"]:  # can't detect face
+    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "Vitamon","Vitamon_phase2"]:  # can't detect face
         if not rst:
             return
 
@@ -283,7 +283,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         preprocessed_label = GCN_preprocess_Label(path + ground_truth_name, sliding_window_stride)
     elif model_name == "AxisNet":
         preprocessed_label = Axis_preprocess_Label(path + ground_truth_name, sliding_window_stride, num_frames)
-    elif model_name in ["Vitamon"]:
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
         preprocessed_label = Vitamon_preprocess_Label(path + ground_truth_name, time_length)
 
 
@@ -301,7 +301,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
-    elif model_name in ["Vitamon"]:
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,def get_model(model_name: str = 'Vitamon', log_flag:bool = True):
     """
     :param model_name: model name

@@ -9,7 +9,7 @@ from dataset.DeepPhysDataset import DeepPhysDataset
 from dataset.GCNDataset import GCNDataset
 from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
-
+from dataset.VitamonDataset import VitamonDataset
 
 def split_data_loader(datasets, batch_size, train_shuffle, test_shuffle=False):
     if datasets.__len__() == 3:
@@ -192,7 +192,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
                                  ptt_data=np.asarray(ptt_data),
                                  label_data=np.asarray(label_data), )
 
-    elif model_name in ["Vitamon"]:
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
         video_data = []
         label_data = []
         if option == "train":
