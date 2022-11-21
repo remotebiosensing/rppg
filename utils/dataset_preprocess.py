@@ -27,7 +27,7 @@ def dataset_split(dataset, ratio):
 
 
 def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
-                  model_name: str = "DeepPhys",
+                  model_name: str = "Vitamon",
                   data_root_path: str = "/media/hdd1/",
                   dataset_name: str = "UBFC",
                   train_ratio: float = 0.8,
@@ -266,7 +266,7 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
             path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)
-    elif model_name == "Vitamon":
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
         rst, preprocessed_video = Vitamon_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
                                                            fixed_position, time_length, img_size)
 
@@ -301,40 +301,11 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
-    elif model_name in ["Vitamon","Vitamon_phase2"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,def get_model(model_name: str = 'Vitamon', log_flag:bool = True):
-    """
-    :param model_name: model name
-    :return: model
-    """
-    if log_flag:
-        print("========= set model get_model() in "+ os.path.basename(__file__))
 
-    if model_name == "Vitamon":
-        return Vitamon()
-
-    else:
-        log_warning("use implemented model")
-        raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
-
+    elif model_name in ["Vitamon", "Vitamon_phase2"]:
+        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_label': preprocessed_label}
 
-        def get_model(model_name: str = 'Vitamon', log_flag: bool = True):
-            """
-            :param model_name: model name
-            :return: model
-            """
-            if log_flag:
-                print("========= set model get_model() in " + os.path.basename(__file__))
-
-            if model_name == "Vitamon":
-                return Vitamon()
-
-            else:
-                log_warning("use implemented model")
-                raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
-v
-        # 'preprocessed_graph': saved_graph}
 
 if __name__ == '__main__':
     preprocessing(save_root_path="/dy_dataset/",
