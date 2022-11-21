@@ -1,20 +1,6 @@
 import torch
 import torch.nn as nn
 
-class BasicConv2d(nn.Module):
-
-    def __init__(self, input_channels, output_channels, **kwargs):
-        super().__init__()
-        self.conv = nn.Conv2d(input_channels, output_channels, bias=False, **kwargs)
-        self.bn = nn.BatchNorm2d(output_channels)
-        self.relu = nn.ReLU(inplace=True)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        x = self.relu(x)
-
-        return x
 
 class Vitamon_phase2(nn.Module):
     def __init__(self):
