@@ -217,10 +217,8 @@ def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_positi
     # bvp,sliding,frames,ptt
     return True, maps, sliding_window_stride, num_frames, stacked_ptts
 
-
 def RhythmNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
     return RhythmNet_preprocessor(path, time_length)
-
 
 def ETArPPGNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length=10, img_size=224):
     Blocks = 30
@@ -282,6 +280,70 @@ def ETArPPGNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_
         for x in range(Blocks):
             split_raw_video[i][x] = raw_video[index:index + time_length]
             index += time_length
+
+    return True, split_raw_video
+
+def Vitamon_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length=25, img_size=224):
+    """
+        :param path: video data path
+        :param face_detect_algorithm:
+            0 : no crop
+            1 : manually crop
+            2 : face_recognition crop
+            3 : face_recognition + manually crop
+        :return: face existence, cropped face
+        """
+    cap = cv2.VideoCapture(path)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    raw_video = np.empty((length, img_size, img_size))
+    j = 0
+
+    with tqdm(total=length, position=0, leave=True, desc=path) as pbar:
+        while cap.isOpened():
+            ret, frame = cap.read() #다음프레임 불러오기 ret : return frame 있으면 True 없으면 False
+            if frame is None:
+                break
+
+            if face_detect_algorithm == 0:
+                crop_frame = frame
+            elif face_detect_algorithm == 1: #영상의 정중앙만 잘라서 사용
+                crop_frame = frame[:, int(width / 4):int(width / 4) * 3, :]
+            elif face_detect_algorithm == 2 or face_detect_algorithm == 3:  # 2,3 : face_detect_algorithm 사용
+                rst, crop_frame = faceDetection(frame)  #rst : result
+                if not rst:
+                    if face_detect_algorithm == 3:  # can't detect face #2번이면 NONE 반환, 3번이면 영상의 정중앙 반환
+                        crop_frame = frame[:, int(width / 4):int(width / 4) * 3, :]
+                    else:
+                        print('No Face exists')
+                        return False, None
+            else:
+                print('Incorrect Mode Number')
+                return False, None
+
+            crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
+            crop_frame = crop_frame[:, :, 1]
+
+            crop_frame = crop_frame.astype('float32') / 255.
+            # uint8  : 0   - 255
+            # float  : 0.0 - 1
+            crop_frame[crop_frame > 1] = 1 #0~1 사이 값만 존재해야하는데, 1 초과하는 애들이라면 1로 두기
+            crop_frame[crop_frame < 1e-6] = 1e-6 #너무 작은 값들은 1e-6으로 둠
+
+            raw_video[j] = crop_frame
+            j += 1
+            pbar.update(1) #pbar : tqdm의 변수 이름, progress bar
+        cap.release() # 영상을 메모리에 올려놨다가 소환해제-
+
+
+    #전체 영상을 resize 진행 후, 25개씩 자름
+    split_raw_video = np.zeros(((length // time_length), time_length, img_size, img_size))
+    index = 0
+    for i in range(length // time_length):
+        split_raw_video[i] = raw_video[index:index + time_length]
+        index += time_length
 
     return True, split_raw_video
 
@@ -975,7 +1037,7 @@ def preprocess_video(video_path, output_shape, clip_size=256):
     frameRate = cap.get(5)  # frame rate
 
     # Frame dimensions: WxH
-    # frame_dims = (int(cap.get(3)), int(cap.get(4)))
+    frame_dims = (int(cap.get(3)), int(cap.get(4)))
     # Paper mentions a stride of 0.5 seconds = 15 frames
     sliding_window_stride = int(frameRate / 2)
     num_frames = int(cap.get(7))
@@ -1048,7 +1110,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
 
     num_frames = frames.shape[0]
-    # output_shape = (frames.shape[1], frames.shape[2])
+    output_shape = (frames.shape[1], frames.shape[2])
     num_maps = int((num_frames - clip_size) / sliding_window_stride + 1)
     if num_maps < 0:
         # print(num_maps)
@@ -1058,7 +1120,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     # stacked_maps is the all the st maps for a given video (=num_maps) stacked.
     stacked_maps = np.zeros((num_maps, clip_size, 25, 3))
     # processed_maps will contain all the data after processing each frame, but not yet converted into maps
-    # processed_maps = np.zeros((num_frames, 25, 3))
+    processed_maps = np.zeros((num_frames, 25, 3))
     # processed_frames = np.zeros((num_frames, output_shape[0], output_shape[1], 3))
     processed_frames = []
     map_index = 0
@@ -1067,7 +1129,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     min_max_scaler = preprocessing.MinMaxScaler()
     detector = get_haarcascade()
     eye_detector = get_eye_haarcascade()
-    pbar = tqdm(total=num_frames, position=0, leave=True, desc=video_path+' Detecting Faces')
+
     # First we process all the frames and then work with sliding window to save repeated processing for the same frame index
     for idx, frame in enumerate(frames):
         # spatio_temporal_map = np.zeros((fr, 25, 3))
@@ -1081,7 +1143,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
         if len(faces) is not 0:
             (x, y, w, d) = faces[0]
             frame_cropped = frame[y:(y + d), x:(x + w)]
-            # eyes = eye_detector.detectMultiScale(frame_cropped, 1.2, 3)
+            eyes = eye_detector.detectMultiScale(frame_cropped, 1.2, 3)
             # if len(eyes) > 0:
             #     # for having the same radius in both eyes
             #     (eye_x, eye_y, eye_w, eye_h) = eyes[0]
@@ -1102,7 +1164,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
 
             frame_masked = frame_cropped
         else:
-            # The problems that this doesn't get cropped :/
+            # The problemis that this doesn't get cropped :/
             # (x, y, w, d) = (308, 189, 215, 215)
             # frame_masked = frame[y:(y + d), x:(x + w)]
 
@@ -1135,7 +1197,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     #     processed_maps[idx, block_idx, 0] = avg_pixels[0]
     #     processed_maps[idx, block_idx, 1] = avg_pixels[1]
     #     processed_maps[idx, block_idx, 2] = avg_pixels[2]
-    pbar = tqdm(total=num_maps, position=0, leave=True, desc=video_path+' Making STMAPS')
+    pbar = tqdm(total=num_maps, position=0, leave=True, desc=video_path + ' Making STMAPS')
     # At this point we have the processed maps from all the frames in a video and now we do the sliding window part.
     for start_frame_index in range(0, num_frames, sliding_window_stride):
         end_frame_index = start_frame_index + clip_size
@@ -1167,13 +1229,11 @@ def RhythmNet_preprocessor(video_path, clip_size):
         stacked_maps[map_index, :, :, :] = spatio_temporal_map
         map_index += 1
         pbar.update(1)
-    pbar.close()
+        pbar.close()
 
-    (idx, w, h, c) = stacked_maps.shape
-    stacked_maps = stacked_maps.reshape((idx, h, w, c))
-    stacked_maps = stacked_maps.astype(np.uint8)
-    return True, stacked_maps
+        (idx, w, h, c) = stacked_maps.shape
+        stacked_maps = stacked_maps.reshape((idx, h, w, c))
+        stacked_maps = stacked_maps.astype(np.uint8)
+        return True, stacked_maps
 
-
-
-
+    return True, stacked_maps.astype(np.uint8).transpose((1,0,2))
