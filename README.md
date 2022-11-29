@@ -126,6 +126,8 @@ JongEui Chae, forownsake@gmail.com
 This work was supported by the ICT R&D program of
 MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
+This work was supported by the  , [2022, Validation of New Service “Blockchain-enabled federated learning for Decentralized Remote Clinical Trial]
+
 ## reference
 
 1. [ZitongYu/PhysNet](https://github.com/ZitongYu/PhysNet)
