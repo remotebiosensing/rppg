@@ -113,7 +113,6 @@ class Respath(nn.Module):
 
 class MultiResUnet(nn.Module):
     def __init__(self, channels: int, filters: int = 32, nclasses: int = 1) -> None:
-
         """
         Arguments:
         channels - input image channels
@@ -182,8 +181,9 @@ class MultiResUnet(nn.Module):
                                             corresponding_unet_filters=self.filters)
         self.in_filters9 = int(self.filters * self.alpha * 0.5) + int(self.filters * self.alpha * 0.167) + int(
             self.filters * self.alpha * 0.333)
-        self.conv_final = Conv2d_batchnorm(input_features=self.in_filters9, num_of_filters=self.nclasses,
-                                           kernel_size=(1, 1), activation='None')
+        self.conv_final = nn.Conv1d(in_channels=self.in_filters9, out_channels=self.nclasses, kernel_size=1, padding=0)
+        # Conv2d_batchnorm(input_features=self.in_filters9, num_of_filters=self.nclasses, kernel_size=(1, 1),
+        # activation='None')
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_multires1 = self.multiresblock1(x)
@@ -207,8 +207,5 @@ class MultiResUnet(nn.Module):
         x_multires8 = self.multiresblock8(up8)
         up9 = torch.cat([self.upsample9(x_multires8), x_multires1], dim=1)
         x_multires9 = self.multiresblock9(up9)
-        if self.nclasses > 1:
-            conv_final_layer = self.conv_final(x_multires9)
-        else:
-            conv_final_layer = torch.sigmoid(self.conv_final(x_multires9))
+        conv_final_layer = self.conv_final(x_multires9)
         return conv_final_layer
