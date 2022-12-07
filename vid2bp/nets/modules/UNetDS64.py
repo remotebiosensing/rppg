@@ -6,6 +6,7 @@ Check Lists:
 1. concat dim
 """
 
+
 class UNetDS64(nn.Module):
     """
         Deeply supervised U-Net with kernels multiples of 64
@@ -141,6 +142,3 @@ class UNetDS64(nn.Module):
         out = self.out(conv9)
 
         return out, level1, level2, level3, level4
-
-
-
