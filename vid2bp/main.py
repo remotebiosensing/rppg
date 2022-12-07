@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from preprocessing import customdataset
 from nets.modules.bvp2abp import bvp2abp
 from nets.modules.unet import Unet
+from nets.modules.PPG2ABP import UNetDS64, MultiResUnet
 from train import train
 from validation import validation
 from test import test
@@ -133,7 +134,7 @@ def main(model_name, dataset_name, in_channel, cross_val=1):
                 test_ple, test_abp = np.array(test_f['ple']), np.array(test_f['abp'])
                 test_dataset = customdataset.CustomDataset_Unet(x_data=test_ple, y_data=test_abp)
                 test_loader = DataLoader(test_dataset, batch_size=hyper_param["batch_size"], shuffle=True)
-    elif model_name is 'PPG2ABP':
+
     else:
         raise ValueError("** model name is not correct, please check supported model name in parameter.json **")
     '''model train'''
