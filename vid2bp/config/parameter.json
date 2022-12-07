@@ -10,7 +10,7 @@
     }
   },
   "parameters": {
-    "models": ["VBPNet", "Unet"],
+    "models": ["VBPNet", "Unet", "PPG2ABP"],
     "root_path": "/home/paperc/PycharmProjects/dataset/",
     "save_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
     "model_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
