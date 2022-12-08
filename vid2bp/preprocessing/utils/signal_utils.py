@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 import json
 
-with open("/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json") as f:
+with open("/home/najy/PycharmProjects/rppgs/vid2bp/config/parameter.json") as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
     sr = json_data.get("parameters").get("sampling_rate")

@@ -78,11 +78,12 @@ as attributes in a Record or MultiRecord object.
 
 # TODO -> Record.inti_value를 추가로 return 해주는데, 뒤에 함수들 전부 수정
 def read_record(path, sampfrom=0, sampto=None):
+    # channel = ['ABP', 'PLETH']
     channel, flag = find_idx(path)
     if flag == 2:
         record = wfdb.rdrecord(path, channels=channel, sampfrom=sampfrom, sampto=sampto)
-        # wfdb.plot_wfdb(record=record, title='Record from PhysioNet MIMIC Dataset')
-        # display(record.__dict__)
+        wfdb.plot_wfdb(record=record, title='Record from PhysioNet MIMIC Dataset')
+        display(record.__dict__)
         return record.p_signal
     else:
         print('read_recored() -> missing signal')
