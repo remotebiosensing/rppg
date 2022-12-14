@@ -31,7 +31,7 @@ def validation(model_n, model, validation_loader, loss):
 
     if model_n == 'Unet':
         loss_m = loss
-        with tqdm(validation_loader, desc='Validation', total=len(validation_loader), leave=True) as validation_epoch:
+        with tqdm(validation_loader, desc='Validation{}', total=len(validation_loader), leave=True) as validation_epoch:
             idx = 0
             with torch.no_grad():
                 for X_val, Y_val in validation_epoch:
@@ -40,34 +40,42 @@ def validation(model_n, model, validation_loader, loss):
                     cost = loss_m(hypothesis, Y_val)
                     validation_epoch.set_postfix(loss=cost.item())
                     val_cost_sum += cost
-                    validation_avg_cost = val_cost_sum / idx
+                    val_avg_cost = val_cost_sum / idx
 
     elif model_n == 'BPNet':
-        loss_n = loss[0]
-        loss_d = loss[1]
-        loss_s = loss[2]
+        # loss_n = loss[0]
+        # loss_d = loss[1]
+        # loss_s = loss[2]
+        loss_fft = loss[0]
 
         with tqdm(validation_loader, desc='Validation', total=len(validation_loader), leave=True) as validation_epoch:
             idx = 0
             with torch.no_grad():
                 for X_val, Y_val, d, s in validation_epoch:
                     idx += 1
-                    hypothesis = torch.squeeze(model(X_val)[0])
-                    pred_d = torch.squeeze(model(X_val)[1])
-                    pred_s = torch.squeeze(model(X_val)[2])
+                    hypothesis = torch.squeeze(model(X_val))
+                    # pred_d = torch.squeeze(model(X_val)[1])
+                    # pred_s = torch.squeeze(model(X_val)[2])
 
-                    '''Negative Pearson Loss'''
-                    neg_cost = loss_n(hypothesis, Y_val)
-                    '''DBP Loss'''
-                    d_cost = loss_d(pred_d, d)
-                    '''SBP Loss'''
-                    s_cost = loss_s(pred_s, s)
+                    # '''Negative Pearson Loss'''
+                    # neg_cost = loss_n(hypothesis, Y_val)
+                    # '''DBP Loss'''
+                    # d_cost = loss_d(pred_d, d)
+                    # '''SBP Loss'''
+                    # s_cost = loss_s(pred_s, s)
                     ''' Total Loss'''
-                    cost = neg_cost + d_cost + s_cost
-                    val_cost_sum += cost
-                    val_avg_cost = val_cost_sum / idx
-                    validation_epoch.set_postfix(_=val_avg_cost.item(), n=neg_cost.item(), d=d_cost.item(),
-                                                 s=s_cost.item())
+                    # cost = neg_cost + d_cost + s_cost
+                    cost =loss_fft(hypothesis, Y_val)
+
+                    if not np.isnan(cost.__float__()):
+                        val_cost_sum += cost.__float__()
+                        val_avg_cost = val_cost_sum / idx
+                        # validation_epoch.set_postfix(_=val_avg_cost, r=neg_cost.item(), d=d_cost.item(), s=s_cost.item())
+                        validation_epoch.set_postfix(_=val_avg_cost)
+                    else:
+                        print('nan error')
+                        continue
+
 
     return val_avg_cost
 

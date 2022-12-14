@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from vid2bp.nets.modules.sub_modules.Attention_module import Attention_module_1D
+import matplotlib.pyplot as plt
 
 import json
 
@@ -13,48 +15,50 @@ with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.js
 nn.Conv1d expects as 3-dimensional input in the shape of [batch_size, channels, seq_len]
 '''
 
+''' 원래 값의 normalized attention을 return하는 모듈 '''
+''' 왜 normalized attention을 구하냐면, 사람마다 ppg gain이 다르기 때문이다.'''
+
+
 class Trend_module_1D(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, in_channels, out_channels):
         super(Trend_module_1D, self).__init__()
-        self.enconv = torch.nn.Sequential(
-            nn.Conv1d(in_channels=in_channels, out_channels=32,
-                      kernel_size=5, stride=1),
-            nn.BatchNorm1d(32),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=5, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ELU(),
-            nn.Dropout1d(0.5),
-            nn.MaxPool1d(2),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=5, stride=1),
-            nn.BatchNorm1d(32),
-            nn.Conv1d(in_channels=32, out_channels=32,
-                      kernel_size=5, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ELU(),
-            nn.Dropout1d(0.5),
-            nn.MaxPool1d(2)
+        self.attention1 = Attention_module_1D(out_channels)
+        self.attention2 = Attention_module_1D(out_channels * 2)
+        # self.freq = frequency_block()
+
+        self.enconv1 = nn.Sequential(  # [batch, in_channels, 360] -> [batch, out_channels, 360]
+            nn.Conv1d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            torch.nn.BatchNorm1d(out_channels)
         )
-        self.deconv = torch.nn.Sequential(
-            nn.ConvTranspose1d(in_channels=32, out_channels=32,
-                               kernel_size=5, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ConvTranspose1d(in_channels=32, out_channels=32,
-                               kernel_size=5, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ELU(),
-            nn.ConvTranspose1d(in_channels=32, out_channels=32,
-                               kernel_size=5, stride=1),
-            nn.BatchNorm1d(32),
-            nn.ConvTranspose1d(in_channels=32, out_channels=1,
-                               kernel_size=5, stride=1),
-            nn.BatchNorm1d(1),
+        self.enconv2 = nn.Sequential(  # [batch, out_channels, 360] -> [batch, out_channels, 360]
+            nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            torch.nn.BatchNorm1d(out_channels),
             nn.ELU()
         )
+        self.enconv3 = nn.Sequential(  # [batch, out_channel, 180] -> [batch, out_channel*2, 180]
+            nn.Conv1d(out_channels, out_channels * 2, kernel_size=3, stride=1, padding=1),
+            torch.nn.BatchNorm1d(out_channels * 2)
+        )
+        self.enconv4 = nn.Sequential(  # [batch, out_channels*2, 180] -> [batch, out_channels*2, 180]
+            nn.Conv1d(out_channels * 2, out_channels * 2, kernel_size=3, stride=1, padding=1),
+            torch.nn.BatchNorm1d(out_channels * 2),
+            nn.ELU()
+        )
+        self.dropout = nn.Dropout1d(p=0.5)
+        self.max_pool = nn.MaxPool1d(2)
+        self.elu = nn.ELU()
 
-    def forward(self, ple_input):
-        at1 = self.enconv(ple_input)
-        at2 = self.deconv(at1)
+    def forward(self, ple):  # [batch, 1, 360]
+        # f1 = self.enconv1(self.freq(ple).unsqueeze(1))
+        t1 = self.enconv1(ple)  # [batch, 16, 360]
+        t2 = self.enconv2(t1)  # [batch, 16, 360]
+        # at1 = self.attention1(t2)  # [batch, 1, 360]
 
-        return at1, at2
+        p1 = self.max_pool(self.dropout(t2))  # [batch, 1, 180]
+        # f2 = self.enconv3(self.freq(torch.t3))
+        t3 = self.enconv3(p1)  # [batch, 32, 180]
+        t4 = self.enconv4(t3)  # [batch, 32, 180]
+        # at2 = self.attention2(t4)  # [batch, 1, 180]
+        p2 = self.max_pool(self.dropout(t4))  # [batch, 32, 90]
+        # test = torch.mean(t4, dim=1) # [batch, 180]
+        return p2  # [batch, 32, 90]

@@ -100,7 +100,7 @@ def data_aggregator(model_name, read_path, chunk_size, samp_rate):
     print('Number of selected ICU patient :', len(available_list))
     used_file_cnt = 0
     # TODO ''' use total data after solving the problem of get_diastolic() '''
-    for a in available_list[:2]:
+    for a in available_list[:1]:
         p = read_path + a
         for (path, dirs, files) in os.walk(p):
             for file in tqdm(files):
@@ -110,6 +110,7 @@ def data_aggregator(model_name, read_path, chunk_size, samp_rate):
                     total_data = np.append(total_data, read_record(data_path), axis=0)
 
     sig_total = total_data[1:]
+    # for reshaping in signal_utils
     relength = (len(sig_total) // chunk_size) * chunk_size
     sig_total = sig_total[:relength]
     print('np.shape(sig_total) :', np.shape(sig_total))
