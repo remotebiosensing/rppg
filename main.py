@@ -27,13 +27,13 @@ random_seed = 0
 save_img_flag = False
 
 # for Reproducible model
-torch.manual_seed(random_seed)
-torch.cuda.manual_seed(random_seed)
-torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-np.random.seed(random_seed)
-random.seed(random_seed)
+# torch.manual_seed(random_seed)
+# torch.cuda.manual_seed(random_seed)
+# torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
+# torch.backends.cudnn.deterministic = False
+# torch.backends.cudnn.benchmark = False
+# np.random.seed(random_seed)
+# random.seed(random_seed)
 
 # Define Kfold Cross Validator
 if K_Fold_flag:
@@ -41,7 +41,7 @@ if K_Fold_flag:
 
 
 now = datetime.datetime.now()
-os.environ["CUDA_VISIBLE_DEVICES"] = "9"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 with open('params.json') as f:
     jsonObject = json.load(f)
@@ -102,6 +102,11 @@ if __PREPROCESSING__:
     if __TIME__:
         log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
 
+if torch.cuda.is_available():
+    print('cuda is available')
+else :
+    print('cuda is not available')
+
 '''
 Setting Learning Model
 '''
@@ -159,7 +164,7 @@ if __TIME__:
 criterion = loss_fn(hyper_params["loss_fn"], log_flag)
 criterion2 = loss_fn("L1", log_flag)
 
-# if torch.cuda.is_available():
+
 # TODO: implement parallel training
 # if options["parallel_criterion"] :
 #     print(options["parallel_criterion_comment"])
@@ -196,13 +201,13 @@ min_test_loss = 100.0
 
 
 for epoch in range(hyper_params["epochs"]):
-    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train",wandb_flag)
+    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", wandb_flag)
     if data_loaders.__len__() == 3:
         val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
     if min_val_loss > val_loss:
         min_val_loss = val_loss
         running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag )
-        if min_test_loss >running_loss:
+        if min_test_loss > running_loss:
             min_test_loss = running_loss
             torch.save(model.state_dict(),params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"])
     # if epoch % 10 == 0:

@@ -9,6 +9,10 @@ from dataset.DeepPhysDataset import DeepPhysDataset
 from dataset.GCNDataset import GCNDataset
 from dataset.PPNetDataset import PPNetDataset
 from dataset.PhysNetDataset import PhysNetDataset
+from dataset.RhythmNetDataset import RhythmNetDataset
+from dataset.ETArPPGNetDataset import ETArPPGNetDataset
+from dataset.VitamonDataset import VitamonDataset
+
 
 
 def split_data_loader(datasets, batch_size, train_shuffle, test_shuffle=False):
@@ -46,6 +50,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         name = "PhysNet"
 
     train_file = save_root_path + name + "_" + dataset_name + "_" + "train" + ".hdf5"
+    valid_file = save_root_path + name + "_" + dataset_name + "_" + "valid" + ".hdf5"
     test_file = save_root_path + name + "_" + dataset_name + "_" + "test" + ".hdf5"
     if os.path.isfile(train_file):
         print("train dataset exist")
@@ -58,6 +63,8 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
 
     hpy_train_file = h5py.File(train_file, "r")
     hpy_test_file = h5py.File(test_file, "r")
+    hpy_valid_file = h5py.File(valid_file, "r")
+
 
     print("train file size : ", os.path.getsize(train_file)/1024/1024,'MB')
     print("test file size : ", os.path.getsize(test_file)/1024/1024,'MB')
@@ -189,5 +196,73 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         dataset = AxisNetDataset(video_data=np.asarray(video_data),
                                  ptt_data=np.asarray(ptt_data),
                                  label_data=np.asarray(label_data), )
+    elif model_name in ["RhythmNet"]:
+        st_map_data = []
+        target_data = []
+        if option == "train":
+            for key in hpy_train_file.keys():
+                st_map_data.extend(hpy_train_file[key]['preprocessed_video'])
+                target_data.extend(hpy_train_file[key]['preprocessed_label'])
+
+            hpy_train_file.close()
+        elif option == "test":
+            for key in hpy_test_file.keys():
+                cnt += 1
+                if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
+                    st_map_data.extend(hpy_test_file[key]['preprocessed_video'])
+                    target_data.extend(hpy_test_file[key]['preprocessed_label'])
+                if cnt == 5:
+                    break
+            hpy_test_file.close()
+
+        dataset = RhythmNetDataset(st_map_data=np.asarray(st_map_data),
+                                   target_data=np.asarray(target_data))
+
+    elif model_name in ["ETArPPGNet"]:
+        video_data = []
+        label_data = []
+        if option == "train":
+            for key in hpy_train_file.keys():
+                video_data.extend(hpy_train_file[key]['preprocessed_video'])
+                label_data.extend(hpy_train_file[key]['preprocessed_label'])
+
+            hpy_train_file.close()
+        elif option == "test":
+            for key in hpy_test_file.keys():
+                cnt += 1
+                if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
+                    video_data.extend(hpy_test_file[key]['preprocessed_video'])
+                    label_data.extend(hpy_test_file[key]['preprocessed_label'])
+                if cnt == 5:
+                    break
+            hpy_test_file.close()
+
+        dataset = ETArPPGNetDataset(video_data=np.asarray(video_data),
+                                    label_data=np.asarray(label_data))
+
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
+        video_data = []
+        label_data = []
+        if option == "train":
+            for key in hpy_train_file.keys():
+                video_data.extend(hpy_train_file[key]['preprocessed_video'])
+                label_data.extend(hpy_train_file[key]['preprocessed_label'])
+            hpy_train_file.close()
+
+            for key in hpy_test_file.keys():
+                if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
+                    video_data.extend(hpy_test_file[key]['preprocessed_video'])
+                    label_data.extend(hpy_test_file[key]['preprocessed_label'])
+            hpy_test_file.close()
+
+            for key in hpy_valid_file.keys():
+                if len(hpy_valid_file[key]['preprocessed_video']) == len(hpy_valid_file[key]['preprocessed_label']):
+                    video_data.extend(hpy_valid_file[key]['preprocessed_video'])
+                    label_data.extend(hpy_valid_file[key]['preprocessed_label'])
+            hpy_valid_file.close()
+
+        dataset = VitamonDataset(video_data=np.asarray(video_data),
+                                    label_data=np.asarray(label_data))
+
 
     return dataset

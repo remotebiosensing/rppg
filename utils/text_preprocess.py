@@ -12,7 +12,7 @@ import numpy as np
 from biosppy.signals import bvp
 from scipy.signal import resample_poly
 from sklearn.preprocessing import minmax_scale
-
+import pandas as pd
 
 # local
 
@@ -335,3 +335,42 @@ def Axis_preprocess_Label(path, sliding_window_stride, num_frames, clip_size=256
     f.close()
 
     return split_raw_label
+
+def RhythmNet_preprocess_Label(path, time_length=300):
+    f = open(path, 'r')
+    hr_list = f.read().split('\n')
+    hr_list = [hr.strip() for hr in hr_list if hr != '']
+    hr_list = list(map(float, hr_list))
+
+    hr_mean = np.zeros((len(hr_list))//time_length)
+    # 프레임 수가 같다고 가정 후 진행
+    for i in range((len(hr_list))//time_length):
+        hr_mean[i] = np.mean(hr_list[i*time_length:(i+1)*time_length])
+    return hr_mean
+
+
+def ETArPPGNet_preprocess_Label(path, time_length):
+    time_length *= 30
+    f = open(path, 'r')
+    f_read = f.read().split('\n')
+    label_hr = ' '.join(f_read[1].split()).split()
+    new_hr = list(map(float, label_hr))
+    new_hr = np.array(new_hr).astype('float64')
+    new_hr = new_hr[:(len(new_hr)//time_length)*time_length].reshape(-1, time_length)
+    f.close()
+    return new_hr
+
+
+def Vitamon_preprocess_Label(path, time_length):
+    f = open(path, 'r')
+    f_read = f.read().split('\n')
+    f_read = f_read[1:-1]
+    new_hr = list(map(float, f_read))
+    new_hr = np.array(new_hr).astype('float64')
+    path = path[:-8] + 'video.avi'
+    cap = cv2.VideoCapture(path)
+    length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    new_hr = scipy.signal.resample(new_hr, length)
+    new_hr = new_hr[:(len(new_hr)//time_length)*time_length].reshape(-1, time_length)
+    f.close()
+    return new_hr
