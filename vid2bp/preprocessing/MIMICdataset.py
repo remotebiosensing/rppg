@@ -3,19 +3,7 @@ import os
 import wfdb
 import numpy as np
 from tqdm import tqdm
-import preprocessing.utils.math_module as mm
-import preprocessing.utils.signal_utils as su
-from scipy import signal
-import json
-
-import h5py
-
-# TODO DRAW GRAPH OF PPG, VPG, APG Done
-with open('/home/paperc/PycharmProjects/VBPNet/config/parameter.json') as f:
-    json_data = json.load(f)
-    param = json_data.get("parameters")
-#     orders = json_data.get("parameters").get("in_channels")
-#     sampling_rate = json_data.get("parameters").get("sampling_rate")
+import vid2bp.preprocessing.utils.signal_utils as su
 
 '''
 find_available_data(root_path)
@@ -101,118 +89,30 @@ def read_record(path, sampfrom=0, sampto=None):
         return None
 
 
-
-
-
-def data_aggregator(root_path, degree=0, train=True, percent=0.7):
-    print('\n***MIMICdataset.data_aggregator called*** >> degree :', degree)
-    available_list = find_available_data(root_path)
-    total_len = len(available_list)
-    train_ = int(total_len * 0.7)
-    train_len = int(train_ * percent)
+def data_aggregator(model_name, read_path, chunk_size, samp_rate):
+    print('MIMIC-I dataset selected')
+    available_list = find_available_data(read_path)
     print('Number of total ICU patient :', len(available_list))
     print(' >>', available_list)
     total_data = np.empty((1, 2))
-    if train:
-        used_list = available_list[:train_len]
-    else:
-        used_list = available_list[train_len:]
     total_cnt = 0
-    print('Number of selected ICU patient :', len(used_list))
-    print(' >>', used_list)
+    print('Number of selected ICU patient :', len(available_list))
     used_file_cnt = 0
-    for u in used_list:
-        p = root_path + u
+    # TODO ''' use total data after solving the problem of get_diastolic() '''
+    for a in available_list[:1]:
+        p = read_path + a
         for (path, dirs, files) in os.walk(p):
             for file in tqdm(files):
                 if (len(file.split('/')[-1]) == 12) and (file.split('.')[-1] == 'hea'):
                     data_path = (p + '/' + file).strip('.hea')
-                    temp_data = read_record(data_path)
-                    total_cnt += 1
-                    if np.shape(temp_data) == (75000, 2):
-                        used_file_cnt += 1
-                        total_data = np.append(total_data, temp_data, axis=0)
-                    else:
-                        print('\ntrain file dropped :', used_file_cnt, 'th ->> due to file shape is not right :',
-                              np.shape(temp_data))
+                    used_file_cnt += 1
+                    total_data = np.append(total_data, read_record(data_path), axis=0)
 
-    data = total_data[1:]
-    print('np.shape(data) :', np.shape(data))
-    print('used_file_cnt :', used_file_cnt, ' / total_cnt :', total_cnt, ' ( dropped_file_cnt :',
-          total_cnt - used_file_cnt, ')')
-    print('total_data_lenth :', np.shape(data)[0], ', one chunk length', param["chunk_size"])
-    print('np.shape(signal_slicing input(data) ) :', np.shape(data), '== (', int(np.shape(data)[0] / 75000),
-          '* 75000, 2 )')
+    sig_total = total_data[1:]
+    # for reshaping in signal_utils
+    relength = (len(sig_total) // chunk_size) * chunk_size
+    sig_total = sig_total[:relength]
+    print('np.shape(sig_total) :', np.shape(sig_total))
 
-    if degree == 0:
-        abp, ple = su.signal_slicing(data)  # f
-        print('*** f data aggregation done***')
-
-        return abp, ple, train_len
-    elif degree == 1:
-        abp, ple = su.signal_slicing(data)  # f
-        ple_first = mm.diff_np(ple)  # f'
-        ple_total = ple_first
-        print('*** f\' data aggregation done***')
-
-        return abp, ple_total, train_len
-    elif degree == 2:
-        abp, ple = su.signal_slicing(data)  # f
-        ple_first = mm.diff_np(ple)  # f'
-        ple_second = mm.diff_np(ple_first)  # f''
-        ple_total = ple_second
-        print('*** f\'\' data aggregation done***')
-
-        return abp, ple_total, train_len
-
-    elif degree == 3:
-        abp, ple = su.signal_slicing(data)  # f
-        # ple = su.scaler(ple)
-        ple_first = mm.diff_np(ple)  # f'
-        ple_total = mm.diff_channels_aggregator(ple, ple_first)
-        print('*** f & f\' data aggregation done***')
-
-        return abp, ple_total, train_len
-
-    elif degree == 4:
-        abp, ple = su.signal_slicing(data)  # f
-        ple_first = mm.diff_np(ple)  # f'
-        ple_second = mm.diff_np(ple_first)  # f''
-        ple_total = mm.diff_channels_aggregator(ple, ple_second)
-        print('*** f & f\'\' data aggregation done***')
-
-        return abp, ple_total, train_len
-
-    elif degree == 5:
-        abp, ple = su.signal_slicing(data)  # f
-        ple_first = mm.diff_np(ple)  # f'
-        ple_second = mm.diff_np(ple_first)  # f''
-        ple_total = mm.diff_channels_aggregator(ple_first, ple_second)
-        print('*** f\' & f\'\' data aggregation done***')
-
-        return abp, ple_total, train_len
-
-    elif degree == 6:
-        abp, ple = su.signal_slicing(data)  # f
-        ple_first = mm.diff_np(ple)  # f'
-        ple_second = mm.diff_np(ple_first)  # f''
-        ple_total = mm.diff_channels_aggregator(ple, ple_first, ple_second)
-        print('*** f & f\' & f\'\' data aggregation done***')
-
-        return abp, ple_total, train_len
-
-    else:
-        print('derivative not supported... goto data_aggregator_sig_processed()')
-
-
-
-if __name__ == '__main__':
-    root_path = param["root_path"]
-    order = orders["third"]
-    train_ple, train_abp, data_len = data_aggregator(root_path=root_path, degree=order[1], train=True, percent=0.075)  # 0.05 > 2 patients
-    dset = h5py.File("/home/paperc/PycharmProjects/BPNET/dataset/mimic_BPNet/" + "case(" + str(order[-1])+")_len("+str(data_len)+").hdf5", "w")
-    if len(train_ple) == len(train_abp):
-        dset['ple'] = train_ple
-        dset['abp'] = train_abp
-    dset.close()
-
+    abp, ple, dsm = su.signal_slicing(model_name, sig_total, chunk_size, samp_rate, fft=True)
+    return ple, abp, dsm

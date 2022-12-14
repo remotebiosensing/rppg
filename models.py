@@ -74,6 +74,7 @@ def summary(model, model_name):
     elif model_name in "PPNet":
         torchinfo.summary(model, (1, 1, 250))
     elif model_name in "GCN":
+        log_warning("some module is not supported in torchinfo")
         torchinfo.summary(model,(32,3,32,32,32))
     else:
         log_warning("use implemented model")

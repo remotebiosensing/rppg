@@ -1,27 +1,42 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import matplotlib.pyplot as plt
+import vid2bp.preprocessing.utils.signal_utils as su
 
-'''
-np.shape(predictions) = torch.Size([64,7500])
-np.shape(targets) = torch.Size([64,7500])
-'''
+# TODO : '''jaccard similarity'''
 
 
-def r(predictions, targets):
-    x_bar = (1 / len(predictions)) * np.sum(predictions)
-    # print('x_bar :', x_bar)
-    y_bar = (1 / len(targets)) * np.sum(targets)
-    # print('y_bar :', y_bar)
-    Sxx = 0
-    Syy = 0
-    Sxy = 0
-    for x, y in zip(predictions, targets):
-        Sxx += pow(x - x_bar, 2)
-        Syy += pow(y - y_bar, 2)
-        Sxy += (x - x_bar) * (y - y_bar)
 
-    return Sxy / (np.sqrt(Sxx) * np.sqrt(Syy))
+def fft_Loss(predictions, targets):
+    predictions = torch.squeeze(predictions)
+    mseLoss = nn.MSELoss()
+    rst = 0
+    for p, t in zip(predictions, targets):
+
+        # p_fft = torch.fft.fft(p, norm='forward')
+        # t_fft = torch.fft.fft(t, norm='forward')
+        # rst += torch.sqrt(mseLoss(su.get_systolic(p.detach().cpu()), su.get_systolic(t.detach().cpu())))
+        # rst += torch.sqrt(mseLoss(su.get_diastolic(p.detach().cpu()), su.get_diastolic(t.detach().cpu())))
+        rst += torch.sqrt(mseLoss(p, t))
+        # rst += mseLoss(p, t)
+        # rst += torch.sqrt(mseLoss((abs(p_fft) * (2 / len(p_fft)))[:180], (abs(t_fft) * (2 / len(t_fft)))[:180]))
+    rst /= predictions.shape[0]
+    # rst += Neg_Pearson_Loss(predictions, targets)
+    return rst
+
+    # for i in range(predictions.shape[0]):
+    #     dc_removed_predictions = predictions[i] - torch.mean(predictions[i])
+    #     de_removed_targets = targets[i] - torch.mean(targets[i])
+    #     # rst += torch.nn.MSELoss(torch.fft.fft(predictions[i]), torch.fft.fft(targets[i]))
+    #     p_fft = torch.fft.fft(dc_removed_predictions)
+    #     t_fft = torch.fft.fft(de_removed_targets)
+    #     # rst += torch.nn.MSELoss(abs(p_fft) * (2 / len(p_fft)), abs(t_fft) * (2 / len(t_fft)))
+    #     # rst += torch.pow(torch.sum(abs(p_fft) * (2 / len(p_fft)) - torch.abs(t_fft) * (2 / len(t_fft))), 2)
+    #     mseLoss = nn.MSELoss()
+    #     rst += torch.sqrt(mseLoss(abs(p_fft) * (2 / len(p_fft)), abs(t_fft) * (2 / len(t_fft))))
+    # rst /= predictions.shape[0]
+    # return rst
 
 
 def Systolic_Loss(predictions, targets):
@@ -52,16 +67,16 @@ def rmse_Loss(predictions, targets):
     return rmse
 
 
-def fft_Loss(predictions, targets):
-    predictions = torch.squeeze(predictions)
-    # global fft
-    rst = 0
-
-    for i in range(predictions.shape[0]):
-        rst += torch.nn.MSELoss(torch.fft.fft(predictions[i]), torch.fft.fft(targets[i]))
-
-    rst /= predictions.shape[0]
-    return rst
+# def fft_Loss(predictions, targets):
+#     predictions = torch.squeeze(predictions)
+#     # global fft
+#     rst = 0
+#
+#     for i in range(predictions.shape[0]):
+#         rst += torch.nn.MSELoss(torch.fft.fft(predictions[i]), torch.fft.fft(targets[i]))
+#
+#     rst /= predictions.shape[0]
+#     return rst
 
 
 def Neg_Pearson_Loss(predictions, targets):
