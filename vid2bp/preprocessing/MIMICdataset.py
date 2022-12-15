@@ -52,10 +52,11 @@ def find_idx(path)
 
 def find_idx(path):
     record = wfdb.rdrecord(path)
-    channel = [i for i in range(len(record.sig_name)) if (record.sig_name[i] == 'ABP' or record.sig_name[i] == 'PLETH')]
+    ABP_channel = [i for i in range(len(record.sig_name)) if (record.sig_name[i] == 'ABP')]
+    PPG_channel = [i for i in range(len(record.sig_name)) if (record.sig_name[i] == 'PLETH')]
     # print('channel :', len(channel))
-    flag = len(channel)
-    return channel, flag
+    # flag = len(channel)
+    return ABP_channel, PPG_channel
 
 
 '''
@@ -79,15 +80,12 @@ as attributes in a Record or MultiRecord object.
 # TODO -> Record.inti_value를 추가로 return 해주는데, 뒤에 함수들 전부 수정
 def read_record(path, sampfrom=0, sampto=None):
     # channel = ['ABP', 'PLETH']
-    channel, flag = find_idx(path)
-    if flag == 2:
-        record = wfdb.rdrecord(path, channels=channel, sampfrom=sampfrom, sampto=sampto)
-        wfdb.plot_wfdb(record=record, title='Record from PhysioNet MIMIC Dataset')
-        display(record.__dict__)
-        return record.p_signal
-    else:
-        print('read_recored() -> missing signal')
-        return None
+    ABP_channel, PPG_channel = find_idx(path)
+    ABP_record = wfdb.rdrecord(path, channels=ABP_channel, sampfrom=sampfrom, sampto=sampto)
+    PPG_record = wfdb.rdrecord(path, channels=PPG_channel, sampfrom=sampfrom, sampto=sampto)
+    # wfdb.plot_wfdb(record=record, title='Record from PhysioNet MIMIC Dataset')
+    # display(ABP_record.__dict__)
+    return ABP_record.p_signal, PPG_record.p_signal
 
 
 def data_aggregator(model_name, read_path, chunk_size, samp_rate):

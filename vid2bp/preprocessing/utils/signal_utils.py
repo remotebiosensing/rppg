@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # from vid2bp.nets.loss.loss import r
 from tqdm import tqdm
 import pandas as pd
-from statsmodels.tsa.seasonal import seasonal_decompose
+# from statsmodels.tsa.seasonal import seasonal_decompose
 import json
 
 
@@ -26,7 +26,7 @@ def r(predictions, targets):
     return Sxy / (np.sqrt(Sxx) * np.sqrt(Syy))
 
 
-with open("/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json") as f:
+with open("/home/najy/PycharmProjects/rppgs/vid2bp/config/parameter.json") as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
     sr = json_data.get("parameters").get("sampling_rate")
