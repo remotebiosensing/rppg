@@ -7,6 +7,7 @@ from tqdm import tqdm
 import pandas as pd
 # from statsmodels.tsa.seasonal import seasonal_decompose
 import json
+from heartpy.filtering import filter_signal
 
 
 def r(predictions, targets):
@@ -51,6 +52,24 @@ def channel_spliter(multi_sig):
 
     else:
         print("not supported dimension for sig_spliter()")
+
+def signal_respiration_checker(ABP, PPG, threshold=0.9):
+    # low pass filter
+    ABP = filter_signal(np.squeeze(ABP), cutoff=3, sample_rate=125., order=3, filtertype='lowpass')
+    PPG = filter_signal(np.squeeze(PPG), cutoff=3, sample_rate=125., order=3, filtertype='lowpass')
+    # normalize
+    ABP = 2 * (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP)) - 1
+    PPG = 2 * (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG)) - 1
+    # stft
+    f_ABP, t_ABP, Zxx_ABP = signal.stft(ABP)
+    f_PPG, t_PPG, Zxx_PPG = signal.stft(PPG)
+    # cosine similarity
+    cosine_similarity = np.sum(np.abs(Zxx_ABP) * np.abs(Zxx_PPG)) / (
+            np.sqrt(np.sum(np.abs(Zxx_ABP) ** 2)) * np.sqrt(np.sum(np.abs(Zxx_PPG) ** 2)))
+    if cosine_similarity > threshold:
+        return True
+    else:
+        return False
 
 class SignalHandler:
     def __init__(self, single_sig):
