@@ -1,8 +1,8 @@
 {
     "__TIME__" : 0,
-    "__PREPROCESSING__" : 1,
+    "__PREPROCESSING__" : 0,
     "preprocessing_params": {
-        "dataset_name": "V4V",
+        "dataset_name": "UBFC",
         "dataset_comment" :
                 [
                     "V4V",
@@ -48,19 +48,19 @@
         "train_ratio_comment" : "generate train dataset using train_ratio",
         "validation_ratio": 0.9,
         "validation_ratio_comment" : "split train dataset using validation_ratio",
-        "train_batch_size" : 200,
+        "train_batch_size" : 20,
         "train_batch_size_comment" :
                 [
                     "PhysNet_LSTM : 8",
                     "PPNET :  100"
                 ],
         "train_shuffle" : 1,
-        "test_batch_size" : 200,
+        "test_batch_size" : 20,
         "test_shuffle" : 0
     },
     "hyper_params":
     {
-        "loss_fn": "neg_pearson",
+        "loss_fn": "fft",
         "loss_fn_comment":
                [
                    "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
@@ -77,14 +77,15 @@
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam",
                     "PPNET : adam"
                 ],
-        "learning_rate": 0.0001,
+        "learning_rate": 0.001,
         "learning_rate_comment": [
             "DeepPhys : lr = 1",
             "PhysNet : lr = 0.001",
-            "PPNet : lr = 0.001"
+            "PPNet : lr = 0.001",
+            "GCN : lr = 0.003"
         ],
 
-        "epochs" : 30000,
+        "epochs" : 500,
         "epochs_comment" :
                 [
                     "PPNET : 100"
@@ -92,7 +93,7 @@
     },
     "model_params":
     {
-        "name": "PhysNet",
+        "name": "GCN",
         "name_comment":
                 [
                     "DeepPhys",

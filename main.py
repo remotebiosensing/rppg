@@ -13,7 +13,7 @@ from torch.optim import lr_scheduler
 from dataset.dataset_loader import dataset_loader, split_data_loader
 from log import log_info_time
 from loss import loss_fn
-from models import is_model_support, get_model, summary
+from models import is_model_support, get_model, summary,get_ver_model
 from optim import optimizer
 from utils.dataset_preprocess import preprocessing, dataset_split
 from utils.train import train_fn, test_fn
@@ -21,8 +21,8 @@ from utils.train import train_fn, test_fn
 bpm_flag = False
 K_Fold_flag = False
 model_save_flag = False
-log_flag = False
-wandb_flag = False
+log_flag = True
+wandb_flag = True
 random_seed = 0
 save_img_flag = False
 
@@ -56,8 +56,6 @@ with open('params.json') as f:
     wandb_params = jsonObject.get("wandb")
 #
 
-if wandb_flag:
-    wandb.init(project=wandb_params["project"], entity=wandb_params["entity"])
 
 """
 TEST FOR LOAD
@@ -109,7 +107,7 @@ if __TIME__:
     start_time = time.time()
 
 # model = [get_model(model_params["name"])]
-model = get_model(model_params["name"], log_flag).cuda()
+# model = get_model(model_params["name"], log_flag).cuda()
 
 if __MODEL_SUMMARY__:
     summary(model, model_params["name"], log_flag)
@@ -174,36 +172,54 @@ if __TIME__:
     start_time = time.time()
 # optimizer = [optimizer(mod.parameters(),hyper_params["learning_rate"], hyper_params["optimizer"]) for mod in model[0]]
 # scheduler = [lr_scheduler.ExponentialLR(optim,gamma=0.99) for optim in optimizer]
-optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
-scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
-
-if wandb_flag:
-    wandb.config = {
-        "learning_rate": hyper_params["learning_rate"],
-        "epochs": hyper_params["epochs"],
-        "batch_size": params["train_batch_size"]
-    }
-
-if __TIME__:
-    log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
-
-'''
-Model Training Step
-'''
-min_val_loss = 100.0
-min_test_loss = 100.0
-# dataloaders
 
 
-for epoch in range(hyper_params["epochs"]):
-    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train",wandb_flag)
-    if data_loaders.__len__() == 3:
-        val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
-    if min_val_loss > val_loss:
-        min_val_loss = val_loss
-        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag )
-        if min_test_loss >running_loss:
-            min_test_loss = running_loss
-            torch.save(model.state_dict(),params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"])
-    # if epoch % 10 == 0:
+opt = []
+sch = []
+idx = 0
+for ver in range(10):
+    model = get_ver_model(model_params["name"], ver).cuda()
+    if wandb_flag:
+        wandb.init(project=wandb_params["project"], entity=wandb_params["entity"],name = "APNET_"+str(ver)+"_"+hyper_params["loss_fn"])
 
+    opt.append(optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"]))
+    # optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
+    # scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
+    sch.append(lr_scheduler.ExponentialLR(opt[idx], gamma=0.99))
+
+    if wandb_flag:
+        wandb.config = {
+            "learning_rate": hyper_params["learning_rate"],
+            "epochs": hyper_params["epochs"],
+            "batch_size": params["train_batch_size"]
+        }
+
+    if __TIME__:
+        log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+
+    '''
+    Model Training Step
+    '''
+    min_val_loss = 100.0
+    min_test_loss = 100.0
+    # dataloaders
+
+
+    for epoch in range(hyper_params["epochs"]):
+        train_fn(epoch, model, opt[idx], criterion, data_loaders[0], "Train",wandb_flag)
+        if data_loaders.__len__() == 3:
+            val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
+        if min_val_loss > val_loss:
+            min_val_loss = val_loss
+            running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag )
+            if min_test_loss >running_loss:
+                min_test_loss = running_loss
+                torch.save(model.state_dict(),params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"])
+        # if epoch % 10 == 0:
+    os.rename(params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"],params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"]+"_"+str(ver)+"_2")
+
+    idx += 1
+
+
+    if wandb_flag:
+        wandb.finish()
