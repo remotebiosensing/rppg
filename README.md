@@ -117,6 +117,10 @@ Kwangkee Lee, kwangkeelee@gmail.com
 
 min a Lee, mina1505@kw.ac.kr
 
+Jun Yeong Na, najubae@kw.ac.kr
+
+JongEui Chae, forownsake@gmail.com
+
 ## Funding
 
 This work was supported by the ICT R&D program of
