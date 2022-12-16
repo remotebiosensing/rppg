@@ -8,6 +8,8 @@ np.shape(input_sig) : ndarray(702, 7500)     ex) ple, abp
 
 # TODO np.diff 사용 고려
 
+# def Taylor_series(sig, degree=1):
+#
 
 def diff_np(input_sig, input_sig2=None):
     ple_diff = []

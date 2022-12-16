@@ -6,10 +6,10 @@ import numpy as np
 from torch.utils.data import random_split
 
 from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
-    GCN_preprocess_Video, Axis_preprocess_Video
+    GCN_preprocess_Video, Axis_preprocess_Video, RhythmNet_preprocess_Video, ETArPPGNet_preprocess_Video, Vitamon_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
 from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
-    Axis_preprocess_Label
+    Axis_preprocess_Label, RhythmNet_preprocess_Label, ETArPPGNet_preprocess_Label, Vitamon_preprocess_Label
 
 
 def dataset_split(dataset, ratio):
@@ -26,15 +26,28 @@ def dataset_split(dataset, ratio):
         return random_split(dataset, [train_len, test_len])
 
 
-def preprocessing(params, model_params, preprossessing_params, log_flag):
+def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
+                  model_name: str = "DeepPhys",
+                  data_root_path: str = "/media/hdd1/",
+                  dataset_name: str = "UBFC",
+                  train_ratio: float = 0.8,
+                  face_detect_algorithm: int = 1,
+                  divide_flag: bool = True,
+                  fixed_position: bool = True,
+                  time_length: int = 32,
+                  img_size:int = 32,
+                  log_flag: bool = True):
     """
+    :param save_root_path: save file destination path
+    :param model_name: select preprocessing method
+    :param data_root_path: data set root path
+    :param dataset_name: data set name(ex. UBFC, COFACE)
+    :param train_ratio: data split [ train ratio : 1 - train ratio]
+    :param face_detect_algorithm: select face_Detect algorithm
+    :param divide_flag : True : divide by number, False : divide by subject
+    :param fixed_position: True : fixed position, False : face tracking
+    :return:
     """
-
-    save_root_path = params["save_root_path"]
-    model_name = model_params["name"]
-    data_root_path = params["data_root_path"]
-    dataset_name = preprossessing_params["dataset_name"]
-    train_ratio = params["train_ratio"]
 
     if log_flag:
         print("=========== preprocessing() in " + os.path.basename(__file__))
@@ -103,9 +116,8 @@ def preprocessing(params, model_params, preprossessing_params, log_flag):
         for index, data_path in enumerate(data_list):
             proc = multiprocessing.Process(target=preprocess_Dataset,
                                            args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                 model_name, preprossessing_params, return_dict))
-
-            process.append(proc)
+                                                 face_detect_algorithm, divide_flag, fixed_position, time_length,
+                                                 model_name, img_size, return_dict))
             proc.start()
 
         for proc in process:
@@ -119,8 +131,8 @@ def preprocessing(params, model_params, preprossessing_params, log_flag):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
                                                args=(
                                                    dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                   model_name, preprossessing_params, return_dict))
-
+                                                   face_detect_algorithm, divide_flag, fixed_position,
+                                                   time_length, model_name, img_size, return_dict))
                 # flag 0 : pass
                 # flag 1 : detect face
                 # flag 2 : remove nose
@@ -173,7 +185,7 @@ def preprocessing(params, model_params, preprossessing_params, log_flag):
             dset['hr'] = return_dict[data_path]['hr']
         test_file.close()
 
-    elif model_name in ["GCN"]:
+    elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
         for index, data_path in enumerate(return_dict.keys()[:train]):
             dset = train_file.create_group(data_path)
             dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
@@ -202,8 +214,30 @@ def preprocessing(params, model_params, preprossessing_params, log_flag):
             dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
         test_file.close()
 
+    elif model_name in ["Vitamon", "Vitamon_phase2"]:
+        train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[:train]):
+            dset = train_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        train_file.close()
 
-def preprocess_Dataset(path, vid_name, ground_truth_name, model_name, preprossessing_params, return_dict):
+        valid_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_valid.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[train:valid]):
+            dset = valid_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        valid_file.close()
+
+        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
+        for index, data_path in enumerate(return_dict.keys()[valid:]):
+            dset = test_file.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+        test_file.close()
+
+def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
+                       time_length, model_name, img_size, return_dict):
     """
     :param path: dataset path
     :param flag: face detect flag
@@ -211,13 +245,6 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, model_name, preprosses
     :param return_dict: : preprocessed image, label
 
     """
-    face_detect_algorithm = preprossessing_params["face_detect_algorithm"]
-    divide_flag = preprossessing_params["divide_flag"]
-    fixed_position = preprossessing_params["face_detect_position"]
-    time_length = preprossessing_params["time_length"]
-    img_size = preprossessing_params["image_size"]
-    # face_detect_algorithm, divide_flag, fixed_position, time_length, img_size
-
 
     # Video Based
     if model_name == "DeepPhys":
@@ -238,8 +265,18 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, model_name, preprosses
     elif model_name == "AxisNet":
         rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
             path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)
+    elif model_name == "RhythmNet":
+        rst, preprocessed_video = RhythmNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
+                                                             fixed_position, time_length)
+    elif model_name == "ETArPPGNet":
+        rst, preprocessed_video = ETArPPGNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
+                                                              fixed_position, time_length, img_size)
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
+        rst, preprocessed_video = Vitamon_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
+                                                           fixed_position, time_length, img_size)
+
     # rst,bvp,sliding,frames,ptt
-    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM"]:  # can't detect face
+    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "Vitamon", "Vitamon_phase2"]:  # can't detect face
         if not rst:
             return
 
@@ -251,6 +288,14 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, model_name, preprosses
         preprocessed_label = GCN_preprocess_Label(path + ground_truth_name, sliding_window_stride)
     elif model_name == "AxisNet":
         preprocessed_label = Axis_preprocess_Label(path + ground_truth_name, sliding_window_stride, num_frames)
+    elif model_name == "RhythmNet":
+        preprocessed_label = RhythmNet_preprocess_Label(path + ground_truth_name, time_length)
+    elif model_name == "ETArPPGNet":
+        preprocessed_label = ETArPPGNet_preprocess_Label(path + ground_truth_name, time_length)
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
+        preprocessed_label = Vitamon_preprocess_Label(path + ground_truth_name, time_length)
+
+
 
     # ppg, sbp, dbp, hr
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
@@ -259,11 +304,15 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, model_name, preprosses
                                               'preprocessed_hr': preprocessed_hr}
     elif model_name in ["PPNet"]:
         return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
-    elif model_name in ["GCN"]:
+    elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_label': preprocessed_label}
     elif model_name in ["AxisNet"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
                                               'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
-        # 'preprocessed_graph': saved_graph}
+    elif model_name in ["Vitamon", "Vitamon_phase2"]:
+        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+                                          'preprocessed_label': preprocessed_label}
+
+    # 'preprocessed_graph': saved_graph}

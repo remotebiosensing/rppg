@@ -10,6 +10,10 @@ from nets.models.PhysNet import PhysNet
 from nets.models.PhysNet import PhysNet_2DCNN_LSTM
 from nets.models.Seq_GCN import Seq_GCN
 from nets.models.TEST import TEST,TEST2
+from nets.models.RhythmNet import RhythmNet
+from nets.models.ETArPPGNet import ETArPPGNet
+from nets.models.sub_models.Vitamon import Vitamon
+
 import os
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -40,6 +44,12 @@ def get_model(model_name: str = 'DeepPhys', log_flag:bool = True):
         return TEST()#Seq_GCN()#TEST()#
     elif model_name == "AxisNet":
         return AxisNet(),PhysiologicalGenerator()
+    elif model_name == "RhythmNet":
+        return RhythmNet()
+    elif model_name == "ETArPPGNet":
+        return ETArPPGNet()
+    elif model_name == "Vitamon":
+        return Vitamon()
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
