@@ -3,7 +3,6 @@ import wfdb
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
 # heartpy
 import heartpy as hp
@@ -13,13 +12,9 @@ from heartpy.filtering import filter_signal
 
 # scipy
 from scipy import signal
-# import scipy
 
 # ours
 from vid2bp.preprocessing.MIMICdataset import find_available_data, find_idx, read_record, data_aggregator
-
-
-# from vid2bp.nets.loss.loss import r
 
 
 def window_wise_heartpy_peak_detection(signal, win_start, win_end, step=0.5, fs=125):
@@ -38,7 +33,7 @@ def window_wise_heartpy_peak_detection(signal, win_start, win_end, step=0.5, fs=
     return peaks
 
 
-def SBP_detection(signal, rolling_sec, fs=125):
+def SBP_detection(signal, rolling_sec=0.75, fs=125):
     roll_mean = rolling_mean(signal, rolling_sec, fs)
     peak_heartpy = hp_peak.detect_peaks(signal, roll_mean, ma_perc=20, sample_rate=fs)
     return peak_heartpy['peaklist']
@@ -57,47 +52,39 @@ def PPG_peak_detection(PPG, rolling_sec, fs=125):
     return peak_heartpy['peaklist']
 
 
-def match_signal(ABP, PPG, SBP, PPG_peak):
-    """
-    1. pivot -> bad synchronization
-        BP_pviot = SBP[np.argmax(ABP[SBP])]
-        PPG_pviot = PPG_peak[np.argmax(PPG[PPG_peak])]
-        gap = PPG_pviot - BP_pviot
-    2. second, third peak -> bad synchronization
-        gap = PPG_peak[2] - SBP[2]
-    3. minimum gap of around second peak -> bad synchronization
-        diff = PPG[PPG_peak[-1]] - ABP[SBP[-1]]
-        gap = PPG_peak[-1] - SBP[-1]
-        for i in range(3):
-            tmp_diff = PPG[PPG_peak[i]] - ABP[SBP[2]]
-            if abs(tmp_diff) < abs(diff):
-                diff = tmp_diff
-                gap = PPG_peak[i] - SBP[2]
-    """
-    # previous version
-    # matched_PPG = np.zeros_like(ABP)
-    # gap = abs(PPG_peak[0] - SBP[0])
-    # matched_PPG[:len(PPG) - gap] = PPG[gap:]
-
-    matched_PPG = np.zeros_like(ABP)
-    matched_ABP = ABP
-    idx = int((len(PPG_peak)+len(SBP)) / 4)
-    gap = PPG_peak[idx] - SBP[idx]
-    if gap > 0:
-        gap_sign = gap
-        matched_PPG[:-gap] = PPG[gap:]
-        # matched_PPG = matched_PPG[:len(matched_PPG)-gap]
-        # matched_PPG = matched_PPG[:-gap]
-        # matched_ABP = ABP[:-gap]
+def match_signal(ABP, PPG, SBP, DBP, PPG_peak, PPG_low):
+    if PPG_peak[0] < SBP[0]:
+        matched_ABP = ABP[SBP[0]:]
+        matched_PPG, gap_size = PPG[PPG_peak[0]:len(matched_ABP) + PPG_peak[0]], PPG_peak[0] - SBP[0]
     else:
-        gap_sign = gap
-        gap = abs(gap)
-        matched_PPG[gap:] = PPG[:-gap]
-        # matched_PPG = matched_PPG[gap:]
-        # matched_PPG = matched_PPG[gap:]
-        # matched_ABP = ABP[gap:]
+        matched_PPG = PPG[PPG_peak[0]:]
+        matched_ABP, gap_size = ABP[SBP[0]:len(matched_PPG) + SBP[0]], PPG_peak[0] - SBP[0]
 
-    return matched_ABP, matched_PPG, gap_sign
+    if gap_size >= 0:
+        gap_size = SBP[0]
+        SBP = [SBP[x] - gap_size for x in range(len(SBP)) if
+               0 <= SBP[x] - gap_size < len(matched_ABP)]
+        DBP = [DBP[x] - gap_size for x in range(len(DBP)) if
+               0 <= DBP[x] - gap_size < len(matched_ABP)]
+        gap_size = PPG_peak[0]
+        PPG_peak = [PPG_peak[x] - gap_size for x in range(len(PPG_peak)) if
+                    0 <= PPG_peak[x] - gap_size < len(matched_PPG)]
+        PPG_low = [PPG_low[x] - gap_size for x in range(len(PPG_low)) if
+                   0 <= PPG_low[x] - gap_size < len(matched_PPG)]
+    else:
+        gap_size = PPG_peak[0]
+
+        PPG_peak = [PPG_peak[x] - gap_size for x in range(len(PPG_peak)) if
+                    len(matched_PPG) > PPG_peak[x] - gap_size >= 0]
+        PPG_low = [PPG_low[x] - gap_size for x in range(len(PPG_low)) if
+                   len(matched_PPG) > PPG_low[x] - gap_size >= 0]
+        gap_size = SBP[0]
+        SBP = [SBP[x] - gap_size for x in range(len(SBP)) if
+               len(matched_PPG) > SBP[x] - gap_size >= 0]
+        DBP = [DBP[x] - gap_size for x in range(len(DBP)) if
+               len(matched_PPG) > DBP[x] - gap_size >= 0]
+
+    return matched_ABP, matched_PPG, gap_size, SBP, DBP, PPG_peak, PPG_low
 
 
 def signals_rolling_mean(ABP, PPG, rolling_sec, fs=125):
@@ -107,7 +94,7 @@ def signals_rolling_mean(ABP, PPG, rolling_sec, fs=125):
     return ABP_rolling_mean, PPG_rolling_mean
 
 
-def plot_signal_with_props(ABP, PPG, SBP, DBP, PPG_peak, ABP_rolling_mean, PPG_rolling_mean,
+def plot_signal_with_props(ABP, PPG, SBP, DBP, PPG_peak, PPG_low, ABP_rolling_mean, PPG_rolling_mean,
                            title='signal with properties'):
     plt.figure(figsize=(20, 5))
     plt.plot(ABP)
@@ -115,11 +102,61 @@ def plot_signal_with_props(ABP, PPG, SBP, DBP, PPG_peak, ABP_rolling_mean, PPG_r
     plt.plot(SBP, ABP[SBP], 'ro')
     plt.plot(DBP, ABP[DBP], 'bo')
     plt.plot(PPG_peak, PPG[PPG_peak], 'go')
-    # plt.plot(ABP_rolling_mean, 'g')
-    # plt.plot(PPG_rolling_mean, 'y')
+    plt.plot(PPG_low, PPG[PPG_low], 'yo')
+    plt.plot(ABP_rolling_mean, 'g', linestyle='--')
+    plt.plot(PPG_rolling_mean, 'y', linestyle='--')
     plt.title(title)
-    plt.legend(['ABP', 'PPG', 'SBP', 'DBP', 'PPG_peak', 'ABP_rolling_mean', 'PPG_rolling_mean'])
+    plt.legend(['ABP', 'PPG', 'SBP', 'DBP', 'PPG_peak', 'PPG_low', 'ABP_rolling_mean', 'PPG_rolling_mean'])
     plt.show()
+
+
+def SBP_DBP_filter(ABP, SBP, DBP):
+    i = 0
+    total = len(SBP) - 1
+    while i < total:
+        flag = False
+        # Distinguish SBP[i] < DBP < SBP[i+1]
+        for idx_dbp in DBP:
+            # Normal situation
+            if (SBP[i] < idx_dbp) and (idx_dbp < SBP[i + 1]):
+                flag = True
+                break
+            # abnormal situation
+        if flag:
+            i += 1
+        else:
+            # compare peak value
+            # delete smaller one @SBP
+            if ABP[SBP[i]] < ABP[SBP[i + 1]]:
+                SBP = np.delete(SBP, i)
+            else:
+                SBP = np.delete(SBP, i + 1)
+            total -= 1
+
+    i = 0
+    total = len(DBP) - 1
+    while i < total:
+        flag = False
+        # Distinguish DBP[i] < SBP < DBP[i+1]
+        for idx_sbp in SBP:
+            # Normal situation
+            if (DBP[i] < idx_sbp) and (idx_sbp < DBP[i + 1]):
+                flag = True
+                break
+        # normal situation
+        if flag:
+            i += 1
+        # abnormal situation, there is no SBP between DBP[i] and DBP[i+1]
+        else:
+            # compare peak value
+            # delete bigger one @DBP
+            if ABP[DBP[i]] < ABP[DBP[i + 1]]:
+                DBP = np.delete(DBP, i + 1)
+            else:
+                DBP = np.delete(DBP, i)
+            total -= 1
+
+    return SBP, DBP
 
 
 if __name__ == '__main__':
@@ -138,63 +175,36 @@ if __name__ == '__main__':
             raw_ABP = ABP.copy()
             raw_PPG = PPG.copy()
 
-            # Normalization
-            # ABP = signal.savgol_filter(np.squeeze(ABP[:750]), window_length=125*3, polyorder=3, mode="nearest")
-            # PPG = signal.savgol_filter(np.squeeze(PPG[:750]), window_length=125*3, polyorder=3, mode="nearest")
             ABP = filter_signal(np.squeeze(ABP[:750]), cutoff=3, sample_rate=125., order=2, filtertype='lowpass')
             PPG = filter_signal(np.squeeze(PPG[:750]), cutoff=3, sample_rate=125., order=2, filtertype='lowpass')
 
+            # Normalization
             ABP = 2 * (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP)) - 1
             PPG = 2 * (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG)) - 1
-            # ABP = (ABP - np.mean(ABP)) / np.std(ABP)
-            # PPG = (PPG - np.mean(PPG)) / np.std(PPG)
 
             if np.isnan(np.mean(ABP)) or np.isnan(np.mean(PPG)):
                 continue
             else:
                 ### rolling mean by 'rolling_sec' sec ###
                 rolling_sec = 0.75
-                r_rolling_sec = 3
+                r_rolling_sec = 0.75
                 SBP = SBP_detection(ABP, rolling_sec)
                 DBP = DBP_detection(ABP, rolling_sec)
+                SBP, DBP = SBP_DBP_filter(ABP, SBP, DBP)
+                PPG_peak = SBP_detection(PPG, rolling_sec)
+                PPG_low = DBP_detection(PPG, rolling_sec)
+                PPG_peak, PPG_low = SBP_DBP_filter(PPG, PPG_peak, PPG_low)
 
-                PPG_peak = PPG_peak_detection(PPG, rolling_sec)
                 if len(SBP) > 2:
-                    matched_ABP, matched_PPG, gap_sign = match_signal(ABP, PPG, SBP, PPG_peak)
+                    matched_ABP, matched_PPG, gap_size, SBP, DBP, PPG_peak, PPG_low = match_signal(ABP, PPG, SBP, DBP,
+                                                                                                   PPG_peak, PPG_low)
                 else:
                     continue
-                # if gap_sign >= 0:
-                #     indices = np.where(PPG_peak < len(PPG) - abs(gap_sign))
-                #     PPG_peak = [PPG_peak[int(x)] - abs(gap_sign) for x in indices[0]]
-                # else:
-                #     indices = np.where(PPG_peak > abs(gap_sign))
-                #     tmp_peak = []
-                #     for i in indices[0]:
-                #         if PPG_peak[int(i)]+abs(gap_sign) < len(PPG) - abs(gap_sign):
-                #             tmp_peak.append(PPG_peak[i])
-                #     PPG_peak = tmp_peak
-                # PPG_peak = [PPG_peak[int(x)] + abs(gap_sign) if (PPG_peak[int(x)] + abs(gap_sign) < len(matched_PPG))
-                #             for x in indices[0]]
-                if gap_sign >= 0:
-                    PPG_peak = [PPG_peak[x] - gap_sign for x in range(len(PPG_peak)) if PPG_peak[x] - gap_sign >= 0]
-                    # indices = np.where(PPG_peak < len(PPG) - abs(gap_sign))
-                    # PPG_peak = [PPG_peak[int(x)] - abs(gap_sign) for x in indices[0]]
-                else:
-                    PPG_peak = [PPG_peak[x] - gap_sign for x in range(len(PPG_peak)) if
-                                PPG_peak[x] - gap_sign < len(PPG)]
-                    # indices = np.where(PPG_peak > abs(gap_sign))
-                    # tmp_peak = []
-                    # for i in indices[0]:
-                    #     if PPG_peak[int(i)]+abs(gap_sign) < len(PPG) - abs(gap_sign):
-                    #         tmp_peak.append(PPG_peak[i])
-                    # PPG_peak = tmp_peak
-                    # PPG_peak = [PPG_peak[int(x)] + abs(gap_sign) if (PPG_peak[int(x)] + abs(gap_sign) < len(matched_PPG))
-                    #             for x in indices[0]]
+
                 if len(SBP) > 2:
-                    r_rolling_sec = (SBP[2] - SBP[1]) * 3 / 125
+                    r_rolling_sec = 0.5
+
                 ABP_rolling_mean, PPG_rolling_mean = signals_rolling_mean(matched_ABP, matched_PPG, r_rolling_sec)
-                # ABP_rolling_mean = ABP_rolling_mean[:SBP[-1]]
-                # PPG_rolling_mean = PPG_rolling_mean[:SBP[-1]]
 
                 ABP_rolling_mean = 2 * (ABP_rolling_mean - np.min(ABP_rolling_mean)) / (
                         np.max(ABP_rolling_mean) - np.min(ABP_rolling_mean)) - 1
@@ -202,47 +212,16 @@ if __name__ == '__main__':
                         np.max(PPG_rolling_mean) - np.min(PPG_rolling_mean)) - 1
 
                 # correlation = r(ABP_rolling_mean, PPG_rolling_mean)
-                correlation = (np.square(ABP_rolling_mean - PPG_rolling_mean)).mean(axis=0)
-                # correlation = np.mean(np.corrcoef(ABP_rolling_mean, PPG_rolling_mean))
+                # correlation = (np.square(ABP_rolling_mean - PPG_rolling_mean)).mean(axis=0)
+                correlation = np.mean(np.corrcoef(ABP_rolling_mean, PPG_rolling_mean))
 
-                ### plot ###
-                # plt.figure(figsize=(20, 5))
-                # plt.title("gap_sign : {}".format(gap_sign))
-                # # plt.plot(matched_ABP)
-                # plt.plot(matched_PPG)
-                # plt.plot(PPG_peak, matched_PPG[PPG_peak], 'ro')
-                # # plt.legend(['ABP', 'PPG'])
-                # plt.show()
-
-                plot_signal_with_props(ABP, matched_PPG, SBP, DBP, PPG_peak, ABP_rolling_mean, PPG_rolling_mean,
-                                       title='MSE : {:.2f}'.format(correlation)
+                plot_signal_with_props(matched_ABP, matched_PPG, SBP, DBP, PPG_peak, PPG_low, ABP_rolling_mean,
+                                       PPG_rolling_mean,
+                                       title='corrcoef : {:.2f}'.format(correlation)
                                              + ' SBP : {:.2f}'.format(np.mean(raw_ABP[SBP]))
                                              + ' DBP : {:.2f}'.format(np.mean(raw_ABP[DBP]))
                                              + ' rolling_sec : {}'.format(rolling_sec)
                                              + ' r_rolling_sec : {}'.format(r_rolling_sec)
-                                             + ' gap_size : {}'.format(gap_sign))
+                                             + ' gap_size : {}'.format(gap_size))
         else:
             continue
-    """scipy"""
-    # peak_scipy, property_scipy = signal.find_peaks(ABP, height=np.max(ABP) - np.std(ABP))
-
-    """heartpy"""
-    ### window-wise rolling mean ###
-    # heartpy_peakdict = window_wise_heartpy_peak_detection(ABP, win_start=0.5, win_end=2.5, step=0.25, fs=125)
-    # heartpy_peaks = []
-    # for i in range(len(heartpy_peakdict)):
-    #     heartpy_peaks.append(heartpy_peakdict[i]['peaklist'])
-    ############################
-
-    ### plot signal with peaks ###
-    # plt.figure(figsize=(10, 5))
-    # plt.plot(ABP, label='ABP')
-    # plt.plot(PPG, label='PPG')
-    # plt.plot(peak_scipy, ABP[peak_scipy], 'x', label='scipy')
-    # color_list = list(mcolors.TABLEAU_COLORS.keys())
-    # for i in range(len(heartpy_peaks)):
-    #     plt.plot(ABP, label='ABP')
-    #     plt.plot(heartpy_peaks[i], ABP[heartpy_peaks[i]], 'x', label='heartpy', color=color_list[i])
-    #     plt.legend()
-    #     plt.show()
-    ############################

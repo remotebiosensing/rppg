@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 # import matplotlib cmap
 import matplotlib.cm as cmap
+import matplotlib as mpl
 
 # heartpy
 import heartpy as hp
@@ -20,6 +21,7 @@ from scipy import signal
 
 # ours
 from vid2bp.preprocessing.MIMICdataset import find_available_data, find_idx, read_record, data_aggregator
+
 
 def signal_respiration_checker(ABP, PPG, threshold=0.9):
     # low pass filter
@@ -57,20 +59,35 @@ if __name__ == '__main__':
             # raw_PPG = PPG.copy()
             ABP = filter_signal(np.squeeze(ABP[:750]), cutoff=3, sample_rate=125., order=2, filtertype='lowpass')
             PPG = filter_signal(np.squeeze(PPG[:750]), cutoff=3, sample_rate=125., order=2, filtertype='lowpass')
-            ABP = 2 * (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP)) - 1
-            PPG = 2 * (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG)) - 1
+            # ABP = (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP))
+            # PPG = (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG))
+            # ABP = 2 * (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP)) - 1
+            # PPG = 2 * (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG)) - 1
+            ABP = 0.5 * (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP))
+            PPG = 0.5 * (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG))
             if np.isnan(np.mean(ABP)) or np.isnan(np.mean(PPG)):
                 continue
             else:
                 f_ABP, t_ABP, Zxx_ABP = signal.stft(ABP)
                 f_PPG, t_PPG, Zxx_PPG = signal.stft(PPG)
                 cosine_similarity = np.sum(np.abs(Zxx_ABP) * np.abs(Zxx_PPG)) / (
-                            np.sqrt(np.sum(np.abs(Zxx_ABP) ** 2)) * np.sqrt(np.sum(np.abs(Zxx_PPG) ** 2)))
+                        np.sqrt(np.sum(np.abs(Zxx_ABP) ** 2)) * np.sqrt(np.sum(np.abs(Zxx_PPG) ** 2)))
                 if cosine_similarity >= 0.95:
                     plt.figure(figsize=(20, 5))
-                    # plt.pcolormesh(t_ABP, f_ABP, np.abs(Zxx_ABP), cmap='jet')
-                    # plt.pcolormesh
-                    plt.plot(ABP)
-                    plt.plot(PPG)
-                    plt.title(cosine_similarity)
+                    plt.plot(ABP, label='ABP', color='lawngreen')
+                    plt.plot(PPG, label='PPG', color='deeppink')
+                    plt.legend()
+                    plt.pcolormesh(t_ABP, f_ABP, np.abs(Zxx_ABP),
+                                   norm=mpl.colors.LogNorm(vmin=np.abs(Zxx_ABP).min(), vmax=np.abs(Zxx_ABP).max()),
+                                   cmap='plasma', shading='auto')
+                    plt.title('cosine_similarity : ' + str(cosine_similarity))
                     plt.show()
+
+                    # plt.figure(figsize=(20, 5))
+                    # plt.plot(ABP, label='ABP', color='lawngreen')
+                    # plt.plot(PPG, label='PPG', color='cyan')
+                    # plt.pcolormesh(t_PPG, f_PPG, np.abs(Zxx_PPG),
+                    #                norm=mpl.colors.LogNorm(vmin=np.abs(Zxx_PPG).min(), vmax=np.abs(Zxx_PPG).max()),
+                    #                cmap='plasma', shading='auto')
+                    # plt.title('PPG' + ' cosine_similarity : ' + str(cosine_similarity))
+                    # plt.show()
