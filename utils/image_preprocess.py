@@ -57,8 +57,15 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
     :param flag: face detect flag
     :return:
     '''
-    set = 128
-    div = 64
+    # "0: position with first detected face",
+    # "1: position with largest detected face",
+    # "2: position with face tracking"
+
+    # file description check # png, jpg, jpeg, mp4
+    # divide flag check  # subject or percent
+    # face detect flag check # mediapipe or dlib
+    # fixed position check # 0,1,2
+
 
     if path.__contains__("png"):
         path = path[:-3]
@@ -74,33 +81,57 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
         mp_face_detection = mp.solutions.face_detection
         with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
             # ret, frame = cap.read()
-            for img in data:
-                frame = cv2.imread(path + "/" + img)
+
+
+            if fixed_position ==0:
+
+                frame = cv2.imread(path + "/" + data[0])
                 height, width, channel = frame.shape
                 frame.flags.writeable = False
 
-                if face_detect_algorithm == 1:
-                    rst, crop_frame = faceDetection(frame)
-                    if not rst:  # can't detect face
-                        return False, None
-                elif face_detect_algorithm == 2:
-                    f, dot = crop_mediapipe(detector, frame)
-                    # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
-                    bin_mask = '0011000000000000000100000001001'
-                    view, remove = make_mask(dot)
-                    crop_frame = generate_maks(f, view, remove)
-
-                    _, dot = detector.findFaceMesh(f)
-
-
+                if face_detect_algorithm == 0:
+                    #results = face_detection.process(frame)
+                    pass
+                elif face_detect_algorithm == 1:
+                    rst, position = faceDetection(frame) # position [t, r, b, l]
                 else:
-                    crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+                    f, dot = crop_mediapipe(detector, frame)
 
-                crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
-                crop_frame = generate_Floatimage(crop_frame)
+            elif fixed_position == 1:
+                for img in data:
 
-                raw_video[j] = crop_frame
-                j += 1
+            else :
+
+
+            with tqdm(total=data.__len__(), position=0, leave=True, desc=path) as pbar:
+                for img in data:
+                    frame = cv2.imread(path + "/" + img)
+                    height, width, channel = frame.shape
+                    frame.flags.writeable = False
+
+                    if face_detect_algorithm == 1:
+                        rst, crop_frame = faceDetection(frame)
+                        if not rst:  # can't detect face
+                            return False, None
+                    elif face_detect_algorithm == 2:
+                        f, dot = crop_mediapipe(detector, frame)
+                        # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
+                        bin_mask = '0011000000000000000100000001001'
+                        view, remove = make_mask(dot)
+                        crop_frame = generate_maks(f, view, remove)
+
+                        _, dot = detector.findFaceMesh(f)
+
+
+                    else:
+                        crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+
+                    crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
+                    crop_frame = generate_Floatimage(crop_frame)
+
+                    raw_video[j] = crop_frame
+                    pbar.update(1)
+                    j += 1
 
     else:
         cap = cv2.VideoCapture(path)
@@ -396,8 +427,8 @@ def faceDetection(frame):
     if len(face_location) == 0:  # can't detect face
         return False, None
     top, right, bottom, left = face_location[0]
-    dst = resized_frame[top:bottom, left:right]
-    return True, dst
+    # dst = resized_frame[top:bottom, left:right]
+    return True, [top, right, bottom, left]
 
 
 def generate_Floatimage(frame):
@@ -1231,9 +1262,4 @@ def RhythmNet_preprocessor(video_path, clip_size):
         pbar.update(1)
         pbar.close()
 
-        (idx, w, h, c) = stacked_maps.shape
-        stacked_maps = stacked_maps.reshape((idx, h, w, c))
-        stacked_maps = stacked_maps.astype(np.uint8)
-        return True, stacked_maps
-
-    return True, stacked_maps.astype(np.uint8).transpose((1,0,2))
+    return True, stacked_maps.astype(np.uint8)
