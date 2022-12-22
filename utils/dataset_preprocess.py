@@ -118,9 +118,14 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
     if not split_flag:
         for index, data_path in enumerate(data_list):
             proc = multiprocessing.Process(target=preprocess_Dataset,
-                                           args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                 face_detect_algorithm, divide_flag, fixed_position, time_length,
-                                                 model_name, img_size, return_dict))
+                                           args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name)
+                                           , kwargs={"face_detect_algorithm": face_detect_algorithm,
+                                                     "divide_flag": divide_flag,
+                                                     "fixed_position": fixed_position,
+                                                     "time_length": time_length,
+                                                     "model_name": model_name,
+                                                     "img_size": img_size,
+                                                     "return_dict": return_dict})
             proc.start()
 
         for proc in process:
@@ -132,13 +137,21 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         for i in range(loop):
             for index, data_path in enumerate(data_list[i * 32:(i + 1) * 32]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
-                                               args=(
-                                                   dataset_root_path + "/" + data_path, vid_name, ground_truth_name,
-                                                   face_detect_algorithm, divide_flag, fixed_position,
-                                                   time_length, model_name, img_size, return_dict))
-                # flag 0 : pass
+                                               args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name)
+                                               ,kwargs={"face_detect_algorithm": face_detect_algorithm,
+                                                        "divide_flag": divide_flag,
+                                                        "fixed_position": fixed_position,
+                                                        "time_length": time_length,
+                                                        "model_name": model_name,
+                                                        "img_size": img_size,
+                                                        "return_dict": return_dict})
+                proc.start()
+                process.append(proc)
+
                 # flag 1 : detect face
                 # flag 2 : remove nose
+
+
                 process.append(proc)
                 proc.start()
 
