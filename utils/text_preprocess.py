@@ -10,7 +10,7 @@ import math
 # 3rd party
 import numpy as np
 from biosppy.signals import bvp
-from scipy.signal import resample_poly,resample
+from scipy.signal import resample_poly,resample,smooth
 from sklearn.preprocessing import minmax_scale
 import pandas as pd
 
@@ -20,6 +20,8 @@ def label_preprocess(model_name, path,**kwargs):
         return Deepphys_preprocess_Label(path, **kwargs)
     elif model_name == 'GCN':
         return GCN_preprocess_Label(path, **kwargs)
+    elif model_name == 'PulseNet':
+        return PhysNet_preprocess_Label(path, **kwargs)
     elif model_name == 'Axis':
         return Axis_preprocess_Label(path, **kwargs)
     elif model_name == 'RhythmNet':

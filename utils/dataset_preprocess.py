@@ -114,18 +114,20 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         ground_truth_name = "/json"
     process = []
 
+    ssl_flag = True
+
     # multiprocessing
     if not split_flag:
         for index, data_path in enumerate(data_list):
             proc = multiprocessing.Process(target=preprocess_Dataset,
-                                           args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name)
+                                           args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name, return_dict)
                                            , kwargs={"face_detect_algorithm": face_detect_algorithm,
                                                      "divide_flag": divide_flag,
                                                      "fixed_position": fixed_position,
                                                      "time_length": time_length,
                                                      "model_name": model_name,
                                                      "img_size": img_size,
-                                                     "return_dict": return_dict})
+                                                     "flip_flag": ssl_flag})
             proc.start()
 
         for proc in process:
@@ -137,14 +139,14 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
         for i in range(loop):
             for index, data_path in enumerate(data_list[i * 32:(i + 1) * 32]):
                 proc = multiprocessing.Process(target=preprocess_Dataset,
-                                               args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name)
+                                               args=(dataset_root_path + "/" + data_path, vid_name, ground_truth_name, return_dict)
                                                ,kwargs={"face_detect_algorithm": face_detect_algorithm,
                                                         "divide_flag": divide_flag,
                                                         "fixed_position": fixed_position,
                                                         "time_length": time_length,
                                                         "model_name": model_name,
                                                         "img_size": img_size,
-                                                        "return_dict": return_dict})
+                                                        "flip_flag": ssl_flag})
                 proc.start()
                 process.append(proc)
 
@@ -263,10 +265,10 @@ def preprocess_Dataset(model_name,path, vid_name, ground_truth_name, return_dict
 
     """
 
-    rst, preprocessed_video = video_preprocess(model_name=model_name,
+    rst_dict = video_preprocess(model_name=model_name,
                                                path = path+vid_name,
                                                **kwargs)
-    if not rst:
+    if not rst_dict["face_detect"]:
         return
 
     preprocessed_label = label_preprocess(model_name=model_name,
@@ -276,20 +278,21 @@ def preprocess_Dataset(model_name,path, vid_name, ground_truth_name, return_dict
 
     # ppg, sbp, dbp, hr
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.replace('/', '')] = {'preprocessed_video': rst_dict["video_data"],
+                                              'flip_arr' : rst_dict["flip_arr"],
                                               'preprocessed_label': preprocessed_label}
                                               # 'preprocessed_hr': preprocessed_hr}
     # elif model_name in ["PPNet"]:
     #     return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
     elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.replace('/', '')] = {'preprocessed_video': rst_dict["video_data"],
                                               'preprocessed_label': preprocessed_label}
     elif model_name in ["AxisNet"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.replace('/', '')] = {'preprocessed_video': rst_dict["video_data"],
                                               # 'preprocessed_ptt': stacked_ptts,
                                               'preprocessed_label': preprocessed_label}
     elif model_name in ["Vitamon", "Vitamon_phase2"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+        return_dict[path.replace('/', '')] = {'preprocessed_video': rst_dict["video_data"],
                                           'preprocessed_label': preprocessed_label}
 
     # 'preprocessed_graph': saved_graph}
