@@ -10,7 +10,7 @@ import math
 # 3rd party
 import numpy as np
 from biosppy.signals import bvp
-from scipy.signal import resample_poly,resample,smooth
+from scipy.signal import resample_poly,resample
 from sklearn.preprocessing import minmax_scale
 import pandas as pd
 
@@ -90,7 +90,7 @@ def PhysNet_preprocess_Label(path):
         label_bvp = bvp.bvp(label, 256, show=False)
         label = label_bvp['filtered']
 
-        label = smooth(label, 128)
+        # label = smooth(label, 128)
         label = resample_poly(label, 15, 128)
         # label = resample(label,frame_total)
         # label = detrend(label,100)

@@ -12,7 +12,7 @@ from nets.models.Seq_GCN import Seq_GCN
 from nets.models.TEST import TEST,TEST2
 from nets.models.RhythmNet import RhythmNet
 from nets.models.ETArPPGNet import ETArPPGNet
-from nets.models.sub_models.Vitamon import Vitamon
+from nets.models.sub_models.VitaMon import Vitamon
 
 import os
 NUM_FEATURES = 5

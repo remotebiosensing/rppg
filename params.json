@@ -1,6 +1,6 @@
 {
     "__TIME__" : 0,
-    "__PREPROCESSING__" : 0,
+    "__PREPROCESSING__" : 1,
     "preprocessing_params": {
         "dataset_name": "UBFC",
         "dataset_comment" :
@@ -18,7 +18,7 @@
                     "1: position with largest detected face",
                     "2: position with face tracking"
                 ],
-        "face_detect_algorithm" : 1,
+        "face_detect_algorithm" : 4,
         "face_detect_algorithm_comment" :
                 [
                     "1: face_recognition_algorithm",
@@ -94,7 +94,7 @@
     },
     "model_params":
     {
-        "name": "GCN",
+        "name": "PhysNet",
         "name_comment":
                 [
                     "DeepPhys",
