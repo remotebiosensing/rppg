@@ -251,8 +251,12 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
         rst, preprocessed_video = Deepphys_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
                                                             fixed_position, time_length, img_size)
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
-        rst, preprocessed_video = PhysNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
-                                                           fixed_position, time_length, img_size)
+        # rst, preprocessed_video = PhysNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
+        #                                                    fixed_position, time_length, img_size)
+        rst, preprocessed_video = PhysNet_preprocess_Video(path = path + vid_name,
+                                                           face_detect_algorithm=face_detect_algorithm,
+                                                           fixed_position= fixed_position,
+                                                           img_size= img_size)
     elif model_name == "RTNet":
         rst, preprocessed_video = RTNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
                                                          fixed_position, time_length, img_size)
