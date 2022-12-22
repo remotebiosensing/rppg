@@ -12,14 +12,35 @@ import json
 from skimage.transform import PiecewiseAffineTransform, warp
 
 
+def video_preprocess(model_name, path, return_dict,**kwargs):
+    if model_name == 'Deepphys':
+        return Deepphys_preprocess_Video(path, **kwargs)
+    elif model_name in 'PhysNet':
+        return PhysNet_preprocess_Video(path, **kwargs)
+    elif model_name == 'RTNet':
+        return RTNet_preprocess_Video(path, **kwargs)
+    elif model_name == 'GCN':
+        return GCN_preprocess_Video(path,**kwargs)
+    elif model_name == 'Axis':
+        return Axis_preprocess_Video(path,**kwargs)
+    elif model_name == 'RhythmNet':
+        return RhythmNet_preprocess_Video(path,**kwargs)
+    elif model_name == 'ETArPPGNet':
+        return ETArPPGNet_preprocess_Video(path,**kwargs)
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
+        return Vitamon_preprocess_Video(path,**kwargs)
+    else:
+        return False, None
 
-def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
+def Deepphys_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
     :return: [:,:,:0-2] : motion diff frame
              [:,:,:,3-5] : normalized frame
     '''
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+
     cap = cv2.VideoCapture(path)
     frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -52,10 +73,7 @@ def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_po
     cap.release()
 
     return True, raw_video
-
-
-def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
-def PhysNet_preprocess_Video(**kwargs):
+def PhysNet_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -71,11 +89,8 @@ def PhysNet_preprocess_Video(**kwargs):
     # divide flag check  # subject or percent
     # face detect flag check # mediapipe or dlib
     # fixed position check # 0,1,2
-    path = kwargs['path']
     face_detect_algorithm = kwargs['face_detect_algorithm']
-    # divide_flag = kwargs['divide_flag']
     fixed_position = kwargs['fixed_position']
-    # time_length = kwargs['time_length']
     img_size = kwargs['img_size']
 
     if path.__contains__("png"):
@@ -202,14 +217,15 @@ def PhysNet_preprocess_Video(**kwargs):
         index = index + 10
 
     return True, split_raw_video
-
-
-def RTNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
+def RTNet_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
     :return:
     '''
+
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+
     cap = cv2.VideoCapture(path)
     frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -243,7 +259,7 @@ def RTNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_posit
     preprocessed_video[:, :, :, 3] = video_normalize(preprocessed_video[:, :, :, 3])
 
     return True, preprocessed_video
-def GCN_preprocess_Video(path, flag):
+def GCN_preprocess_Video(path, **kwargs):
     '''
        :param path: dataset path
        :param flag: face detect flag
@@ -251,7 +267,7 @@ def GCN_preprocess_Video(path, flag):
        '''
     maps, sliding_window_stride = preprocess_video_to_st_maps(path, output_shape=(180, 180))
     return True, maps, sliding_window_stride
-def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
+def Axis_preprocess_Video(path, **kwargs):
     '''
        :param path: dataset path
        :param flag: face detect flag
@@ -261,9 +277,15 @@ def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_positi
     maps, sliding_window_stride, num_frames, stacked_ptts = preprocess_video_to_st_maps(path, output_shape=(180, 180))
     # bvp,sliding,frames,ptt
     return True, maps, sliding_window_stride, num_frames, stacked_ptts
-def RhythmNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
+def RhythmNet_preprocess_Video(path, **kwargs):
+    time_length = kwargs['time_length']
     return RhythmNet_preprocessor(path, time_length)
-def ETArPPGNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length=10, img_size=224):
+def ETArPPGNet_preprocess_Video(path, **kwargs):
+
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+    time_length = kwargs['time_length'] # 10
+    img_size = kwargs['img_size'] # 224
+
     Blocks = 30
     crop_length = time_length * Blocks
     """
@@ -325,7 +347,7 @@ def ETArPPGNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_
             index += time_length
 
     return True, split_raw_video
-def Vitamon_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length=25, img_size=224):
+def Vitamon_preprocess_Video(path, **kwargs):
     """
         :param path: video data path
         :param face_detect_algorithm:
@@ -335,6 +357,12 @@ def Vitamon_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
             3 : face_recognition + manually crop
         :return: face existence, cropped face
         """
+
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+    time_length = kwargs['time_length'] # 25
+    img_size = kwargs['img_size'] # 224
+
+
     cap = cv2.VideoCapture(path)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

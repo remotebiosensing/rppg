@@ -5,6 +5,8 @@ import h5py
 import numpy as np
 from torch.utils.data import random_split
 
+from utils.image_preprocess import video_preprocess
+
 from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
     GCN_preprocess_Video, Axis_preprocess_Video, RhythmNet_preprocess_Video, ETArPPGNet_preprocess_Video, Vitamon_preprocess_Video
 from utils.seq_preprocess import PPNet_preprocess_Mat
@@ -236,8 +238,9 @@ def preprocessing(save_root_path: str = "/media/hdd1/dy_dataset/",
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
         test_file.close()
 
-def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
-                       time_length, model_name, img_size, return_dict):
+# def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
+#                        time_length, model_name, img_size, return_dict):
+def preprocess_Dataset(model_name,path, vid_name, ground_truth_name, return_dict, **kwargs):
     """
     :param path: dataset path
     :param flag: face detect flag
@@ -246,77 +249,46 @@ def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm,
 
     """
 
-    # Video Based
-    if model_name == "DeepPhys":
-        rst, preprocessed_video = Deepphys_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
-                                                            fixed_position, time_length, img_size)
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
-        # rst, preprocessed_video = PhysNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
-        #                                                    fixed_position, time_length, img_size)
-        rst, preprocessed_video = PhysNet_preprocess_Video(path = path + vid_name,
-                                                           face_detect_algorithm=face_detect_algorithm,
-                                                           fixed_position= fixed_position,
-                                                           img_size= img_size)
-    elif model_name == "RTNet":
-        rst, preprocessed_video = RTNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
-                                                         fixed_position, time_length, img_size)
-    elif model_name == "PPNet":  # Sequence data based
-        ppg, sbp, dbp, hr = PPNet_preprocess_Mat(path)
-    elif model_name == "GCN":
-        rst, preprocessed_video, sliding_window_stride = GCN_preprocess_Video(path + vid_name, face_detect_algorithm,
-                                                                              divide_flag, fixed_position, time_length,
-                                                                              img_size)
-    elif model_name == "AxisNet":
-        rst, preprocessed_video, sliding_window_stride, num_frames, stacked_ptts = Axis_preprocess_Video(
-            path + vid_name, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size)
-    elif model_name == "RhythmNet":
-        rst, preprocessed_video = RhythmNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
-                                                             fixed_position, time_length)
-    elif model_name == "ETArPPGNet":
-        rst, preprocessed_video = ETArPPGNet_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
-                                                              fixed_position, time_length, img_size)
-    elif model_name in ["Vitamon","Vitamon_phase2"]:
-        rst, preprocessed_video = Vitamon_preprocess_Video(path + vid_name, face_detect_algorithm, divide_flag,
-                                                           fixed_position, time_length, img_size)
+    rst, preprocessed_video = video_preprocess(model_name=model_name,
+                                               path = path+vid_name,
+                                               return_dict= return_dict,
+                                               **kwargs)
+    if not rst:
+        return
 
-    # rst,bvp,sliding,frames,ptt
-    if model_name in ["DeepPhys", "MTTS", "PhysNet", "PhysNet_LSTM", "Vitamon", "Vitamon_phase2"]:  # can't detect face
-        if not rst:
-            return
-
-    if model_name == "DeepPhys":
-        preprocessed_label = Deepphys_preprocess_Label(path + ground_truth_name)
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
-        preprocessed_label, preprocessed_hr = PhysNet_preprocess_Label(path + ground_truth_name)
-    elif model_name == "GCN":
-        preprocessed_label = GCN_preprocess_Label(path + ground_truth_name, sliding_window_stride)
-    elif model_name == "AxisNet":
-        preprocessed_label = Axis_preprocess_Label(path + ground_truth_name, sliding_window_stride, num_frames)
-    elif model_name == "RhythmNet":
-        preprocessed_label = RhythmNet_preprocess_Label(path + ground_truth_name, time_length)
-    elif model_name == "ETArPPGNet":
-        preprocessed_label = ETArPPGNet_preprocess_Label(path + ground_truth_name, time_length)
-    elif model_name in ["Vitamon","Vitamon_phase2"]:
-        preprocessed_label = Vitamon_preprocess_Label(path + ground_truth_name, time_length)
-
-
-
-    # ppg, sbp, dbp, hr
-    if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
-                                              'preprocessed_label': preprocessed_label,
-                                              'preprocessed_hr': preprocessed_hr}
-    elif model_name in ["PPNet"]:
-        return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
-    elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
-                                              'preprocessed_label': preprocessed_label}
-    elif model_name in ["AxisNet"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
-                                              'preprocessed_ptt': stacked_ptts,
-                                              'preprocessed_label': preprocessed_label}
-    elif model_name in ["Vitamon", "Vitamon_phase2"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
-                                          'preprocessed_label': preprocessed_label}
+    # if model_name == "DeepPhys":
+    #     preprocessed_label = Deepphys_preprocess_Label(path + ground_truth_name)
+    # elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
+    #     preprocessed_label, preprocessed_hr = PhysNet_preprocess_Label(path + ground_truth_name)
+    # elif model_name == "GCN":
+    #     preprocessed_label = GCN_preprocess_Label(path + ground_truth_name, sliding_window_stride)
+    # elif model_name == "AxisNet":
+    #     preprocessed_label = Axis_preprocess_Label(path + ground_truth_name, sliding_window_stride, num_frames)
+    # elif model_name == "RhythmNet":
+    #     preprocessed_label = RhythmNet_preprocess_Label(path + ground_truth_name, time_length)
+    # elif model_name == "ETArPPGNet":
+    #     preprocessed_label = ETArPPGNet_preprocess_Label(path + ground_truth_name, time_length)
+    # elif model_name in ["Vitamon","Vitamon_phase2"]:
+    #     preprocessed_label = Vitamon_preprocess_Label(path + ground_truth_name, time_length)
+    #
+    #
+    #
+    # # ppg, sbp, dbp, hr
+    # if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
+    #     return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+    #                                           'preprocessed_label': preprocessed_label,
+    #                                           'preprocessed_hr': preprocessed_hr}
+    # elif model_name in ["PPNet"]:
+    #     return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
+    # elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
+    #     return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+    #                                           'preprocessed_label': preprocessed_label}
+    # elif model_name in ["AxisNet"]:
+    #     return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+    #                                           'preprocessed_ptt': stacked_ptts,
+    #                                           'preprocessed_label': preprocessed_label}
+    # elif model_name in ["Vitamon", "Vitamon_phase2"]:
+    #     return_dict[path.replace('/', '')] = {'preprocessed_video': preprocessed_video,
+    #                                       'preprocessed_label': preprocessed_label}
 
     # 'preprocessed_graph': saved_graph}
