@@ -12,7 +12,7 @@ import json
 from skimage.transform import PiecewiseAffineTransform, warp
 
 
-def video_preprocess(model_name, path, return_dict,**kwargs):
+def video_preprocess(model_name, path,**kwargs):
     if model_name == 'Deepphys':
         return Deepphys_preprocess_Video(path, **kwargs)
     elif model_name in 'PhysNet':

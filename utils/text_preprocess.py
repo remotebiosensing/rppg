@@ -10,12 +10,26 @@ import math
 # 3rd party
 import numpy as np
 from biosppy.signals import bvp
-from scipy.signal import resample_poly
+from scipy.signal import resample_poly,resample
 from sklearn.preprocessing import minmax_scale
 import pandas as pd
 
 # local
-
+def label_preprocess(model_name, path,**kwargs):
+    if model_name == 'Deepphys':
+        return Deepphys_preprocess_Label(path, **kwargs)
+    elif model_name == 'GCN':
+        return GCN_preprocess_Label(path, **kwargs)
+    elif model_name == 'Axis':
+        return Axis_preprocess_Label(path, **kwargs)
+    elif model_name == 'RhythmNet':
+        return RhythmNet_preprocess_Label(path, **kwargs)
+    elif model_name == 'ETArPPGNet':
+        return ETArPPGNet_preprocess_Label(path, **kwargs)
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
+        return Vitamon_preprocess_Label(path, **kwargs)
+    else:
+        raise ValueError('model_name is not valid')
 
 def Deepphys_preprocess_Label(path):
 
@@ -58,8 +72,6 @@ def Deepphys_preprocess_Label(path):
     split_hr_label = np.zeros(shape=delta_pulse.shape)
 
     return delta_pulse,split_hr_label
-
-
 def PhysNet_preprocess_Label(path):
     '''
     :param path: label file path
@@ -268,13 +280,13 @@ def PhysNet_preprocess_Label(path):
         index = index + 10
 
     return split_raw_label, split_hr_label
-
-
-def GCN_preprocess_Label(path, sliding_window_stride):
+def GCN_preprocess_Label(path, **kwargs):
     '''
     :param path: label file path
     :return: wave form
     '''
+
+    sliding_window_stride = kwargs['sliding_window_stride']
 
     div = 256
     stride = sliding_window_stride
@@ -293,9 +305,7 @@ def GCN_preprocess_Label(path, sliding_window_stride):
     f.close()
 
     return split_raw_label
-
-
-def Axis_preprocess_Label(path, sliding_window_stride, num_frames, clip_size=256):
+def Axis_preprocess_Label(path, **kwargs):
     '''
     :param path: label file path
     :return: wave form
@@ -304,6 +314,12 @@ def Axis_preprocess_Label(path, sliding_window_stride, num_frames, clip_size=256
     # div = 256
     # stride = num_maps
     # Load input
+
+    num_frames = kwargs['num_frames']
+    clip_size = kwargs['clip_size'] # 256
+    sliding_window_stride = kwargs['sliding_window_stride']
+
+
     ext = path.split('.')[-1]
 
     f = open(path, 'r')
@@ -336,7 +352,8 @@ def Axis_preprocess_Label(path, sliding_window_stride, num_frames, clip_size=256
 
     return split_raw_label
 
-def RhythmNet_preprocess_Label(path, time_length=300):
+def RhythmNet_preprocess_Label(path, **kwargs):
+    time_length = kwargs['time_length']
     f = open(path, 'r')
     hr_list = f.read().split('\n')
     hr_list = [hr.strip() for hr in hr_list if hr != '']
@@ -349,7 +366,8 @@ def RhythmNet_preprocess_Label(path, time_length=300):
     return hr_mean
 
 
-def ETArPPGNet_preprocess_Label(path, time_length):
+def ETArPPGNet_preprocess_Label(path, **kwargs):
+    time_length = kwargs['time_length']
     time_length *= 30
     f = open(path, 'r')
     f_read = f.read().split('\n')
@@ -370,7 +388,7 @@ def Vitamon_preprocess_Label(path, time_length):
     path = path[:-8] + 'video.avi'
     cap = cv2.VideoCapture(path)
     length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    new_hr = scipy.signal.resample(new_hr, length)
+    new_hr = resample(new_hr, length)
     new_hr = new_hr[:(len(new_hr)//time_length)*time_length].reshape(-1, time_length)
     f.close()
     return new_hr
