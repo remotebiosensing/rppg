@@ -1,170 +1,52 @@
-import json
-
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import torch.optim as optim
 import wandb
 from tqdm import tqdm
-
-from vid2bp.nets.loss import loss
-from vid2bp.validation import validation
-from vid2bp.test import test
-import os
-import datetime
-
-with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
-    json_data = json.load(f)
-    param = json_data.get("parameters")
-    hyper_param = json_data.get("hyper_parameters")
-    channels = json_data.get("parameters").get("in_channels")
+import numpy as np
+import matplotlib.pyplot as plt
 
 
-def train(model_n, model, case, fft, dataset_name, in_channel, device, train_loader, validation_loader, test_loader, epochs):
+def train(model, dataset, loss, optimizer, scheduler, epoch, scaler=True):
     model.train()
-    ''' - wandb setup '''
-    wandb.init(project="VBPNet", entity="paperchae")
-    model_save_point = []
-    ''' loss function '''
-    if model_n == 'Unet':
-        model = model.to(device)
-        loss_mse = torch.nn.MSELoss()
-        optimizer = optim.Adam(model.parameters(), lr=0.00001)
-    elif model_n == 'BPNet':
-        model = model.to(device)
-        # loss_neg = loss.NegPearsonLoss().to(device)
-        # loss_d = loss.dbpLoss().to(device)
-        # loss_s = loss.sbpLoss().to(device)
-        loss_fft = loss.fftLoss().to(device)
-        """optimizer"""
-        optimizer = optim.AdamW(model.parameters(), lr=hyper_param["learning_rate"],
-                                weight_decay=hyper_param["weight_decay"])
-        """scheduler"""
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=hyper_param["gamma"])
-    else:
-        print('not supported model name error')
-        return
+    train_avg_cost = 0
+    train_cost_sum = 0
+    with tqdm(dataset, desc='Train{}'.format(str(epoch)), total=len(dataset),
+              leave=True) as train_epoch:
+        # avg_cost = 0
+        for idx, (X_train, Y_train, d, s, m) in enumerate(train_epoch):
+            optimizer.zero_grad()
+            hypothesis = model(X_train, scaler=scaler)
 
-    print('batchN :', train_loader.__len__())
-    model_save_cnt = 0
-    cost_arr = []
-    validation_cost_arr = []
-    for epoch in range(epochs):
-        avg_cost = 0
-        cost_sum = 0
-        if model_n == 'Unet':
-            with tqdm(train_loader, desc='Train{}'.format(str(epoch)), total=len(train_loader),
-                      leave=True) as train_epoch:
-                idx = 0
-                for X_train, Y_train in train_epoch:
-                    idx += 1
-                    optimizer.zero_grad()
-                    hypothesis = torch.squeeze(model(X_train))
-                    cost = loss_mse(hypothesis, Y_train)
-                    train_epoch.set_postfix(loss=cost.item())
-                    cost.backward()
-                    optimizer.step()
-                    cost_sum += cost
-                    avg_cost = cost_sum / idx
-                    cost_arr.append(avg_cost)
-                    wandb.log({'Train MSE Loss': cost}, step=epoch)
-                cost_arr.append(avg_cost.__float__())
-            total_loss = loss_mse
+            '''Negative Pearson Loss'''
+            neg_cost = loss[0](hypothesis, Y_train)
+            # neg_cost = 0
+            ''' STFT Loss '''
+            stft_cost = loss[1](hypothesis, Y_train)
+            '''DBP Loss'''
+            # d_cost = loss[1](pred_d, d)
+            '''SBP Loss'''
+            # s_cost = loss[2](pred_s, s)
+            '''FFT Loss'''
+            # fft_cost = loss_fft(hypothesis, Y_train)
 
-        elif model_n == 'BPNet':
-            with tqdm(train_loader, desc='Train{}'.format(str(epoch)), total=len(train_loader),
-                      leave=True) as train_epochs:
-                idx = 0
-                for X_train, Y_train, d, s in train_epochs:
-                    idx += 1
-                    hypothesis = torch.squeeze(model(X_train))
-                    # pred_d = torch.squeeze(model(X_train)[1])
-                    # pred_s = torch.squeeze(model(X_train)[2])
-                    optimizer.zero_grad()
+            '''Total Loss'''
+            cost = neg_cost + stft_cost
+            # cost = fft_cost
+            cost.backward()
+            optimizer.step()
 
-                    # '''Negative Pearson Loss'''
-                    # neg_cost = loss_neg(hypothesis, Y_train)
-                    # '''DBP Loss'''
-                    # d_cost = loss_d(pred_d, d)
-                    # '''SBP Loss'''
-                    # s_cost = loss_s(pred_s, s)
-                    '''FFT Loss'''
-                    fft_cost = loss_fft(hypothesis, Y_train)
-
-                    '''Total Loss'''
-                    # cost = neg_cost + d_cost + s_cost
-                    cost = fft_cost
-                    cost.backward()
-                    optimizer.step()
-
-                    if not np.isnan(cost.__float__()):
-                        cost_sum += cost.__float__()
-                        avg_cost = cost_sum / idx
-                        # train_epochs.set_postfix(_=avg_cost, r=neg_cost.item(), d=d_cost.item(), s=s_cost.item())
-                        train_epochs.set_postfix(_=avg_cost)
-                        wandb.log({'Train FFT Loss': cost}, step=epoch)
-                        # wandb.log({"Train Loss": cost,
-                        # "Train Negative Pearson Loss": neg_cost,  # },step=epoch)
-                        # "Train Systolic Loss": s_cost,
-                        # "Train Diastolic Loss": d_cost}, step=epoch)
-                    else:
-                        print('nan error')
-                        continue
-                scheduler.step()
-                # train loss array
-                cost_arr.append(avg_cost.__float__())
-            # total_loss = [loss_neg, loss_d, loss_s]
-            total_loss = [loss_fft]
-        # validation
-        if epoch % 1 == 0:
-            val_c = validation(model_n, model=model, validation_loader=validation_loader, loss=total_loss)
-
-            val_idx = epoch + 1
-            # test loss array
-            validation_cost_arr.append(val_c.__float__())
-            # if current test loss < prev test loss:
-            #   save model
-            if val_idx == 1:
-                val_prev_c = val_c
+            if not np.isnan(cost.__float__()):
+                train_cost_sum += cost.__float__()
+                train_avg_cost = train_cost_sum / (idx + 1)
+                train_epoch.set_postfix(n=neg_cost.__float__(), s=stft_cost.__float__(), loss=train_avg_cost)
             else:
-                val_prev_c = validation_cost_arr[-2]
-            # save the model only when train and test loss are lower than prior epoch
-            if (cost.__float__() < avg_cost.__float__()) and (val_c.__float__() < val_prev_c.__float__()):
-                print('current train cost :', cost.__float__(), '/ avg_cost :', avg_cost.__float__(), ' >> trained :',
-                      avg_cost.__float__() - cost.__float__())
-                print('current test cost :', val_c.__float__(), '/ prev test cost :', val_prev_c.__float__(),
-                      ' >> trained :', val_prev_c.__float__() - val_c.__float__())
-
-                current_time = datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S")
-                save_path = param['save_path'] + '{}_{}_{}_{}_{}_{}.pt'.format(str(model_n), str(dataset_name),
-                                                                               str(in_channel[-1]), str(case),
-                                                                               str(fft),
-                                                                               str(current_time))
-                model_save_point.append(current_time)
-
-                if len(model_save_point) == 1:
-                    torch.save(model, save_path)
-                else:
-                    prior_path = param['save_path'] + '{}_{}_{}_{}_{}_{}.pt'.format(str(model_n), str(dataset_name),
-                                                                                    str(in_channel[-1]), str(case),
-                                                                                    str(fft),
-                                                                                    str(model_save_point[-2]))
-                    os.remove(prior_path)
-                    # os.rename(prior_path, save_path)
-                    torch.save(model, save_path)
-                # torch.save(model, param["save_path"] + 'model_' + dataset + '_(' + str(channel[-1]) + ')_' + str(model_n) + '.pt')
-                model_save_cnt += 1
-        # test
-        if epoch % 1 == 0:
-            test(model_n, model=model, test_loader=test_loader, loss=total_loss, idxx=epoch)
-    print('model saved cnt :', model_save_cnt)
-    print('cost :', cost_arr[-1])
-
-    t_val = np.array(range(len(cost_arr)))
-    plt.title('Neg Pearson corr + SBP modMAE + DBP modMAE')
-    plt.plot(t_val, cost_arr, label='Train loss')
-    plt.plot(t_val, validation_cost_arr, linestyle='--', label='Validation loss')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.legend()
-    # plt.show()
+                print('nan error')
+                continue
+        scheduler.step()
+        wandb.log({'Train Loss': train_avg_cost}, step=epoch)
+        # wandb.log({'Train Loss': train_avg_cost,
+        #            'Pearson Loss': neg_cost,
+        #            'STFT Loss': stft_cost}, step=epoch)
+        # wandb.log({"Train Loss": cost,
+        #            "Train Negative Pearson Loss": neg_cost,  # },step=epoch)
+        #            "Train Systolic Loss": s_cost,
+        #            "Train Diastolic Loss": d_cost}, step=epoch)
+    return train_avg_cost.__float__()

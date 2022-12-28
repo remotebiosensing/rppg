@@ -15,7 +15,7 @@ def dataset_loader(dataset_name: str = 'mimiciii', channel: int = 1, batch_size:
     valid_file_path = dataset_root_path + "val.hdf5"
     test_file_path = dataset_root_path + "test.hdf5"
     if os.path.isfile(train_file_path) and os.path.isfile(valid_file_path) and os.path.isfile(test_file_path):
-        print("dataset exist")
+        print("datasets exist")
     else:
         print("preprocessing needed")
 
@@ -40,4 +40,4 @@ def dataset_loader(dataset_name: str = 'mimiciii', channel: int = 1, batch_size:
     return [train_loader, valid_loader, test_loader]
 
 
-dataset_loader(dataset_name='mimiciii', channel=3)
+# dataset_loader(dataset_name='mimiciii', channel=3)
