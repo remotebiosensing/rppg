@@ -74,8 +74,9 @@ if __PREPROCESSING__:
     if __TIME__:
         start_time = time.time()
 
-    preprocessing(parmas=params,
-                  preprocessing_prams=preprocessing_params,
+    preprocessing(params=params,
+                  model_params = model_params,
+                  preprocessing_params=preprocessing_params,
                   log_flag=log_flag)
 
     # save_root_path: str = "/media/hdd1/dy_dataset/",

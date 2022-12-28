@@ -8,15 +8,41 @@ from skimage.util import img_as_float
 # from test import plot_graph_from_image,get_graph_from_image
 from sklearn import preprocessing
 from tqdm import tqdm
+import json
+from skimage.transform import PiecewiseAffineTransform, warp
 
 
-def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
+def video_preprocess(model_name, path,**kwargs):
+    if model_name == 'Deepphys':
+        return Deepphys_preprocess_Video(path, **kwargs)
+    elif model_name in 'PhysNet':
+        return PhysNet_preprocess_Video(path, **kwargs)
+    elif model_name == 'RTNet':
+        return RTNet_preprocess_Video(path, **kwargs)
+    elif model_name == 'GCN':
+        return GCN_preprocess_Video(path,**kwargs)
+    elif model_name == 'Axis':
+        return Axis_preprocess_Video(path,**kwargs)
+    elif model_name == 'RhythmNet':
+        return RhythmNet_preprocess_Video(path,**kwargs)
+    elif model_name == 'ETArPPGNet':
+        return ETArPPGNet_preprocess_Video(path,**kwargs)
+    elif model_name in ["Vitamon","Vitamon_phase2"]:
+        return Vitamon_preprocess_Video(path,**kwargs)
+    else:
+        return {"face_detect": False,
+                "video_data": None}
+
+
+def Deepphys_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
     :return: [:,:,:0-2] : motion diff frame
              [:,:,:,3-5] : normalized frame
     '''
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+
     cap = cv2.VideoCapture(path)
     frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -48,10 +74,9 @@ def Deepphys_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_po
     raw_video[:, :, :, :3] = video_normalize(raw_video[:, :, :, :3])
     cap.release()
 
-    return True, raw_video
-
-
-def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
+    return { "face_detect" : True,
+             "video_data" : raw_video}
+def PhysNet_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -60,12 +85,17 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
     # "0: position with first detected face",
     # "1: position with largest detected face",
     # "2: position with face tracking"
+    # "3: position with fixed position"
+    # "4: face unwrapping with uv map"
 
     # file description check # png, jpg, jpeg, mp4
     # divide flag check  # subject or percent
     # face detect flag check # mediapipe or dlib
     # fixed position check # 0,1,2
-
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+    fixed_position = kwargs['fixed_position']
+    img_size = kwargs['img_size']
+    flip_flag = kwargs['flip_flag'] # True or False
 
     if path.__contains__("png"):
         path = path[:-3]
@@ -82,26 +112,24 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
         with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
             # ret, frame = cap.read()
 
-
-            if fixed_position ==0:
+            if fixed_position == 0:
 
                 frame = cv2.imread(path + "/" + data[0])
                 height, width, channel = frame.shape
                 frame.flags.writeable = False
 
                 if face_detect_algorithm == 0:
-                    #results = face_detection.process(frame)
+                    # results = face_detection.process(frame)
                     pass
                 elif face_detect_algorithm == 1:
-                    rst, position = faceDetection(frame) # position [t, r, b, l]
+                    rst, position = faceDetection(frame)  # position [t, r, b, l]
                 else:
                     f, dot = crop_mediapipe(detector, frame)
 
-            elif fixed_position == 1:
-                for img in data:
-
-            else :
-
+            # elif fixed_position == 1:
+            #     for img in data:
+            #
+            # else :
 
             with tqdm(total=data.__len__(), position=0, leave=True, desc=path) as pbar:
                 for img in data:
@@ -138,60 +166,113 @@ def PhysNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        raw_video = np.empty((frame_total, img_size, img_size, 3))
+        cap.release()
 
-        j = 0
+        if flip_flag:
+            iter = 4
+            raw_video = np.empty((frame_total*4, img_size, img_size, 3))
+        else:
+            iter = 1
+            raw_video = np.empty((frame_total, img_size, img_size, 3))
+
+
 
         detector = None
 
         if face_detect_algorithm == 2:
             detector = FaceMeshDetector(maxFaces=2)
 
-        with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if frame is None:
-                    break
-                if face_detect_algorithm == 1:
-                    rst, crop_frame = faceDetection(frame)
-                    if not rst:  # can't detect face
-                        return False, None
-                elif face_detect_algorithm == 2:
-                    f, dot = crop_mediapipe(detector, frame)
-                    # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
-                    bin_mask = '0011000000000000000100000001001'
-                    view, remove = make_mask(dot)
-                    crop_frame = generate_maks(f, view, remove)
+        if face_detect_algorithm == 4:
+            uv_path = "uv_datas/uv_map.json"  # taken from https://github.com/spite/FaceMeshFaceGeometry/blob/353ee557bec1c8b55a5e46daf785b57df819812c/js/geometry.js
+            uv_map_dict = json.load(open(uv_path))
+            uv_map = np.array([(uv_map_dict["u"][str(i)], uv_map_dict["v"][str(i)]) for i in range(468)])
+        for i in range(iter):
+            cap = cv2.VideoCapture(path)
+            j = 0
+            with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+                while cap.isOpened():
 
-                    _, dot = detector.findFaceMesh(f)
+                    ret, frame = cap.read()
+
+                    if frame is None:
+                        break
+                    if face_detect_algorithm == 1:
+                        rst, crop_frame = faceDetection(frame)
+                        if not rst:  # can't detect face
+                            return False, None
+                    elif face_detect_algorithm == 2:
+                        f, dot = crop_mediapipe(detector, frame)
+                        # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
+                        bin_mask = '0011000000000000000100000001001'
+                        view, remove = make_mask(dot)
+                        crop_frame = generate_maks(f, view, remove)
+
+                        _, dot = detector.findFaceMesh(f)
+
+                    elif face_detect_algorithm == 4:
+                        crop_frame = faceUnwrapping(frame,(img_size, img_size),uv_map,flip_flag)
+
+                    else:
+                        crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+
+                    crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
+                    crop_frame = generate_Floatimage(crop_frame)
+
+                    raw_video[j + i * frame_total] = crop_frame
+                    j += 1
+                    pbar.update(1)
+                cap.release()
 
 
-                else:
-                    crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
-                crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
-                crop_frame = generate_Floatimage(crop_frame)
+    if flip_flag:
+        split_raw_video = np.zeros((((frame_total - 22) // 10) * 4, 32, img_size, img_size, 3))
+    else :
+        split_raw_video = np.zeros((((frame_total - 22) // 10), 16, img_size, img_size, 3))
 
-                raw_video[j] = crop_frame
-                j += 1
-                pbar.update(1)
-            cap.release()
-
-    split_raw_video = np.zeros((((frame_total - 22) // 10), 32, img_size, img_size, 3))
     index = 0
-    for x in range(((frame_total - 22) // 10)):
-        split_raw_video[x] = raw_video[index:index + 32]
-        index = index + 10
 
-    return True, split_raw_video
+    if flip_flag :
+        for x in range(((frame_total - 22) // 10)*4):
+            split_raw_video[x] = raw_video[index:index + 32]
+            index = index + 10
+    else:
+        for x in range(((frame_total - 22) // 10)):
+            split_raw_video[x] = raw_video[index:index + 32]
+            index = index + 10
 
+    if flip_flag == 'True':
+        flip_arr = np.zeros((frame_total-22)//10 * 4,32)
+        for i in range((frame_total - 22) // 10 * 4):
+            if i < (frame_total - 22) // 10:
+                for j in range(32):
+                    flip_arr[index] = 0
+                    index += 1
+            elif i < (frame_total - 22) // 10 * 2:
+                for j in range(32):
+                    flip_arr[index] = 1
+                    index += 1
+            elif i < (frame_total - 22) // 10 * 3:
+                for j in range(32):
+                    flip_arr[index] = 2
+                    index += 1
+            else:
+                for j in range(32):
+                    flip_arr[index] = 3
+                    index += 1
 
-def RTNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length, img_size):
+    return { "face_detect" : True,
+             "video_data" : split_raw_video,
+             "flip_arr" : flip_arr}
+def RTNet_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
     :return:
     '''
+
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+
     cap = cv2.VideoCapture(path)
     frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -224,20 +305,21 @@ def RTNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_posit
 
     preprocessed_video[:, :, :, 3] = video_normalize(preprocessed_video[:, :, :, 3])
 
-    return True, preprocessed_video
+    return { "face_detect" : True,
+             "video_data" : preprocessed_video}
 
-
-def GCN_preprocess_Video(path, flag):
+def GCN_preprocess_Video(path, **kwargs):
     '''
        :param path: dataset path
        :param flag: face detect flag
        :return:
        '''
     maps, sliding_window_stride = preprocess_video_to_st_maps(path, output_shape=(180, 180))
-    return True, maps, sliding_window_stride
+    return { "face_detect" : True,
+             "sliding_window_stride" : sliding_window_stride,
+             "video_data" : maps}
 
-
-def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
+def Axis_preprocess_Video(path, **kwargs):
     '''
        :param path: dataset path
        :param flag: face detect flag
@@ -246,12 +328,21 @@ def Axis_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_positi
     preprocess_video_to_st_maps(path, (256, 256))
     maps, sliding_window_stride, num_frames, stacked_ptts = preprocess_video_to_st_maps(path, output_shape=(180, 180))
     # bvp,sliding,frames,ptt
-    return True, maps, sliding_window_stride, num_frames, stacked_ptts
+    return { "face_detect" : True,
+             "video_data" : maps,
+             "sliding_window_stride" : sliding_window_stride,
+             "num_frames" : num_frames,
+             "stacked_ptts" : stacked_ptts}
 
-def RhythmNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length):
+def RhythmNet_preprocess_Video(path, **kwargs):
+    time_length = kwargs['time_length']
     return RhythmNet_preprocessor(path, time_length)
+def ETArPPGNet_preprocess_Video(path, **kwargs):
 
-def ETArPPGNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length=10, img_size=224):
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+    time_length = kwargs['time_length'] # 10
+    img_size = kwargs['img_size'] # 224
+
     Blocks = 30
     crop_length = time_length * Blocks
     """
@@ -312,9 +403,9 @@ def ETArPPGNet_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_
             split_raw_video[i][x] = raw_video[index:index + time_length]
             index += time_length
 
-    return True, split_raw_video
-
-def Vitamon_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_position, time_length=25, img_size=224):
+    return { "face_detect" : True,
+             "video_data" : split_raw_video}
+def Vitamon_preprocess_Video(path, **kwargs):
     """
         :param path: video data path
         :param face_detect_algorithm:
@@ -324,6 +415,12 @@ def Vitamon_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
             3 : face_recognition + manually crop
         :return: face existence, cropped face
         """
+
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+    time_length = kwargs['time_length'] # 25
+    img_size = kwargs['img_size'] # 224
+
+
     cap = cv2.VideoCapture(path)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -334,25 +431,27 @@ def Vitamon_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
 
     with tqdm(total=length, position=0, leave=True, desc=path) as pbar:
         while cap.isOpened():
-            ret, frame = cap.read() #다음프레임 불러오기 ret : return frame 있으면 True 없으면 False
+            ret, frame = cap.read()  # 다음프레임 불러오기 ret : return frame 있으면 True 없으면 False
             if frame is None:
                 break
 
             if face_detect_algorithm == 0:
                 crop_frame = frame
-            elif face_detect_algorithm == 1: #영상의 정중앙만 잘라서 사용
+            elif face_detect_algorithm == 1:  # 영상의 정중앙만 잘라서 사용
                 crop_frame = frame[:, int(width / 4):int(width / 4) * 3, :]
             elif face_detect_algorithm == 2 or face_detect_algorithm == 3:  # 2,3 : face_detect_algorithm 사용
-                rst, crop_frame = faceDetection(frame)  #rst : result
+                rst, crop_frame = faceDetection(frame)  # rst : result
                 if not rst:
                     if face_detect_algorithm == 3:  # can't detect face #2번이면 NONE 반환, 3번이면 영상의 정중앙 반환
                         crop_frame = frame[:, int(width / 4):int(width / 4) * 3, :]
                     else:
                         print('No Face exists')
-                        return False, None
+                        return { "face_detect" : False,
+                                "video_data" : None}
             else:
                 print('Incorrect Mode Number')
-                return False, None
+                return { "face_detect" : False,
+                        "video_data" : None}
 
             crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
             crop_frame = crop_frame[:, :, 1]
@@ -360,25 +459,23 @@ def Vitamon_preprocess_Video(path, face_detect_algorithm, divide_flag, fixed_pos
             crop_frame = crop_frame.astype('float32') / 255.
             # uint8  : 0   - 255
             # float  : 0.0 - 1
-            crop_frame[crop_frame > 1] = 1 #0~1 사이 값만 존재해야하는데, 1 초과하는 애들이라면 1로 두기
-            crop_frame[crop_frame < 1e-6] = 1e-6 #너무 작은 값들은 1e-6으로 둠
+            crop_frame[crop_frame > 1] = 1  # 0~1 사이 값만 존재해야하는데, 1 초과하는 애들이라면 1로 두기
+            crop_frame[crop_frame < 1e-6] = 1e-6  # 너무 작은 값들은 1e-6으로 둠
 
             raw_video[j] = crop_frame
             j += 1
-            pbar.update(1) #pbar : tqdm의 변수 이름, progress bar
-        cap.release() # 영상을 메모리에 올려놨다가 소환해제-
+            pbar.update(1)  # pbar : tqdm의 변수 이름, progress bar
+        cap.release()  # 영상을 메모리에 올려놨다가 소환해제-
 
-
-    #전체 영상을 resize 진행 후, 25개씩 자름
+    # 전체 영상을 resize 진행 후, 25개씩 자름
     split_raw_video = np.zeros(((length // time_length), time_length, img_size, img_size))
     index = 0
     for i in range(length // time_length):
         split_raw_video[i] = raw_video[index:index + time_length]
         index += time_length
 
-    return True, split_raw_video
-
-
+    return { "face_detect" : True,
+             "video_data" : split_raw_video}
 def faceLandmarks(frame):
     '''
     :param frame: one frame
@@ -415,8 +512,6 @@ def faceLandmarks(frame):
     # test = cv2.bitwise_and(dst,dst,mask=mask)
 
     return True, dst, mask
-
-
 def faceDetection(frame):
     '''
     :param frame: one frame
@@ -429,8 +524,6 @@ def faceDetection(frame):
     top, right, bottom, left = face_location[0]
     # dst = resized_frame[top:bottom, left:right]
     return True, [top, right, bottom, left]
-
-
 def generate_Floatimage(frame):
     '''
     :param frame: roi frame
@@ -441,8 +534,6 @@ def generate_Floatimage(frame):
     dst[dst > 1] = 1
     dst[dst < 0] = 0
     return dst
-
-
 def generate_MotionDifference(prev_frame, crop_frame):
     '''
     :param prev_frame: previous frame
@@ -455,8 +546,6 @@ def generate_MotionDifference(prev_frame, crop_frame):
     # motion_input = motion_input / np.std(motion_input)
     # TODO : do not divide each D frame, modify divide whole video's unit standard deviation
     return motion_input
-
-
 def normalize_Image(frame):
     '''
     :param frame: image
@@ -465,8 +554,6 @@ def normalize_Image(frame):
     if frame is not np.all(frame == 0):
         frame = frame / np.std(frame)
     return frame
-
-
 def preprocess_Image(prev_frame, crop_frame):
     '''
     :param prev_frame: previous frame
@@ -474,22 +561,16 @@ def preprocess_Image(prev_frame, crop_frame):
     :return: motion_differnceframe, normalized_frame
     '''
     return generate_MotionDifference(prev_frame, crop_frame), normalize_Image(prev_frame)
-
-
 def ci99(motion_diff):
     max99 = np.mean(motion_diff) + (2.58 * (np.std(motion_diff) / np.sqrt(len(motion_diff))))
     min99 = np.mean(motion_diff) - (2.58 * (np.std(motion_diff) / np.sqrt(len(motion_diff))))
     motion_diff[motion_diff > max99] = max99
     motion_diff[motion_diff < min99] = min99
     return motion_diff
-
-
 def video_normalize(channel):
     if channel is not np.all(channel == 0):
         channel /= np.std(channel)
     return channel
-
-
 class FaceMeshDetector:
 
     def __init__(self, staticMode=False, maxFaces=2, minDetectionCon=0.5, minTrackCon=0.5):
@@ -530,12 +611,8 @@ class FaceMeshDetector:
                     face.append([x, y])
                 faces.append(face)
         return img, faces
-
-
 def avg(a, b):
     return [(int)((x + y) / 2) for x, y in zip(a, b)]
-
-
 def crop_mediapipe(detector, frame):
     _, dot = detector.findFaceMesh(frame)
     if len(dot) > 0:
@@ -552,8 +629,6 @@ def crop_mediapipe(detector, frame):
         f = frame[y_center - w_2 - 10:y_center + w_2 + 10, x_center - w_2 - 10:x_center + w_2 + 10]
         _, dot = detector.findFaceMesh(f)
         return f, dot[0]
-
-
 def make_specific_mask(bin_mask, dot):
     '''
     :param num:
@@ -779,8 +854,6 @@ def make_specific_mask(bin_mask, dot):
                     ))
 
     return mask_list
-
-
 def make_mask(dot):
     view_mask = []
     view_mask.append(np.array(
@@ -836,8 +909,6 @@ def make_mask(dot):
     ))
 
     return view_mask, remove_mask
-
-
 def generate_maks(src, view, remove):
     shape = src.shape
     view_mask = np.zeros((shape[0], shape[1], 3), np.uint8)
@@ -852,8 +923,6 @@ def generate_maks(src, view, remove):
     rst = cv2.bitwise_and(src, img)
 
     return rst
-
-
 def divide_array(data_array, count_array, frame_total):
     interval = max(count_array)
     rst = np.empty((frame_total, interval))
@@ -868,20 +937,14 @@ def divide_array(data_array, count_array, frame_total):
         i += 1
 
     return rst
-
-
 def get_haarcascade():
     # haarcascade_url = "https://github.com/opencv/opencv/blob/master/data/haarcascades/haarcascade_frontalface_alt2.xml"
     haarcascade_filename = "haarcascade_frontalface_alt2.xml"
     return cv2.CascadeClassifier(cv2.data.haarcascades + haarcascade_filename)
-
-
 def get_eye_haarcascade():
     # haarcascade_url = "https://github.com/opencv/opencv/blob/master/data/haarcascades/haarcascade_frontalface_alt2.xml"
     haarcascade_filename = "haarcascade_eye.xml"
     return cv2.CascadeClassifier(cv2.data.haarcascades + haarcascade_filename)
-
-
 def get_frames_and_video_meta_data(video_path, meta_data_only=False):
     cap = cv2.VideoCapture(video_path)
     frameRate = cap.get(5)  # frame rate
@@ -911,8 +974,6 @@ def get_frames_and_video_meta_data(video_path, meta_data_only=False):
 
     cap.release()
     return frames, frameRate, sliding_window_stride
-
-
 def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
     frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
     num_frames = frames.shape[0]
@@ -1027,8 +1088,6 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
     return stacked_maps, sliding_window_stride, num_frames, stacked_ptts
     # rst,bvp,sliding,frames,ptt
     # return 1,1,num_frames,1
-
-
 def chunkify(img, block_width=5, block_height=5):
     shape = img.shape
     x_len = shape[0] // block_width
@@ -1061,8 +1120,6 @@ def chunkify(img, block_width=5, block_height=5):
         #     print('End of Array')
 
     return chunks
-
-
 def preprocess_video(video_path, output_shape, clip_size=256):
     cap = cv2.VideoCapture(video_path)
     frameRate = cap.get(5)  # frame rate
@@ -1136,7 +1193,6 @@ def preprocess_video(video_path, output_shape, clip_size=256):
         map_index += 1
 
     return stacked_maps, num_maps, num_frames
-
 def RhythmNet_preprocessor(video_path, clip_size):
     frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
 
@@ -1262,4 +1318,52 @@ def RhythmNet_preprocessor(video_path, clip_size):
         pbar.update(1)
         pbar.close()
 
-    return True, stacked_maps.astype(np.uint8)
+    return { "face_detect" : True,
+             "video_data" : stacked_maps.astype(np.uint8)}
+
+def faceUnwrapping(frame, target_shape, uv_map, flip_flag = 0):
+    '''
+    @param frame: input frame
+    @param target_shape: target shape of the output frame
+    @param uv_map: face unwrapping map
+    @param flip_flag: 0 for no flip, 1 for vertical flip, 2 for right side flip, 3 for left side flip
+    @return:
+    '''
+
+
+    H, W, C = frame.shape
+    W_new, H_new = target_shape
+
+    with mp.solutions.face_mesh.FaceMesh(
+            static_image_mode=True,
+            refine_landmarks=True,
+            max_num_faces=1,
+            min_detection_confidence=0.5) as face_mesh:
+        results = face_mesh.process(frame)
+
+    face_landmarks = results.multi_face_landmarks[0]
+    keypoints = np.array(
+        [(W * point.x, H * point.y) for point in face_landmarks.landmark[0:468]])  # after 468 is iris or something else
+    # ax = imshow(frame)
+    # ax.plot(keypoints[:, 0], keypoints[:, 1], '.b', markersize=2)
+    # plt.show()
+
+
+    keypoints_uv = np.array([(W_new*x, H_new*y) for x,y in uv_map])
+
+    tform = PiecewiseAffineTransform()
+    tform.estimate(keypoints_uv,keypoints)
+    texture = warp(frame, tform, output_shape=(H_new,W_new))
+    texture = (255*texture).astype(np.uint8)
+
+    if flip_flag == 1:
+        texture = cv2.flip(texture, 1)
+    elif flip_flag == 2:
+        tmp = cv2.flip(texture,1)
+        texture[:,:256] = tmp[:,:256]
+    elif flip_flag == 3:
+        tmp = cv2.flip(texture, 1)
+        texture[:,256:] = tmp[:,256:]
+
+
+    return texture
