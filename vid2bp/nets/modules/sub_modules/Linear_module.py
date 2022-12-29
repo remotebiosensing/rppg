@@ -8,21 +8,25 @@ class Linear_module_1D(nn.Module):
     def __init__(self):
         super(Linear_module_1D, self).__init__()
         self.linear1 = nn.Linear(90, 180)
-        self.batch1 = nn.BatchNorm1d(180)
         self.linear2 = nn.Linear(180, 270)
-        self.batch2 = nn.BatchNorm1d(270)
         self.linear3 = nn.Linear(270, 360)
-        self.batch3 = nn.BatchNorm1d(360)
+        self.elu = nn.ELU()
+
+        self.linear4 = nn.Linear(360, 360)
+        self.dropout = nn.Dropout(0.5)
+        self.linear5 = nn.Linear(360, 360)
         # channel-wise max pooling
 
     def forward(self, feature):
-        # l1 = self.convT1(feature)
-        # l2 = self.convT2(l1)
-        # l3 = self.convT3(l2)
-        l1 = self.linear1(torch.mean(feature, dim=1))
-        l2 = self.linear2(l1)
-        l3 = self.linear3(l2)
-        return l3
+        l1 = self.linear4(feature)
+        l2 = self.linear5(self.dropout(l1))
+        # l1 = self.linear1(feature)
+        # l2 = self.linear2(l1)
+        # l3 = self.linear3(l2)
+        # out = (torch.mul((s - d), l3) + h)
+        out = l2
+
+        return out
     # def __init__(self):
     #     super(Linear_module_1D, self).__init__()
     #     # self.adaptivepool1 = nn.AdaptiveMaxPool1d(180)

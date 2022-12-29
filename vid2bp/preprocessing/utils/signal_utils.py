@@ -29,11 +29,12 @@ def r(predictions, targets):
     return Sxy / (np.sqrt(Sxx) * np.sqrt(Syy))
 
 
-with open("/home/najy/PycharmProjects/rppgs/vid2bp/config/parameter.json") as f:
+with open("/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json") as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
     sr = json_data.get("parameters").get("sampling_rate")
     # chunk_size = json_data.get("parameters").get("chunk_size")
+
 
 def channel_spliter(multi_sig):
     if np.ndim(multi_sig) == 2:
@@ -55,28 +56,54 @@ def channel_spliter(multi_sig):
     else:
         print("not supported dimension for sig_spliter()")
 
+def ds_detection(ABP):
+    ABP = filter_signal(np.squeeze(ABP), cutoff=3, sample_rate=60., order=2, filtertype='lowpass')
+    rolling_sec = 0.75
+    SBP = SBP_detection(ABP, rolling_sec)
+    DBP = DBP_detection(ABP, rolling_sec)
+    SBP, DBP = SBP_DBP_filter(ABP, SBP, DBP)
+    if len(SBP) == 0 or len(DBP) == 0:
+        return 0, 0, 0, 0, 0
+        # return False, None, None, None
+    mean_sbp, mean_dbp = np.mean(ABP[SBP]), np.mean(ABP[DBP])
+    mean_map = (2 * mean_dbp + mean_sbp) / 3
+    return mean_sbp, mean_dbp, mean_map, SBP, DBP
+
+
 def signal_respiration_checker(ABP, PPG, threshold=0.9):
+    if np.isnan(PPG).any() or np.isnan(ABP).any() or \
+            (np.var(ABP) < 1) or \
+            (not (np.sign(ABP) > 0.0).all()):
+        return False, None, None, None
     ABP = filter_signal(np.squeeze(ABP), cutoff=3, sample_rate=125., order=2, filtertype='lowpass')
     PPG = filter_signal(np.squeeze(PPG), cutoff=3, sample_rate=125., order=2, filtertype='lowpass')
 
     # Normalization
-    ABP = 2 * (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP)) - 1
-    PPG = 2 * (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG)) - 1
     # Peak detection
     rolling_sec = 0.75
     r_rolling_sec = 0.5
     SBP = SBP_detection(ABP, rolling_sec)
     DBP = DBP_detection(ABP, rolling_sec)
     SBP, DBP = SBP_DBP_filter(ABP, SBP, DBP)
+    if len(SBP) == 0 or len(DBP) == 0:
+        return False, None, None, None
+    mean_sbp, mean_dbp = np.mean(ABP[SBP]), np.mean(ABP[DBP])
+    mean_map = (2 * mean_dbp + mean_sbp) / 3
     PPG_peak = SBP_detection(PPG, rolling_sec)
     PPG_low = DBP_detection(PPG, rolling_sec)
     PPG_peak, PPG_low = SBP_DBP_filter(PPG, PPG_peak, PPG_low)
+    ABP = 2 * (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP)) - 1
+    PPG = 2 * (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG)) - 1
     # Matching peaks
+    if len(PPG_peak) == 0 or len(PPG_low) == 0 or len(SBP) == 0 or len(DBP) == 0:
+        return False, None, None, None
     matched_ABP, matched_PPG, gap_size, SBP, DBP, PPG_peak, PPG_low = match_signal(ABP, PPG, SBP, DBP,
                                                                                    PPG_peak, PPG_low)
     # ABP, PPG Rolling mean
-    ABP_rolling_mean, PPG_rolling_mean = signals_rolling_mean(matched_ABP, matched_PPG, r_rolling_sec)
+    Flag, ABP_rolling_mean, PPG_rolling_mean = signals_rolling_mean(matched_ABP, matched_PPG, r_rolling_sec)
 
+    if Flag is False:
+        return False, None, None, None
     # Normalization
     ABP_rolling_mean = 2 * (ABP_rolling_mean - np.min(ABP_rolling_mean)) / (
             np.max(ABP_rolling_mean) - np.min(ABP_rolling_mean)) - 1
@@ -86,9 +113,10 @@ def signal_respiration_checker(ABP, PPG, threshold=0.9):
     # correlation @rolling mean
     correlation = np.mean(np.corrcoef(ABP_rolling_mean, PPG_rolling_mean))
     if correlation >= threshold:
-        return True
+        return True, mean_dbp, mean_sbp, mean_map
     else:
-        return False
+        return False, None, None, None
+
 
 def window_wise_heartpy_peak_detection(signal, win_start, win_end, step=0.5, fs=125):
     """
@@ -162,9 +190,12 @@ def match_signal(ABP, PPG, SBP, DBP, PPG_peak, PPG_low):
 
 def signals_rolling_mean(ABP, PPG, rolling_sec, fs=125):
     # rolling mean for find proper trend
-    ABP_rolling_mean = rolling_mean(ABP, rolling_sec, fs)
-    PPG_rolling_mean = rolling_mean(PPG, rolling_sec, fs)
-    return ABP_rolling_mean, PPG_rolling_mean
+    try:
+        ABP_rolling_mean = rolling_mean(ABP, rolling_sec, fs)
+        PPG_rolling_mean = rolling_mean(PPG, rolling_sec, fs)
+        return True, ABP_rolling_mean, PPG_rolling_mean
+    except:
+        return False, None, None
 
 
 def plot_signal_with_props(ABP, PPG, SBP, DBP, PPG_peak, PPG_low, ABP_rolling_mean, PPG_rolling_mean,
@@ -231,6 +262,7 @@ def SBP_DBP_filter(ABP, SBP, DBP):
 
     return SBP, DBP
 
+
 class SignalHandler:
     def __init__(self, single_sig):
         self.single_sig = single_sig
@@ -279,7 +311,9 @@ class BPInfoExtractor:
         idx, prop = signal.find_peaks(x, height=np.max(self.input_sig) - np.std(self.input_sig))
         # idx, prop = signal.find_peaks(x, height=np.mean(input_sig))
         sbp = prop["peak_heights"]
-        return [idx, sbp]
+        if len(sbp) < 5:
+            return False, None
+        return True, [idx, sbp]
 
     # TODO : make get_diastolic() function available for mimic dataset
     def get_diastolic(self):
@@ -289,7 +323,9 @@ class BPInfoExtractor:
         for i, idx in enumerate(range(int(len(self.input_sig) / cycle_len))):
             cycle_min = np.min(self.input_sig[i * cycle_len:(i + 1) * cycle_len])
             dbp.append(cycle_min)
-        return dbp
+        if len(dbp) < 5:
+            return False, None
+        return True, dbp
 
     def get_mean_arterial_pressure(self):
         # mbp = []
@@ -318,9 +354,6 @@ def signal_quality_checker(input_sig, is_abp):
             return False
         else:
             return True
-
-
-
 
 
 def frequency_checker(input_sig):
