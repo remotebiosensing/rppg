@@ -21,6 +21,7 @@ class params():
     # UBFC / PURE / V4V / VIPL_HR
     save_root_path = "/media/hdd1/dy_dataset/"
     data_root_path = "/media/hdd1/"
+    model_root_path = "/media/hdd1/dy/model/"
     train_ratio = 0.8
     face_detect_algorithm = 0
     divide_flag = 1  # 1 : divide by number 0: divide by subject

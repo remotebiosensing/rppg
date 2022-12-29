@@ -152,7 +152,7 @@ for ver in range(10):
         wandb.init(project=params.wandb_project_name, entity=params.wandb_entity,
                    name="APNET_" + str(ver) + "_" + params.loss_fn)
 
-    opt.append(optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"]))
+    opt.append(optimizer(model.parameters(), params.lr, params.optimizer))
     # optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
     # scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
     sch.append(lr_scheduler.ExponentialLR(opt[idx], gamma=0.99))
@@ -175,17 +175,16 @@ for ver in range(10):
     # dataloaders
 
 for epoch in range(params.epoch):
-    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", wandb_flag)
+    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", params.wandb_flag)
     if data_loaders.__len__() == 3:
-        val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag)
+        val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", params.wandb_flag, params.save_img_flag)
     if min_val_loss > val_loss:
         min_val_loss = val_loss
-        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag)
+        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", params.wandb_flag, params.save_img_flag)
         if min_test_loss > running_loss:
             min_test_loss = running_loss
             torch.save(model.state_dict(),
-                       params["model_root_path"] + preprocessing_prams["dataset_name"] + "_" + model_params[
-                           "name"] + "_" + hyper_params["loss_fn"])
+                       params.model_root_path + params.dataset_name + "_" + params.model + "_" + params.loss_fn)
     # if epoch % 10 == 0:
 
     if params.wandb_flag:
