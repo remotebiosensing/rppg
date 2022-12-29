@@ -14,14 +14,12 @@ from torch.optim import lr_scheduler
 from dataset.dataset_loader import dataset_loader, split_data_loader
 from log import log_info_time
 from loss import loss_fn
-from models import is_model_support, get_model, summary,get_ver_model
+from models import is_model_support, get_model, summary, get_ver_model
 from optim import optimizer
 from utils.dataset_preprocess import preprocessing, dataset_split
 from utils.train import train_fn, test_fn
 
 from params import params
-
-
 
 # for Reproducible model
 # torch.manual_seed(random_seed)
@@ -38,7 +36,6 @@ if params.k_fold_flag:
 
 now = datetime.datetime.now()
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
 
 """
 TEST FOR LOAD
@@ -72,7 +69,7 @@ if params.__PREPROCESSING__:
 
 if torch.cuda.is_available():
     print('cuda is available')
-else :
+else:
     print('cuda is not available')
 
 '''
@@ -98,7 +95,7 @@ if params.__TIME__:
 
 dataset = dataset_loader()
 
-datasets = dataset_split(dataset, [0.7, 0.1, 0.2])
+datasets = dataset_split(dataset, [params.train_ratio, params.val_ratio, params.test_ratio])
 
 if params.__TIME__:
     log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
@@ -150,23 +147,24 @@ opt = []
 sch = []
 idx = 0
 for ver in range(10):
-    model = get_ver_model(model_params["name"], ver).cuda()
-    if wandb_flag:
-        wandb.init(project=wandb_params["project"], entity=wandb_params["entity"],name = "APNET_"+str(ver)+"_"+hyper_params["loss_fn"])
+    model = get_ver_model(ver).cuda()
+    if params.wandb_flag:
+        wandb.init(project=params.wandb_project_name, entity=params.wandb_entity,
+                   name="APNET_" + str(ver) + "_" + params.loss_fn)
 
     opt.append(optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"]))
     # optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
     # scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
     sch.append(lr_scheduler.ExponentialLR(opt[idx], gamma=0.99))
 
-    if wandb_flag:
+    if params.wandb_flag:
         wandb.config = {
-            "learning_rate": hyper_params["learning_rate"],
-            "epochs": hyper_params["epochs"],
-            "batch_size": params["train_batch_size"]
+            "learning_rate": params.lr,
+            "epochs": params.epoch,
+            "batch_size": params.train_batch_size
         }
 
-    if __TIME__:
+    if params.__TIME__:
         log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
     '''
@@ -176,19 +174,19 @@ for ver in range(10):
     min_test_loss = 100.0
     # dataloaders
 
-
-for epoch in range(hyper_params["epochs"]):
-    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train",wandb_flag)
+for epoch in range(params.epoch):
+    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", wandb_flag)
     if data_loaders.__len__() == 3:
-        val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag )
+        val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag, save_img_flag)
     if min_val_loss > val_loss:
         min_val_loss = val_loss
-        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag )
-        if min_test_loss >running_loss:
+        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", wandb_flag, save_img_flag)
+        if min_test_loss > running_loss:
             min_test_loss = running_loss
-            torch.save(model.state_dict(),params["model_root_path"]+preprocessing_prams["dataset_name"]+"_"+model_params["name"]+"_"+hyper_params["loss_fn"])
+            torch.save(model.state_dict(),
+                       params["model_root_path"] + preprocessing_prams["dataset_name"] + "_" + model_params[
+                           "name"] + "_" + hyper_params["loss_fn"])
     # if epoch % 10 == 0:
 
-
-    if wandb_flag:
+    if params.wandb_flag:
         wandb.finish()

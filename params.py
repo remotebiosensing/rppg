@@ -25,7 +25,6 @@ class params():
     face_detect_algorithm = 0
     divide_flag = 1  # 1 : divide by number 0: divide by subject
     fixed_position = 1  # 1 : fixed position 0: not fixed position
-    log_flag = True  # 1 : print log 0: not print log
     time_length = 32  # The number of frames in dataset.__GetItem__
     chunk_size = 4  # The number of subjects processed at one time
 

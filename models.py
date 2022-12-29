@@ -20,7 +20,7 @@ import os
 NUM_FEATURES = 5
 NUM_CLASSES = 10
 
-def get_ver_model(model_name: str = "DeepPhys", ver:int = 1):
+def get_ver_model(ver:int = 1):
     return TEST2(ver)
 
 
