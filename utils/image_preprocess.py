@@ -95,7 +95,9 @@ def PhysNet_preprocess_Video(path, **kwargs):
     face_detect_algorithm = kwargs['face_detect_algorithm']
     fixed_position = kwargs['fixed_position']
     img_size = kwargs['img_size']
-    flip_flag = kwargs['flip_flag'] # True or False
+    flip_flag = kwargs['flip_flag'] # 0,1,2,3
+    if flip_flag == None:
+        flip_flag = 0
 
     if path.__contains__("png"):
         path = path[:-3]
@@ -166,14 +168,13 @@ def PhysNet_preprocess_Video(path, **kwargs):
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        valid_frame_num = (frame_total)//32
+
         cap.release()
 
-        if flip_flag:
-            iter = 4
-            raw_video = np.empty((frame_total*4, img_size, img_size, 3))
-        else:
-            iter = 1
-            raw_video = np.empty((frame_total, img_size, img_size, 3))
+
+        raw_video = np.empty((frame_total, img_size, img_size, 3))
 
 
 
@@ -186,82 +187,73 @@ def PhysNet_preprocess_Video(path, **kwargs):
             uv_path = "uv_datas/uv_map.json"  # taken from https://github.com/spite/FaceMeshFaceGeometry/blob/353ee557bec1c8b55a5e46daf785b57df819812c/js/geometry.js
             uv_map_dict = json.load(open(uv_path))
             uv_map = np.array([(uv_map_dict["u"][str(i)], uv_map_dict["v"][str(i)]) for i in range(468)])
-        for i in range(iter):
-            cap = cv2.VideoCapture(path)
-            j = 0
-            with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
-                while cap.isOpened():
-
-                    ret, frame = cap.read()
-
-                    if frame is None:
-                        break
-                    if face_detect_algorithm == 1:
-                        rst, crop_frame = faceDetection(frame)
-                        if not rst:  # can't detect face
-                            return False, None
-                    elif face_detect_algorithm == 2:
-                        f, dot = crop_mediapipe(detector, frame)
-                        # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
-                        bin_mask = '0011000000000000000100000001001'
-                        view, remove = make_mask(dot)
-                        crop_frame = generate_maks(f, view, remove)
-
-                        _, dot = detector.findFaceMesh(f)
-
-                    elif face_detect_algorithm == 4:
-                        crop_frame = faceUnwrapping(frame,(img_size, img_size),uv_map,flip_flag)
-
-                    else:
-                        crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
-
-                    crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
-                    crop_frame = generate_Floatimage(crop_frame)
-
-                    raw_video[j + i * frame_total] = crop_frame
-                    j += 1
-                    pbar.update(1)
-                cap.release()
+            face_mesh = mp.solutions.face_mesh.FaceMesh(
+                static_image_mode=True,
+                refine_landmarks=True,
+                max_num_faces=1,
+                min_detection_confidence=0.5)
 
 
+        cap = cv2.VideoCapture(path)
+        j = 0
+        with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+            while cap.isOpened():
 
-    if flip_flag:
-        split_raw_video = np.zeros((((frame_total - 22) // 10) * 4, 32, img_size, img_size, 3))
-    else :
-        split_raw_video = np.zeros((((frame_total - 22) // 10), 16, img_size, img_size, 3))
+                ret, frame = cap.read()
+
+                if frame is None:
+                    break
+                if face_detect_algorithm == 1:
+                    rst, crop_frame = faceDetection(frame)
+                    if not rst:  # can't detect face
+                        return False, None
+                elif face_detect_algorithm == 2:
+                    f, dot = crop_mediapipe(detector, frame)
+                    # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
+                    bin_mask = '0011000000000000000100000001001'
+                    view, remove = make_mask(dot)
+                    crop_frame = generate_maks(f, view, remove)
+
+                    _, dot = detector.findFaceMesh(f)
+
+                elif face_detect_algorithm == 4:
+                    results = face_mesh.process(frame)
+                    crop_frame = faceUnwrapping(frame, results,(img_size, img_size),uv_map,flip_flag)
+
+                else:
+                    crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+
+                crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
+                crop_frame = generate_Floatimage(crop_frame)
+
+                raw_video[j] = crop_frame
+                j += 1
+                pbar.update(1)
+                if j == valid_frame_num * 32:
+                    break
+            cap.release()
+
+
+
+
+    split_raw_video = np.zeros(((frame_total)//32, 32, img_size, img_size, 3))
+    flip_arr = np.zeros((frame_total // 32, 32))
+    frame_number = np.zeros((frame_total // 32, 32))
 
     index = 0
 
-    if flip_flag :
-        for x in range(((frame_total - 22) // 10)*4):
-            split_raw_video[x] = raw_video[index:index + 32]
-            index = index + 10
-    else:
-        for x in range(((frame_total - 22) // 10)):
-            split_raw_video[x] = raw_video[index:index + 32]
-            index = index + 10
+    length = (frame_total)//32
 
-    if flip_flag == 'True':
-        flip_arr = np.zeros((frame_total-22)//10 * 4,32)
-        for i in range((frame_total - 22) // 10 * 4):
-            if i < (frame_total - 22) // 10:
-                for j in range(32):
-                    flip_arr[index] = 0
-                    index += 1
-            elif i < (frame_total - 22) // 10 * 2:
-                for j in range(32):
-                    flip_arr[index] = 1
-                    index += 1
-            elif i < (frame_total - 22) // 10 * 3:
-                for j in range(32):
-                    flip_arr[index] = 2
-                    index += 1
-            else:
-                for j in range(32):
-                    flip_arr[index] = 3
-                    index += 1
+    for x in range(length):
+
+        split_raw_video[x] = raw_video[index:index + 32]
+        flip_arr[x] = flip_flag
+        frame_number[x] = np.arange(index, index + 32)
+        index = index + 32
+
 
     return { "face_detect" : True,
+             "frame_number" :frame_number,
              "video_data" : split_raw_video,
              "flip_arr" : flip_arr}
 def RTNet_preprocess_Video(path, **kwargs):
@@ -1321,7 +1313,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
     return { "face_detect" : True,
              "video_data" : stacked_maps.astype(np.uint8)}
 
-def faceUnwrapping(frame, target_shape, uv_map, flip_flag = 0):
+def faceUnwrapping(frame, results, target_shape, uv_map, flip_flag = 0):
     '''
     @param frame: input frame
     @param target_shape: target shape of the output frame
@@ -1333,13 +1325,6 @@ def faceUnwrapping(frame, target_shape, uv_map, flip_flag = 0):
 
     H, W, C = frame.shape
     W_new, H_new = target_shape
-
-    with mp.solutions.face_mesh.FaceMesh(
-            static_image_mode=True,
-            refine_landmarks=True,
-            max_num_faces=1,
-            min_detection_confidence=0.5) as face_mesh:
-        results = face_mesh.process(frame)
 
     face_landmarks = results.multi_face_landmarks[0]
     keypoints = np.array(

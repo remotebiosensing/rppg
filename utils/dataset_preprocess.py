@@ -10,11 +10,9 @@ import datetime
 from utils.image_preprocess import video_preprocess
 from utils.text_preprocess import label_preprocess
 
-from utils.image_preprocess import Deepphys_preprocess_Video, PhysNet_preprocess_Video, RTNet_preprocess_Video, \
-    GCN_preprocess_Video, Axis_preprocess_Video, RhythmNet_preprocess_Video, ETArPPGNet_preprocess_Video, Vitamon_preprocess_Video
-from utils.seq_preprocess import PPNet_preprocess_Mat
-from utils.text_preprocess import Deepphys_preprocess_Label, PhysNet_preprocess_Label, GCN_preprocess_Label, \
-    Axis_preprocess_Label, RhythmNet_preprocess_Label, ETArPPGNet_preprocess_Label, Vitamon_preprocess_Label
+import math
+
+import cv2
 
 
 def dataset_split(dataset, ratio):
@@ -53,12 +51,12 @@ def preprocessing(params, model_params, preprocessing_params, log_flag):
     fixed_position = True
     time_length = preprocessing_params["time_length"]
     img_size = preprocessing_params["image_size"]
-    ssl_flag = True
+    chunk_size = preprocessing_params["chunk_size"]
 
     if log_flag:
         print("=========== preprocessing() in " + os.path.basename(__file__))
 
-    split_flag = True
+    split_flag = False
     dataset_root_path = data_root_path + dataset_name
 
     manager = multiprocessing.Manager()
@@ -115,152 +113,35 @@ def preprocessing(params, model_params, preprocessing_params, log_flag):
         data_list = os.listdir(dataset_root_path)
         vid_name = "/png"
         ground_truth_name = "/json"
-    process = []
 
-
+    ssl_flag = True
 
     # multiprocessing
-    if not split_flag:
-        for index, data_path in enumerate(data_list):
-            proc = multiprocessing.Process(target=preprocess_Dataset,
-                                           args=(model_name, dataset_root_path + "/" + data_path, vid_name, ground_truth_name, return_dict)
-                                           , kwargs={"face_detect_algorithm": face_detect_algorithm,
-                                                     "divide_flag": divide_flag,
-                                                     "fixed_position": fixed_position,
-                                                     "time_length": time_length,
-                                                     "img_size": img_size,
-                                                     "flip_flag": ssl_flag})
-            proc.start()
-            break
 
-        for proc in process:
-            proc.join()
-    else:
-        loop = len(data_list) // 32
-        loop = 5
-
-        for i in range(loop):
-            for index, data_path in enumerate(data_list[i * 32:(i + 1) * 32]):
-                proc = multiprocessing.Process(target=preprocess_Dataset,
-                                               args=(model_name,dataset_root_path + "/" + data_path, vid_name, ground_truth_name, return_dict)
-                                               ,kwargs={"face_detect_algorithm": face_detect_algorithm,
-                                                        "divide_flag": divide_flag,
-                                                        "fixed_position": fixed_position,
-                                                        "time_length": time_length,
-                                                        "img_size": img_size,
-                                                        "flip_flag": ssl_flag})
-                proc.start()
-                process.append(proc)
-
-                # flag 1 : detect face
-                # flag 2 : remove nose
-
-
-                process.append(proc)
-                proc.start()
-
-            for proc in process:
-                proc.join()
-
-    #get current time
     now = datetime.datetime.now()
+    time = now.strftime('%Y-%m-%d')
 
-    train = int(len(return_dict.keys()) * train_ratio)  # split dataset
-    train_file_path = save_root_path + model_name + "_" + dataset_name + now + "_train.hdf5"
-    test_file_path = save_root_path + model_name + "_" + dataset_name + now +"_test.hdf5"
-    dt = h5py.special_dtype(vlen=np.float32)
-    train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
+    chunk_num = math.ceil(len(data_list) / chunk_size)
+    for i in range(chunk_num):
+        if i == chunk_num - 1:
+            break
+            chunk_data_list = data_list[i * chunk_size:]
+        else:
+            chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]
 
-    if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
+        print(chunk_data_list)
+        ## get current time
+        now = datetime.datetime.now()
 
-        for index, data_path in enumerate(return_dict.keys()[:train]):
-            dset = train_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-            dset['preprocessed_hr'] = return_dict[data_path]['preprocessed_hr']
+        chunk_preprocessing(model_name, chunk_data_list, dataset_root_path, vid_name, ground_truth_name,
+                            face_detect_algorithm=face_detect_algorithm, divide_flag=divide_flag,
+                            fixed_position=fixed_position, time_length=time_length, img_size=img_size,
+                            ssl_flag=ssl_flag, idx=i, time=time)
+        ## calculate evaluate time
+        end = datetime.datetime.now()
+        print("time : ", end - now)
 
-        train_file.close()
 
-        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
-        for index, data_path in enumerate(return_dict.keys()[train:]):
-            dset = test_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-            dset['preprocessed_hr'] = return_dict[data_path]['preprocessed_hr']
-        test_file.close()
-
-    elif model_name in ["PPNet"]:
-
-        for index, data_path in enumerate(return_dict.keys()[:train]):
-            dset = train_file.create_group(data_path)
-            dset['ppg'] = return_dict[data_path]['ppg']
-            dset['sbp'] = return_dict[data_path]['sbp']
-            dset['dbp'] = return_dict[data_path]['dbp']
-            dset['hr'] = return_dict[data_path]['hr']
-        train_file.close()
-
-        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
-        for index, data_path in enumerate(return_dict.keys()[train:]):
-            dset = test_file.create_group(data_path)
-            dset['ppg'] = return_dict[data_path]['ppg']
-            dset['sbp'] = return_dict[data_path]['sbp']
-            dset['dbp'] = return_dict[data_path]['dbp']
-            dset['hr'] = return_dict[data_path]['hr']
-        test_file.close()
-
-    elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
-        for index, data_path in enumerate(return_dict.keys()[:train]):
-            dset = train_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        train_file.close()
-
-        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
-        for index, data_path in enumerate(return_dict.keys()[train:]):
-            dset = test_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        test_file.close()
-    elif model_name in ["AxisNet"]:
-        for index, data_path in enumerate(return_dict.keys()[:train]):
-            dset = train_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-            dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
-        train_file.close()
-
-        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
-        for index, data_path in enumerate(return_dict.keys()[train:]):
-            dset = test_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-            dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
-        test_file.close()
-
-    elif model_name in ["Vitamon", "Vitamon_phase2"]:
-        train_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_train.hdf5", "w")
-        for index, data_path in enumerate(return_dict.keys()[:train]):
-            dset = train_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        train_file.close()
-
-        valid_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_valid.hdf5", "w")
-        for index, data_path in enumerate(return_dict.keys()[train:valid]):
-            dset = valid_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        valid_file.close()
-
-        test_file = h5py.File(save_root_path + model_name + "_" + dataset_name + "_test.hdf5", "w")
-        for index, data_path in enumerate(return_dict.keys()[valid:]):
-            dset = test_file.create_group(data_path)
-            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
-        test_file.close()
-
-# def preprocess_Dataset(path, vid_name, ground_truth_name, face_detect_algorithm, divide_flag, fixed_position,
-#                        time_length, model_name, img_size, return_dict):
 def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dict, **kwargs):
     """
     :param path: dataset path
@@ -270,25 +151,26 @@ def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dic
 
     """
 
+    preprocessed_label = label_preprocess(model_name=model_name,
+                                          path=path + ground_truth_name,
+                                          **kwargs)
+
     rst_dict = video_preprocess(model_name=model_name,
-                                               path = path+vid_name,
-                                               **kwargs)
+                                path=path + vid_name,
+                                **kwargs)
     if not rst_dict["face_detect"]:
         return
 
-    preprocessed_label = label_preprocess(model_name=model_name,
-                                          path = path+ground_truth_name,
-                                          **kwargs)
-
-
     # ppg, sbp, dbp, hr
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
-        return_dict[path.replace('/', '')] = {'preprocessed_video': rst_dict["video_data"],
-                                              'flip_arr' : rst_dict["flip_arr"],
-                                              'preprocessed_label': preprocessed_label}
-                                              # 'preprocessed_hr': preprocessed_hr}
-    # elif model_name in ["PPNet"]:
-    #     return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
+        return_dict[path.replace('/', '') + str(kwargs['flip_flag'])] = {
+            'preprocessed_video': rst_dict["video_data"],
+            'frame_number': rst_dict["frame_number"],
+            'flip_arr': rst_dict["flip_arr"],
+            'preprocessed_label': preprocessed_label}
+        # 'preprocessed_hr': preprocessed_hr}
+    elif model_name in ["PPNet"]:
+        return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
     elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': rst_dict["video_data"],
                                               'preprocessed_label': preprocessed_label}
@@ -298,6 +180,89 @@ def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dic
                                               'preprocessed_label': preprocessed_label}
     elif model_name in ["Vitamon", "Vitamon_phase2"]:
         return_dict[path.replace('/', '')] = {'preprocessed_video': rst_dict["video_data"],
-                                          'preprocessed_label': preprocessed_label}
+                                              'preprocessed_label': preprocessed_label}
 
     # 'preprocessed_graph': saved_graph}
+
+
+def chunk_preprocessing(model_name, data_list, dataset_root_path, vid_name, ground_truth_name, **kwargs):
+    process = []
+    face_detect_algorithm = kwargs['face_detect_algorithm']
+    divide_flag = kwargs['divide_flag']
+    fixed_position = kwargs['fixed_position']
+    time_length = kwargs['time_length']
+    img_size = kwargs['img_size']
+    ssl_flag = kwargs['ssl_flag']
+    time = kwargs['time']
+    idx = kwargs['idx']
+
+    save_root_path = "/media/hdd1/dy/dataset/"
+    dataset_name = "UBFC"
+
+    if ssl_flag:
+        loop_range = 4
+    else:
+        loop_range = 1
+
+    manager = multiprocessing.Manager()
+    return_dict = manager.dict()
+
+    for index, data_path in enumerate(data_list):
+        for i in range(loop_range):
+            proc = multiprocessing.Process(target=preprocess_Dataset,
+                                           args=(
+                                               model_name, dataset_root_path + "/" + data_path, vid_name,
+                                               ground_truth_name,
+                                               return_dict)
+                                           , kwargs={"face_detect_algorithm": face_detect_algorithm,
+                                                     "divide_flag": divide_flag,
+                                                     "fixed_position": fixed_position,
+                                                     "time_length": time_length,
+                                                     "img_size": img_size,
+                                                     "flip_flag": i})
+
+            process.append(proc)
+            proc.start()
+
+    print(len(process))
+    for proc in process:
+        proc.join()
+
+
+    dataset_path = h5py.File(save_root_path + model_name + "_" + dataset_name + "_" + time + "_" + str(idx) + ".hdf5",
+                             "w")
+
+    if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
+        for index, data_path in enumerate(return_dict.keys()):
+            dset = dataset_path.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['frame_number'] = return_dict[data_path]['frame_number']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label'][0]
+            dset['preprocessed_hr'] = return_dict[data_path]['preprocessed_label'][1]
+            dset['flip_arr'] = return_dict[data_path]['flip_arr']
+    elif model_name in ["PPNet"]:
+        for index, data_path in enumerate(return_dict.keys()):
+            dset = dataset_path.create_group(data_path)
+            dset['ppg'] = return_dict[data_path]['ppg']
+            dset['sbp'] = return_dict[data_path]['sbp']
+            dset['dbp'] = return_dict[data_path]['dbp']
+            dset['hr'] = return_dict[data_path]['hr']
+    elif model_name in ["GCN", "RhythmNet", "ETArPPGNet"]:
+        for index, data_path in enumerate(return_dict.keys()):
+            dset = dataset_path.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+    elif model_name in ["AxisNet"]:
+        for index, data_path in enumerate(return_dict.keys()):
+            dset = dataset_path.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+            dset['preprocessed_ptt'] = return_dict[data_path]['preprocessed_ptt']
+    elif model_name in ["Vitamon", "Vitamon_phase2"]:
+        for index, data_path in enumerate(return_dict.keys()):
+            dset = dataset_path.create_group(data_path)
+            dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+    dataset_path.close()
+
+    manager.shutdown()

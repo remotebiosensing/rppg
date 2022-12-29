@@ -20,7 +20,7 @@ def label_preprocess(model_name, path,**kwargs):
         return Deepphys_preprocess_Label(path, **kwargs)
     elif model_name == 'GCN':
         return GCN_preprocess_Label(path, **kwargs)
-    elif model_name == 'PulseNet':
+    elif model_name == 'PhysNet':
         return PhysNet_preprocess_Label(path, **kwargs)
     elif model_name == 'Axis':
         return Axis_preprocess_Label(path, **kwargs)
@@ -74,13 +74,15 @@ def Deepphys_preprocess_Label(path):
     split_hr_label = np.zeros(shape=delta_pulse.shape)
 
     return delta_pulse,split_hr_label
-def PhysNet_preprocess_Label(path):
+def PhysNet_preprocess_Label(path, **kwargs):
     '''
     :param path: label file path
     :return: wave form
     '''
     set = 64
     div = 64
+
+
     # Load input
     if path.__contains__("hdf5"):
         f = h5py.File(path, 'r')
@@ -104,7 +106,6 @@ def PhysNet_preprocess_Label(path):
         label /= np.std(label)
         start = math.ceil(start / 32)
         end = math.floor(end / 32)
-
     elif path.__contains__("json"):
         name = path.split("/")
         label = []
@@ -242,7 +243,6 @@ def PhysNet_preprocess_Label(path):
                 #     new_hr.append((hr[std] * back + hr[std+1] * head) / 1000)
 
         # print("Check")
-
     elif path.__contains__("label.txt"):
         cap = cv2.VideoCapture(path[:-9] + "video.mkv")
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -271,15 +271,16 @@ def PhysNet_preprocess_Label(path):
     if (len(new_label) - 22) < 0:
         print("negative" + path)
 
-    split_raw_label = np.zeros(((len(new_label) - 22) // 10, 32))
-    split_hr_label = np.zeros(((len(new_label) - 22) // 10))
+    split_raw_label = np.zeros(((len(new_label)) // 32, 32))
+    split_hr_label = np.zeros(((len(new_label)) // 32))
 
     index = 0
+    length = (len(new_label))//32
     # print( str(len(new_label)) + "       "+ str((len(new_label) -22) //10))
-    for i in range((len(new_label) - 22) // 10):
+    for i in range(length):
         split_raw_label[i] = new_label[index:index + 32]
         # split_hr_label[i] = np.mean(new_hr[index:index + 32])
-        index = index + 10
+        index = index + 32
 
     return split_raw_label, split_hr_label
 def GCN_preprocess_Label(path, **kwargs):

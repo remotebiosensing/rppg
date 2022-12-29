@@ -6,7 +6,7 @@ import numpy as np
 import mediapipe as mp
 import skimage
 from skimage.transform import PiecewiseAffineTransform, warp
-
+from utils.image_preprocess import faceUnwrapping
 def imshow(img):
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.imshow(img)
@@ -31,32 +31,11 @@ while cap.isOpened():
     ret, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     H, W, C = frame.shape
+    texture = faceUnwrapping(frame, (W_new, H_new), uv_map, 0)
+    tmp1 = faceUnwrapping(frame, (W_new, H_new), uv_map, 1)
+    tmp2 = faceUnwrapping(frame, (W_new, H_new), uv_map, 2)
+    tmp3 = faceUnwrapping(frame, (W_new, H_new), uv_map, 3)
 
-    with mp.solutions.face_mesh.FaceMesh(
-            static_image_mode=True,
-            refine_landmarks=True,
-            max_num_faces=1,
-            min_detection_confidence=0.5) as face_mesh:
-        results = face_mesh.process(frame)
-
-    face_landmarks = results.multi_face_landmarks[0]
-    keypoints = np.array(
-        [(W * point.x, H * point.y) for point in face_landmarks.landmark[0:468]])  # after 468 is iris or something else
-    # ax = imshow(frame)
-    # ax.plot(keypoints[:, 0], keypoints[:, 1], '.b', markersize=2)
-    # plt.show()
-
-
-    keypoints_uv = np.array([(W_new*x, H_new*y) for x,y in uv_map])
-
-    tform = PiecewiseAffineTransform()
-    tform.estimate(keypoints_uv,keypoints)
-    texture = warp(frame, tform, output_shape=(H_new,W_new))
-    texture = (255*texture).astype(np.uint8)
-
-    # ax = imshow(texture)
-    # ax.plot(keypoints_uv[:, 0], keypoints_uv[:, 1], '.b', markersize=2)
-    # plt.show()
     out.write(texture)
 
     cnt+=1
