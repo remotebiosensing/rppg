@@ -12,6 +12,8 @@ from utils.text_preprocess import label_preprocess
 
 import math
 
+from params import params
+
 import cv2
 
 
@@ -29,7 +31,7 @@ def dataset_split(dataset, ratio):
         return random_split(dataset, [train_len, test_len])
 
 
-def preprocessing(params, model_params, preprocessing_params, log_flag):
+def preprocessing():
     """
     :param save_root_path: save file destination path
     :param model_name: select preprocessing method
@@ -41,19 +43,19 @@ def preprocessing(params, model_params, preprocessing_params, log_flag):
     :param fixed_position: True : fixed position, False : face tracking
     :return:
     """
-    save_root_path = params["save_root_path"]
-    model_name = model_params["name"]
-    data_root_path = params["data_root_path"]
-    dataset_name = preprocessing_params["dataset_name"]
-    train_ratio = params["train_ratio"]
-    face_detect_algorithm = preprocessing_params["face_detect_algorithm"]
-    divide_flag = preprocessing_params["divide_flag"]
-    fixed_position = True
-    time_length = preprocessing_params["time_length"]
-    img_size = preprocessing_params["image_size"]
-    chunk_size = preprocessing_params["chunk_size"]
+    save_root_path = params.save_root_path
+    model_name = params.model
+    data_root_path = params.data_root_path
+    dataset_name = params.dataset_name
+    train_ratio = params.train_ratio
+    face_detect_algorithm = params.face_detect_algorithm
+    divide_flag = params.divide_flag
+    fixed_position = params.fixed_position
+    time_length = params.time_length
+    img_size = params.img_size
+    chunk_size = params.chunk_size
 
-    if log_flag:
+    if params.log_flag:
         print("=========== preprocessing() in " + os.path.basename(__file__))
 
     split_flag = False

@@ -14,6 +14,8 @@ from nets.models.RhythmNet import RhythmNet
 from nets.models.ETArPPGNet import ETArPPGNet
 from nets.models.sub_models.VitaMon import Vitamon
 
+from params import params
+
 import os
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -22,68 +24,68 @@ def get_ver_model(model_name: str = "DeepPhys", ver:int = 1):
     return TEST2(ver)
 
 
-def get_model(model_name: str = 'DeepPhys', log_flag:bool = True):
+def get_model():
     """
     :param model_name: model name
     :return: model
     """
-    if log_flag:
+    if params.log_flag:
         print("========= set model get_model() in"+ os.path.basename(__file__))
 
-    if model_name == "DeepPhys":
+    if params.model == "DeepPhys":
         return DeepPhys()
-    elif model_name == "DeepPhys_DA":
+    elif params.model == "DeepPhys_DA":
         return DeepPhys_DA()
-    elif model_name == "PhysNet":
+    elif params.model == "PhysNet":
         return PhysNet()
-    elif model_name == "PhysNet_LSTM":
+    elif params.model == "PhysNet_LSTM":
         return PhysNet_2DCNN_LSTM()
-    elif model_name == "PPNet":
+    elif params.model == "PPNet":
         return PPNet()
-    elif model_name == "GCN":
+    elif params.model == "GCN":
         return TEST()#Seq_GCN()#TEST()#
-    elif model_name == "AxisNet":
+    elif params.model == "AxisNet":
         return AxisNet(),PhysiologicalGenerator()
-    elif model_name == "RhythmNet":
+    elif params.model == "RhythmNet":
         return RhythmNet()
-    elif model_name == "ETArPPGNet":
+    elif params.model == "ETArPPGNet":
         return ETArPPGNet()
-    elif model_name == "Vitamon":
+    elif params.model == "Vitamon":
         return Vitamon()
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
 
 
-def is_model_support(model_name, model_list, log_flag):
+def is_model_support():
     """
     :param model_name: model name
     :param model_list: implemented model list
     :return: model
     """
-    if log_flag:
+    if params.log_flag:
         print("========= model support check is model support() in " + os.path.basename(__file__))
-    if not (model_name in model_list):
+    if not (params.model in params.model_list):
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
 
 
-def summary(model, model_name):
+def summary(model):
     """
     :param model: torch.nn.module class
     :param model_name: implemented model name
     :return: model
     """
     log_info("=========================================")
-    log_info(model_name)
+    log_info(params.model)
     log_info("=========================================")
-    if model_name == "DeepPhys" or model_name == DeepPhys_DA:
+    if params.model == "DeepPhys" or params.model == DeepPhys_DA:
         torchsummary.summary(model, (2, 3, 36, 36))
-    elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
+    elif params.model == "PhysNet" or params.model == "PhysNet_LSTM":
         torchinfo.summary(model, (1, 3, 32, 128, 128))
-    elif model_name in "PPNet":
+    elif params.model in "PPNet":
         torchinfo.summary(model, (1, 1, 250))
-    elif model_name in "GCN":
+    elif params.model in "GCN":
         log_warning("some module is not supported in torchinfo")
         torchinfo.summary(model,(32,3,32,32,32))
     else:

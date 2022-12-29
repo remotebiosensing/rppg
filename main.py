@@ -19,13 +19,9 @@ from optim import optimizer
 from utils.dataset_preprocess import preprocessing, dataset_split
 from utils.train import train_fn, test_fn
 
-bpm_flag = False
-K_Fold_flag = False
-model_save_flag = False
-log_flag = True
-wandb_flag = True
-random_seed = 0
-save_img_flag = False
+from params import params
+
+
 
 # for Reproducible model
 # torch.manual_seed(random_seed)
@@ -37,24 +33,11 @@ save_img_flag = False
 # random.seed(random_seed)
 
 # Define Kfold Cross Validator
-if K_Fold_flag:
+if params.k_fold_flag:
     kfold = KFold(n_splits=5, shuffle=True)
 
 now = datetime.datetime.now()
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
-with open('params.json') as f:
-    jsonObject = json.load(f)
-    __PREPROCESSING__ = jsonObject.get("__PREPROCESSING__")
-    __TIME__ = jsonObject.get("__TIME__")
-    __MODEL_SUMMARY__ = jsonObject.get("__MODEL_SUMMARY__")
-    options = jsonObject.get("options")
-    params = jsonObject.get("params")
-    preprocessing_params = jsonObject.get("preprocessing_params")
-    hyper_params = jsonObject.get("hyper_params")
-    model_params = jsonObject.get("model_params")
-    wandb_params = jsonObject.get("wandb")
-#
 
 
 """
@@ -64,20 +47,15 @@ TEST FOR LOAD
 """
 Check Model Support
 """
-is_model_support(model_params["name"], model_params["name_comment"], log_flag)
+is_model_support()
 '''
 Generate preprocessed data hpy file 
 '''
-
-print(model_params["name"])
-if __PREPROCESSING__:
-    if __TIME__:
+if params.__PREPROCESSING__:
+    if params.__TIME__:
         start_time = time.time()
 
-    preprocessing(params=params,
-                  model_params = model_params,
-                  preprocessing_params=preprocessing_params,
-                  log_flag=log_flag)
+    preprocessing()
 
     # save_root_path: str = "/media/hdd1/dy_dataset/",
     # model_name: str = "DeepPhys",
@@ -89,7 +67,7 @@ if __PREPROCESSING__:
     # fixed_position: bool = True,
     # log_flag: bool = True):
 
-    if __TIME__:
+    if params.__TIME__:
         log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
 
 if torch.cuda.is_available():
@@ -100,59 +78,56 @@ else :
 '''
 Setting Learning Model
 '''
-if __TIME__:
+if params.__TIME__:
     start_time = time.time()
 
-# model = [get_model(model_params["name"])]
+model = get_model()
 # model = get_model(model_params["name"], log_flag).cuda()
 
-if __MODEL_SUMMARY__:
-    summary(model, model_params["name"], log_flag)
+if params.__MODEL_SUMMARY__:
+    summary()
 
-if __TIME__:
+if params.__TIME__:
     log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Load dataset before using Torch DataLoader
 '''
-if __TIME__:
+if params.__TIME__:
     start_time = time.time()
 
-dataset = dataset_loader(save_root_path=params["save_root_path"],
-                         model_name=model_params["name"],
-                         dataset_name=preprocessing_prams["dataset_name"],
-                         option="train")
+dataset = dataset_loader()
 
 datasets = dataset_split(dataset, [0.7, 0.1, 0.2])
 
-if __TIME__:
+if params.__TIME__:
     log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
-if __TIME__:
+if params.__TIME__:
     start_time = time.time()
 
-if __TIME__:
+if params.__TIME__:
     log_info_time("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
     Call dataloader for iterate dataset
 '''
-if __TIME__:
+if params.__TIME__:
     start_time = time.time()
 
 data_loaders = split_data_loader(datasets, params["train_batch_size"], params["train_shuffle"],
                                  params["test_shuffle"])
 
-if __TIME__:
+if params.__TIME__:
     log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Setting Loss Function
 '''
-if __TIME__:
+if params.__TIME__:
     start_time = time.time()
-criterion = loss_fn(hyper_params["loss_fn"], log_flag)
-criterion2 = loss_fn("L1", log_flag)
+criterion = loss_fn()
+# criterion2 = loss_fn("L1", log_flag)
 
 
 # TODO: implement parallel training
@@ -160,12 +135,12 @@ criterion2 = loss_fn("L1", log_flag)
 #     print(options["parallel_criterion_comment"])
 #     criterion = DataParallelCriterion(criterion,device_ids=[0, 1, 2])
 
-if __TIME__:
+if params.__TIME__:
     log_info_time("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
 Setting Optimizer
 '''
-if __TIME__:
+if params.__TIME__:
     start_time = time.time()
 # optimizer = [optimizer(mod.parameters(),hyper_params["learning_rate"], hyper_params["optimizer"]) for mod in model[0]]
 # scheduler = [lr_scheduler.ExponentialLR(optim,gamma=0.99) for optim in optimizer]

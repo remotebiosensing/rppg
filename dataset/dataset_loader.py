@@ -13,6 +13,7 @@ from dataset.RhythmNetDataset import RhythmNetDataset
 from dataset.ETArPPGNetDataset import ETArPPGNetDataset
 from dataset.VitamonDataset import VitamonDataset
 
+from params import params
 
 
 def split_data_loader(datasets, batch_size, train_shuffle, test_shuffle=False):
@@ -27,12 +28,7 @@ def split_data_loader(datasets, batch_size, train_shuffle, test_shuffle=False):
         return [train_loader, test_loader]
 
 
-def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
-                   model_name: str = "DeepPhys",
-                   dataset_name: str = "UBFC",
-                   option: str = "train",
-                   log_flag: bool = True
-                   ):
+def dataset_loader():
     '''
     :param save_root_path: save file destination path
     :param model_name : model_name
@@ -40,18 +36,18 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
     :param option:[train, test]
     :return: dataset
     '''
-    if log_flag:
+    if params.log_flag:
         print("========= dataset_loader() in" + os.path.basename(__file__))
 
     cnt = 0
     flag = True
-    name = model_name
-    if model_name == "GCN" or model_name == "GCN_TEST":
+    name = params.model
+    if params.model == "GCN" or params.model == "GCN_TEST":
         name = "PhysNet"
 
-    train_file = save_root_path + name + "_" + dataset_name + "_" + "train" + ".hdf5"
-    valid_file = save_root_path + name + "_" + dataset_name + "_" + "valid" + ".hdf5"
-    test_file = save_root_path + name + "_" + dataset_name + "_" + "test" + ".hdf5"
+    train_file = params.save_root_path + name + "_" + params.dataset_name + "_" + "train" + ".hdf5"
+    valid_file = params.save_root_path + name + "_" + params.dataset_name + "_" + "valid" + ".hdf5"
+    test_file = params.save_root_path + name + "_" + params.dataset_name + "_" + "test" + ".hdf5"
     if os.path.isfile(train_file):
         print("train dataset exist")
     else:
@@ -69,7 +65,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
     print("train file size : ", os.path.getsize(train_file)/1024/1024,'MB')
     print("test file size : ", os.path.getsize(test_file)/1024/1024,'MB')
 
-    if model_name in ["DeepPhys", "MTTS"]:
+    if params.model in ["DeepPhys", "MTTS"]:
         appearance_data = []
         motion_data = []
         target_data = []
@@ -95,7 +91,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
-    elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+    elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
         video_data = []
         label_data = []
         bpm_data = []
@@ -132,12 +128,12 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
             #     break
         hpy_test_file.close()
 
-        if model_name in ["GCN"]:
+        if params.model in ["GCN"]:
             dataset = GCNDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data),
                                  bpm_data=np.asarray(bpm_data)
                                  )
-        elif model_name in ["AxisNet"]:
+        elif params.model in ["AxisNet"]:
             dataset = AxisNetDataset(video_data=np.asarray(video_data),
                                      label_data=np.asarray(label_data))
 
@@ -145,7 +141,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
             dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                      label_data=np.asarray(label_data))
 
-    elif model_name in ["PPNet"]:
+    elif params.model in ["PPNet"]:
         ppg = []
         sbp = []
         dbp = []
@@ -177,7 +173,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         dataset = PPNetDataset(face_data=np.asarray(face_data),
                                mask_data=np.asarray(mask_data),
                                target=np.asarray(target_data))
-    elif model_name in ["AxisNet"]:
+    elif params.model in ["AxisNet"]:
         video_data = []
         label_data = []
         ptt_data = []
@@ -196,7 +192,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         dataset = AxisNetDataset(video_data=np.asarray(video_data),
                                  ptt_data=np.asarray(ptt_data),
                                  label_data=np.asarray(label_data), )
-    elif model_name in ["RhythmNet"]:
+    elif params.model in ["RhythmNet"]:
         st_map_data = []
         target_data = []
         if option == "train":
@@ -218,7 +214,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         dataset = RhythmNetDataset(st_map_data=np.asarray(st_map_data),
                                    target_data=np.asarray(target_data))
 
-    elif model_name in ["ETArPPGNet"]:
+    elif params.model in ["ETArPPGNet"]:
         video_data = []
         label_data = []
         if option == "train":
@@ -240,7 +236,7 @@ def dataset_loader(save_root_path: str = "/media/hdd1/dy/dataset/",
         dataset = ETArPPGNetDataset(video_data=np.asarray(video_data),
                                     label_data=np.asarray(label_data))
 
-    elif model_name in ["Vitamon","Vitamon_phase2"]:
+    elif params.model in ["Vitamon","Vitamon_phase2"]:
         video_data = []
         label_data = []
         if option == "train":
