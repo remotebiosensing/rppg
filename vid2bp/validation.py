@@ -37,20 +37,20 @@ def validation(model, dataset, loss, epoch, scaler=True):
             hypothesis = model(X_val, scaler=scaler)
 
             '''Negative Pearson Loss'''
-            neg_cost = loss[0](hypothesis, Y_val)
+            rmse_cost = loss[0](hypothesis, Y_val)
             # neg_cost = 0
             '''STFT Loss'''
             stft_cost = loss[1](hypothesis, Y_val)
             '''DBP Loss'''
-            # d_cost = loss[1](pred_dia, dia)
+            # d_cost = loss[0](pred_d, dia)
             '''SBP Loss'''
-            # s_cost = loss[2](pred_sys, sys)
+            # s_cost = loss[0](pred_s, sys)
 
             '''Total Loss'''
-            cost = neg_cost + stft_cost
+            cost = rmse_cost + stft_cost#  + d_cost + s_cost
             valid_cost_sum += cost.__float__()
             valid_avg_cost = valid_cost_sum / (idx + 1)
-            valid_epoch.set_postfix(n=neg_cost.__float__(), s=stft_cost.__float__(), loss=valid_avg_cost)
+            valid_epoch.set_postfix(rmse=rmse_cost.__float__(), stft=stft_cost.__float__(), tot=valid_avg_cost)
         wandb.log({"Valid Loss": valid_avg_cost}, step=epoch)
         # wandb.log({"Valid Loss": valid_avg_cost,
         #            'Valid Pearson Loss': neg_cost,

@@ -6,13 +6,13 @@ from tqdm import tqdm
 import multiprocessing as mp
 # from multiprocessing import Process, shared_memory, Semaphore
 import numpy as np
-import vid2bp.preprocessing.utils.signal_utils as su
 import matplotlib.pyplot as plt
 import vid2bp.preprocessing.utils.multi_processing as multi
 # import vid2bp.preprocessing.utils.data_shuffler as ds
 import time
 import h5py
 import datetime as dt
+import vid2bp.preprocessing.utils.signal_utils as su
 import vid2bp.preprocessing.utils.math_module as mm
 
 '''
@@ -26,8 +26,11 @@ def derivative(x):
     deriv[-1] = np.mean(deriv[-3:-2])
     return deriv
 
+
 def channel_aggregator(x, dx, ddx):
     return np.concatenate((x, dx, ddx), axis=0)
+
+
 def down_sampling(original_signal, fs: int = 125, target_fs: int = 60):
     '''
     :param original_signal: signal to be down-sampled
@@ -66,24 +69,24 @@ def get_process_num(target_num: int):
             if i != target_num // i:
                 divisors.append(target_num // i)
     available_divisor = [x for x in divisors if x < os.cpu_count()]
-    if np.max(available_divisor) < os.cpu_count() // 2:
-        process_num = os.cpu_count()
-    else:
-        process_num = np.max(available_divisor)
-    if process_num < os.cpu_count():
-        if process_num % 2 == 0:
-            return process_num
-        else:
-            return process_num + 1
     # if np.max(available_divisor) < os.cpu_count() // 2:
-    #     return os.cpu_count()
+    #     process_num = os.cpu_count()
     # else:
-    #     if np.max(available_divisor) % 2 == 0 and np.max(available_divisor) < os.cpu_count():
-    #         return np.max(available_divisor)
+    #     process_num = np.max(available_divisor)
+    # if process_num < os.cpu_count():
+    #     if process_num % 2 == 0:
+    #         return process_num
     #     else:
-    #         return np.max(available_divisor) + 1
+    #         return process_num + 1
+    # # if np.max(available_divisor) < os.cpu_count() // 2:
+    # #     return os.cpu_count()
+    # # else:
+    # #     if np.max(available_divisor) % 2 == 0 and np.max(available_divisor) < os.cpu_count():
+    # #         return np.max(available_divisor)
+    # #     else:
+    # #         return np.max(available_divisor) + 1
 
-    # return os.cpu_count() if np.max(available_divisor) < os.cpu_count() // 2 else np.max(available_divisor)
+    return os.cpu_count() if np.max(available_divisor) < os.cpu_count() // 2 else np.max(available_divisor)
 
 
 def list_shuffler(path_list):
@@ -92,7 +95,7 @@ def list_shuffler(path_list):
     :return: shuffled path_list
     """
     shuffle_cnt = random.randint(len(path_list), len(path_list) * 2)
-    for c in range(shuffle_cnt):
+    for c in tqdm(range(shuffle_cnt), desc='shuffling'):
         i = random.randint(0, len(path_list) - 1)
         j = random.randint(0, len(path_list) - 1)
         path_list[i], path_list[j] = path_list[j], path_list[i]
@@ -118,34 +121,78 @@ def get_segments_per_person(read_path: str):
 def get_total_segment_path(read_path: str):
     """
     * if single patient have too many records,
-        randomly select 10(or any number you like) records to prevent over-fitting to single patient.
+        randomly select 5(or any number you like) records to prevent over-fitting to single patient.
     param: read_path: path of the raw dataset (e.g. /hdd/hdd0/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0)
     return: all_shuffled_data_path: shuffled list of all patient's segments
     """
-    all_patient_num = 0
-    all_patient_paths = []
-    all_shuffled_data_path = []
-    # 사람별로 가져오는 작업(all_patient_paths), 1700개 segment 있는 사람도 있고, 1개 있는 사람도 있고
+    total_patient_path = []
+    train_shuffled_path, val_shuffled_path, test_shuffled_path = [], [], []
+
+    # get all patient's path
     for root, dirs, files in os.walk(read_path):
         if len(files) > 0:
-            all_patient_num += 1
-            all_patient_paths.append(root)
-    all_patient_paths = [p for p in all_patient_paths if '_' in p.split('/')[-1]]
-    # 가져온 사람 p를 돌면서 p 안에 있는 segment를 최대 35개 가져옴
-    for p in all_patient_paths:
-        segments_per_person = get_segments_per_person(p)
-        if len(segments_per_person) > 5:
-            # 한 사람의 segment가 10개가 넘으면, 랜덤하게 10개를 뽑아서 가져옴
-            reduced_segments_per_person = random.sample(list_shuffler(segments_per_person), 5)
-            # random.shuffle(segments_per_person)
-            # segments_per_person = segments_per_person[:10]
-            all_shuffled_data_path.extend(reduced_segments_per_person)
+            total_patient_path.append(root)
+    total_patient_path = [p for p in total_patient_path if '_' in p.split('/')[-1]]
+    print('shuffling all patient path...')
+    total_patient_path = list_shuffler(total_patient_path)
+
+    # split train, val, test
+    train_patient_num = int(len(total_patient_path) * 0.8)
+    val_patient_num = int(len(total_patient_path) * 0.1)
+    train_path = total_patient_path[:train_patient_num]
+    val_path = total_patient_path[train_patient_num:train_patient_num + val_patient_num]
+    test_path = total_patient_path[train_patient_num + val_patient_num:]
+
+    # get train segments per patient
+    print('get_train_segment_path...')
+    for tr in tqdm(train_path, desc='Train_segment'):
+        train_segments = get_segments_per_person(tr)
+        if len(train_segments) > 5:
+            reduced_train_segments = random.sample(train_segments, 5)
+            train_shuffled_path.extend(reduced_train_segments)
         else:
-            all_shuffled_data_path.extend(segments_per_person)
-    # 사람 순서대로 가져온 segments_per_person을 랜덤하게 다시 셔플
-    print('total number of patients: ', all_patient_num)
-    print('total number of segments: ', len(all_shuffled_data_path))
-    return list_shuffler(all_shuffled_data_path)
+            train_shuffled_path.extend(train_segments)
+    # get val segments per patient
+    print('get_validation_segment_path...')
+    for v in tqdm(val_path, desc='Val_segment'):
+        val_segments = get_segments_per_person(v)
+        if len(val_segments) > 5:
+            reduced_val_segments = random.sample(val_segments, 5)
+            val_shuffled_path.extend(reduced_val_segments)
+        else:
+            val_shuffled_path.extend(val_segments)
+    # get test segments per patient
+    print('get_test_segment_path...')
+    for te in tqdm(test_path, desc='Test_segment'):
+        test_segments = get_segments_per_person(te)
+        if len(test_segments) > 5:
+            reduced_test_segments = random.sample(test_segments, 5)
+            test_shuffled_path.extend(reduced_test_segments)
+        else:
+            test_shuffled_path.extend(test_segments)
+    # for p in all_patient_paths:
+    #     segments_per_person = get_segments_per_person(p)
+    #     if len(segments_per_person) > 5:
+    #         # 한 사람의 segment가 10개가 넘으면, 랜덤하게 10개를 뽑아서 가져옴
+    #         reduced_segments_per_person = random.sample(list_shuffler(segments_per_person), 5)
+    #         # random.shuffle(segments_per_person)
+    #         # segments_per_person = segments_per_person[:10]
+    #         all_shuffled_data_path.extend(reduced_segments_per_person)
+    #     else:
+    #         all_shuffled_data_path.extend(segments_per_person)
+    # # 사람 순서대로 가져온 segments_per_person을 랜덤하게 다시 셔플
+    # print('total number of patients: ', all_patient_num)
+    # print('total number of segments: ', len(all_shuffled_data_path))
+    # return list_shuffler(all_shuffled_data_path)
+    # return all_shuffled_data_path
+    print('total number of patients: ', len(total_patient_path))
+    print('total number of train patients: ', len(train_path))
+    print('total number of val patients: ', len(val_path))
+    print('total number of test patients: ', len(test_path))
+    print('total number of train segments: ', len(train_shuffled_path))
+    print('total number of val segments: ', len(val_shuffled_path))
+    print('total number of test segments: ', len(test_shuffled_path))
+    return list_shuffler(train_shuffled_path), list_shuffler(val_shuffled_path), list_shuffler(test_shuffled_path)
 
 
 def find_channel_idx(path):
@@ -164,7 +211,8 @@ def find_channel_idx(path):
 # def read_record(path):
 
 
-def read_total_data(segment_list: list, ple_total: list, abp_total: list, chunk_size: int, sampling_rate: int):
+def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: list, size_total: list, chunk_size: int,
+                    sampling_rate: int):
     """
 
     * if single record is shorter than 6 seconds, skip it to consider only long enough to have respiratory cycles
@@ -184,7 +232,7 @@ def read_total_data(segment_list: list, ple_total: list, abp_total: list, chunk_
         patient_records: list of wfdb record
     """
 
-    for segment in tqdm(segment_list):
+    for segment in tqdm(segment_list, desc='process-'+str(id)):
         chunk_per_segment = 0
         segment = segment.strip('.hea')
         ple_idx, abp_idx = find_channel_idx(segment)
@@ -199,23 +247,19 @@ def read_total_data(segment_list: list, ple_total: list, abp_total: list, chunk_
             continue
 
         for p, a in zip(ple_split, abp_split):
-            if signal_QC(p, a):  # signal integrity check for both ple and abp
-                if su.signal_respiration_checker(a, p, threshold=0.95):
-                    # ple_total.append(channel_aggregator(p, derivative(p), derivative(mm.diff_np(p))))
-                    ple_total.append(down_sampling(p, target_fs=sampling_rate))
-                    abp_total.append(down_sampling(a, target_fs=sampling_rate))
-                    chunk_per_segment += 1
-                else:
-                    continue
+            flag, mean_dbp, mean_sbp, mean_map = su.signal_respiration_checker(a, p, threshold=0.9)
+            if flag:
+                # ple = down_sampling(p, target_fs=sampling_rate)
+                ple_total.append(mm.channel_cat(down_sampling(p, target_fs=sampling_rate)))
+                abp_total.append(down_sampling(a, target_fs=sampling_rate))
+                size_total.append([mean_dbp, mean_sbp, mean_map])
+                chunk_per_segment += 1
             else:
                 continue
+            # else:
+            #     continue
             if chunk_per_segment == 5:
                 break
-
-    '''
-    아니면 여기서 전체를 다시 순회하면서 preprocessing을 할 것인지장
-    multi_processing에서 h5py 파일 저
-    '''
 
 
 def multi_processing(model_name, dataset: str, total_segments):
@@ -232,21 +276,17 @@ def multi_processing(model_name, dataset: str, total_segments):
     if not os.path.exists(dset_path):
         os.mkdir(dset_path)
 
-    print(f'{model_name} {dataset} dataset')
+    print(f'[{model_name} {dataset} dataset]')
     print('dataset name : MIMIC-III')
     print(f'number of segments: {len(total_segments)}')
     print(f'save to: {dset_path}')
 
-    start_time = time.time()
-
-    manager = mp.Manager()
-    ple_total = manager.list()
-    abp_total = manager.list()
-
     # process_num = get_process_num(len(total_segments))
-    process_num = 24
+    # if process_num % 2 != 0:
+    #     process_num += 1
+    process_num = 192
     print(f'number of processes: {process_num}')
-    processes = []
+    # processes = []
 
     ''' Model selection '''
     if model_name == 'BPNet':
@@ -255,62 +295,95 @@ def multi_processing(model_name, dataset: str, total_segments):
         sig_len, samp_rate = 3000, 300
 
     ''' Multi-processing '''
-    segments_per_process = np.array_split(total_segments, process_num)
-    print(f'number of segments per process: {len(segments_per_process[0])}')
+    print('sorting data by size... ')
+    '''
+    size 
+    30% 192, 58초 소요 len: 159
+    50% 192, 123초 소요
+    70% 192, 400초 소요
+    80% 192, 905초 소요
+    800 : 1
+    400 : 3
+    300 : 12
+    200 : 77
+    100 : 470
 
-    for i in range(process_num):
-        # list_chunk = segment_list[i * process_per_processor:(i + 1) * process_per_processor]
-        list_chunk = segments_per_process[i]
-        # if len(list_chunk) % 2 != 0:
-        #     list_chunk = list_chunk[:-1]
-        proc = mp.Process(target=read_total_data, args=(list_chunk, ple_total, abp_total, sig_len, samp_rate))
-        # test = proc.pid
+    '''
+    sorted_by_fsize = sorted(total_segments, key=lambda s: os.stat(s.replace('.hea', '.dat')).st_size)
+    # weight = [0.7, 0.1, 0.005, ]
+    # light_segments = total_segments[int(len(total_segments)*0.4):int(len(total_segments)*0.70)]
+    # heavy_segments = total_segments[int(len(total_segments)*0.70):]
+    # segments_per_process = np.array_split(light_segments, process_num)
+    # segments_per_process = np.array_split(heavy_segments, process_num)
+    light1 = sorted_by_fsize[:int(len(sorted_by_fsize) * 0.4)]
+    light2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.4):int(len(sorted_by_fsize) * 0.70)]
+    heavy1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.80)]
+    heavy2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)]
+    heavy3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.95):]
+    split_by_size = [light1, light2, heavy1, heavy2, heavy3]
+    print('reading_total_data...')
+    ple_tot, abp_tot, size_tot = [], [], []
+    # ple_l1, abp_l1, size_l1 = [], [], []
+    # ple_l2, abp_l2, size_l2 = [], [], []
+    # ple_h1, abp_h1, size_h1 = [], [], []
+    # ple_h2, abp_h2, size_h2 = [], [], []
+    # ple_h3, abp_h3, size_h3 = [], [], []
+    for s in split_by_size:
+        segments_per_process = np.array_split(s, process_num)
+        print(f'number of segments per process: {len(segments_per_process[0])}')
+        with mp.Manager() as manager:
+            start_time = time.time()
+            ple_total = manager.list()
+            abp_total = manager.list()
+            size_total = manager.list()
+            workers = [mp.Process(target=read_total_data,
+                                  args=(i, segments_per_process[i],
+                                        ple_total, abp_total, size_total,
+                                        sig_len, samp_rate)) for i in range(process_num)]
+            for worker in workers:
+                worker.start()
+            for worker in workers:
+                worker.join()
 
-        processes.append(proc)
-        proc.start()
+            print('--- %s seconds ---' % (time.time() - start_time))
+            # ple_total = np.array(ple_total)
+            # abp_total = np.array(abp_total)
+            # size_total = np.array(size_total)
+            ple_tot.append(np.array(ple_total))
+            abp_tot.append(np.array(abp_total))
+            size_tot.append(np.array(size_total))
 
-    for proc in processes:
-        proc.join()
+            # dset = h5py.File(dset_path + str(dataset) + '.hdf5', 'w')
+            # dset['ple'] = ple_total
+            # dset['abp'] = abp_total
+            # dset['size'] = size_total
+            # dset.close()
+            manager.shutdown()
 
-    print('--- %s seconds ---' % (time.time() - start_time))
-    ple_total = np.array(ple_total)
-    abp_total = np.array(abp_total)
     dset = h5py.File(dset_path + str(dataset) + '.hdf5', 'w')
-    dset['ple'] = ple_total
-    dset['abp'] = abp_total
+    dset['ple'] = np.squeeze(np.array(ple_tot))
+    dset['abp'] = np.squeeze(np.array(abp_tot))
+    dset['size'] = np.squeeze(np.array(size_tot))
     dset.close()
-    manager.shutdown()
-    '''
-    여기서 hdf5 파일로 저장
-    '''
 
-    print('total length: ', len(ple_total))
-    print(np.shape(ple_total))
-    print(np.shape(ple_total[0]))
-    print(ple_total[0][:100])
-
-    '''
-    insert code to save ple and abp to h5py file
-    '''
+    print('total length: ', len(ple_tot))
+    print(np.shape(ple_tot))
+    print(np.shape(abp_tot))
+    print(np.shape(size_tot))
+    # print(np.shape(ple_total[0]))
+    print(ple_tot[0][:100])
+    print(abp_tot[0][:100])
+    print(size_tot[0])
 
 
-def dataset_split(model_name: str, data_path: str, train_ratio: float = 0.8, val_ratio: float = 0.1,
-                  test_ratio: float = 0.1):
-    total_segments = get_total_segment_path(data_path)
-    train_segments = total_segments[:int(len(total_segments) * train_ratio)]
-    val_segments = total_segments[
-                   int(len(total_segments) * train_ratio):int(len(total_segments) * (train_ratio + val_ratio))]
-    test_segments = total_segments[int(len(total_segments) * (train_ratio + val_ratio)):]
+def dataset_split(model_name: str, data_path: str):
+    train_segments, val_segments, test_segments = get_total_segment_path(data_path)
 
     multi_processing(model_name, 'train', train_segments)
     multi_processing(model_name, 'val', val_segments)
     multi_processing(model_name, 'test', test_segments)
+    pass
 
 
 dataset_split('BPNet', '/hdd/hdd1/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0')
-
-# multi_processing('BPNet', dataset='train', data_path='/hdd/hdd0/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0')
-
-# def dataset_handler():
-
 

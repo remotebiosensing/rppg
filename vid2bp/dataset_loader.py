@@ -8,7 +8,7 @@ from BPNetDataset import BPNetDataset
 
 def dataset_loader(dataset_name: str = 'mimiciii', channel: int = 1, batch_size: int = 512):
     train_shuffle: bool = True
-    test_shuffle: bool = False
+    test_shuffle: bool = True
 
     dataset_root_path: str = '/home/paperc/PycharmProjects/dataset/BPNet_' + dataset_name + '/'
     train_file_path = dataset_root_path + "train.hdf5"

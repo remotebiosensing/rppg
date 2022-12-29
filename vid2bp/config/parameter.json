@@ -20,7 +20,7 @@
     "save_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
     "model_path": "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/",
     "dataset_path": {
-      "mimic": ["mimic-database-1.0.0/", "BPNet_mimic/"],
+      "mimic": ["mimic-database-1.0.0/", "BPNet_mimic/", "BPNet_mimiciii/"],
       "uci": ["uci-database/", "BPNet_uci/"],
       "uci_unet": ["uci-database/", "Unet_uci/"]
     },
@@ -29,7 +29,7 @@
       "first": [2, "P+V"],
       "second": [3, "P+V+A"]
     },
-    "out_channels": 32,
+    "out_channels": 16,
     "chunk_size": 750,
     "sampling_rate": {
       "base": 125,
@@ -47,5 +47,17 @@
     "epochs": 100,
     "batch_size": 256,
     "kernel_size": 3
+  },
+  "models": {
+    "BPNet": {
+      "learning_rate": 0.001,
+      "weight_decay": 0.0005,
+      "gamma": 0.99
+    },
+    "Unet": {
+      "learning_rate": 0.001,
+      "weight_decay": 0.0005,
+      "gamma": 0.99
+    }
   }
 }

@@ -34,20 +34,6 @@ def AHA_criteria():
     # '''Hypertensive Crisis'''
     # if (180 <= size_factor[1]) or (120 <= size_factor[0]):
 
-def is_learning(cost_arr):
-    print(cost_arr)
-    flag = True
-    cnt = 0
-    if len(cost_arr) > 2:
-        for c in cost_arr[1:]:
-            if c > 5:
-                cnt += 1
-    if cnt > 10:
-        flag = False
-    print(len(cost_arr))
-    print(np.mean(cost_arr), cnt, flag)
-    return flag
-
 
 # '''train dataset load'''
 # with h5py.File(

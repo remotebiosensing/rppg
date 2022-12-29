@@ -11,6 +11,19 @@ np.shape(input_sig) : ndarray(702, 7500)     ex) ple, abp
 # def Taylor_series(sig, degree=1):
 #
 
+def get_derivative(input_sig):
+    vpg = np.append(np.diff(input_sig, axis=0), input_sig[-1] - input_sig[-2])
+    apg = np.append(np.diff(vpg, axis=0), vpg[-1] - vpg[-2])
+
+    return vpg, apg
+
+def channel_cat(input_sig):
+    vpg, apg = get_derivative(input_sig)
+    input_sig = np.expand_dims(input_sig, axis=0)
+    vpg = np.expand_dims(vpg, axis=0)
+    apg = np.expand_dims(apg, axis=0)
+    cat = np.concatenate((input_sig, vpg, apg), axis=0)
+    return cat
 def diff_np(input_sig, input_sig2=None):
     ple_diff = []
     abp_diff = []
