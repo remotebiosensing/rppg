@@ -48,6 +48,7 @@ class LSTMAutoEncoder(nn.Module):
         )
 
     def forward(self, x):
+        # x: tensor of shape (batch_size, seq_length, hidden_size)
         encoder_hidden = self.encoder(x)
 
         reconstruct_output = []
