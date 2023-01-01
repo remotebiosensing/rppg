@@ -2,16 +2,14 @@ import datetime
 import json
 import os
 import random
-import time
 
 import numpy as np
 import torch
 import wandb
 from torch.optim import lr_scheduler
-#
 
 from dataset.dataset_loader import dataset_loader, split_data_loader
-from log import log_info_time
+from log import log_info_time, time_checker
 from loss import loss_fn
 from models import is_model_support, get_model, summary, get_ver_model
 from optim import optimizer
@@ -29,7 +27,6 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(params.random_seed)
 random.seed(params.random_seed)
 
-now = datetime.datetime.now()
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 """
@@ -43,24 +40,7 @@ is_model_support()
 '''
 Generate preprocessed data hpy file 
 '''
-if params.__PREPROCESSING__:
-    if params.__TIME__:
-        start_time = time.time()
-
-    preprocessing()
-
-    # save_root_path: str = "/media/hdd1/dy_dataset/",
-    # model_name: str = "DeepPhys",
-    # data_root_path: str = "/media/hdd1/",
-    # dataset_name: str = "UBFC",
-    # train_ratio: float = 0.8,
-    # face_detect_algorithm: int = 0,
-    # divide_flag: bool = True,
-    # fixed_position: bool = True,
-    # log_flag: bool = True):
-
-    if params.__TIME__:
-        log_info_time("preprocessing time \t:", datetime.timedelta(seconds=time.time() - start_time))
+time_checker("Preprocessing",preprocessing)
 
 if torch.cuda.is_available():
     print('cuda is available')
@@ -70,70 +50,28 @@ else:
 '''
 Setting Learning Model
 '''
-if params.__TIME__:
-    start_time = time.time()
-
-model = get_model()
+model = time_checker("get_model", get_model)
 # model = get_model(model_params["name"], log_flag).cuda()
-
-if params.__MODEL_SUMMARY__:
-    summary()
-
-if params.__TIME__:
-    log_info_time("model initialize time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
 '''
 Load dataset before using Torch DataLoader
 '''
-if params.__TIME__:
-    start_time = time.time()
-
-dataset = dataset_loader()
-
-datasets = dataset_split(dataset, [params.train_ratio, params.val_ratio, params.test_ratio])
-
-if params.__TIME__:
-    log_info_time("load train hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
-
-if params.__TIME__:
-    start_time = time.time()
-
-if params.__TIME__:
-    log_info_time("load test hpy time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+dataset = time_checker("load dataset", dataset_loader)
+datasets = time_checker("split dataset", dataset_split, dataset = dataset, ratio = [params.train_ratio, params.val_ratio, params.test_ratio])
 
 '''
-    Call dataloader for iterate dataset
+Call dataloader for iterate dataset
 '''
-if params.__TIME__:
-    start_time = time.time()
-
-data_loaders = split_data_loader(datasets, params["train_batch_size"], params["train_shuffle"],
-                                 params["test_shuffle"])
-
-if params.__TIME__:
-    log_info_time("generate dataloader time \t: ", datetime.timedelta(seconds=time.time() - start_time))
+data_loaders = time_checker("load data", split_data_loader, datasets = datasets, batch_size=params.batch_size, train_shuffle=params.train_shuffle, test_shuffle=params.test_shuffle)
 
 '''
 Setting Loss Function
 '''
-if params.__TIME__:
-    start_time = time.time()
-criterion = loss_fn()
+criterion = time_checker("loss_fn", loss_fn)
 # criterion2 = loss_fn("L1", log_flag)
-
-
-# TODO: implement parallel training
-# if options["parallel_criterion"] :
-#     print(options["parallel_criterion_comment"])
-#     criterion = DataParallelCriterion(criterion,device_ids=[0, 1, 2])
-
-if params.__TIME__:
-    log_info_time("setting loss func time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 '''
 Setting Optimizer
 '''
-if params.__TIME__:
-    start_time = time.time()
 # optimizer = [optimizer(mod.parameters(),hyper_params["learning_rate"], hyper_params["optimizer"]) for mod in model[0]]
 # scheduler = [lr_scheduler.ExponentialLR(optim,gamma=0.99) for optim in optimizer]
 
@@ -158,9 +96,6 @@ for ver in range(10):
             "epochs": params.epoch,
             "batch_size": params.train_batch_size
         }
-
-    if params.__TIME__:
-        log_info_time("setting optimizer time \t: ", datetime.timedelta(seconds=time.time() - start_time))
 
     '''
     Model Training Step

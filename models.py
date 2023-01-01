@@ -1,6 +1,6 @@
 import torchinfo
 import torchsummary
-
+import time
 from log import log_warning, log_info
 from nets.models.AxisNet import AxisNet,PhysiologicalGenerator
 from nets.models.DeepPhys import DeepPhys
@@ -13,7 +13,7 @@ from nets.models.TEST import TEST,TEST2
 from nets.models.RhythmNet import RhythmNet
 from nets.models.ETArPPGNet import ETArPPGNet
 from nets.models.sub_models.VitaMon import Vitamon
-
+from log import log_info_time
 from params import params
 
 import os
@@ -29,32 +29,43 @@ def get_model():
     :param model_name: model name
     :return: model
     """
+    if params.__TIME__:
+        start_time = time.time()
+
     if params.log_flag:
         print("========= set model get_model() in"+ os.path.basename(__file__))
 
     if params.model == "DeepPhys":
-        return DeepPhys()
+        model = DeepPhys()
     elif params.model == "DeepPhys_DA":
-        return DeepPhys_DA()
+        model = DeepPhys_DA()
     elif params.model == "PhysNet":
-        return PhysNet()
+        model = PhysNet()
     elif params.model == "PhysNet_LSTM":
-        return PhysNet_2DCNN_LSTM()
+        model = PhysNet_2DCNN_LSTM()
     elif params.model == "PPNet":
-        return PPNet()
+        model = PPNet()
     elif params.model == "GCN":
-        return TEST()#Seq_GCN()#TEST()#
+        model = TEST()#Seq_GCN()#TEST()#
     elif params.model == "AxisNet":
-        return AxisNet(),PhysiologicalGenerator()
+        model = AxisNet(),PhysiologicalGenerator()
     elif params.model == "RhythmNet":
-        return RhythmNet()
+        model = RhythmNet()
     elif params.model == "ETArPPGNet":
-        return ETArPPGNet()
+        model = ETArPPGNet()
     elif params.model == "Vitamon":
-        return Vitamon()
+        model =  Vitamon()
     else:
         log_warning("use implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
+
+    if params.__MODEL_SUMMARY__:
+        summary(model)
+
+    if params.__TIME__:
+        end_time = time.time()
+        log_info_time("model load time : ", end_time - start_time)
+    return model
 
 
 def is_model_support():
