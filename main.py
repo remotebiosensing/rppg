@@ -21,14 +21,15 @@ from utils.train import train_fn, test_fn
 
 from params import params
 
+
 # for Reproducible model
-# torch.manual_seed(random_seed)
-# torch.cuda.manual_seed(random_seed)
-# torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
-# torch.backends.cudnn.deterministic = False
-# torch.backends.cudnn.benchmark = False
-# np.random.seed(random_seed)
-# random.seed(random_seed)
+torch.manual_seed(params.random_seed)
+torch.cuda.manual_seed(params.random_seed)
+torch.cuda.manual_seed_all(params.random_seed)  # if use multi-GPU
+torch.backends.cudnn.deterministic = False
+torch.backends.cudnn.benchmark = False
+np.random.seed(params.random_seed)
+random.seed(params.random_seed)
 
 # Define Kfold Cross Validator
 if params.k_fold_flag:
