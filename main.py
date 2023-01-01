@@ -7,7 +7,6 @@ import time
 import numpy as np
 import torch
 import wandb
-from sklearn.model_selection import KFold
 from torch.optim import lr_scheduler
 #
 
@@ -21,7 +20,6 @@ from utils.train import train_fn, test_fn
 
 from params import params
 
-
 # for Reproducible model
 torch.manual_seed(params.random_seed)
 torch.cuda.manual_seed(params.random_seed)
@@ -30,10 +28,6 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 np.random.seed(params.random_seed)
 random.seed(params.random_seed)
-
-# Define Kfold Cross Validator
-if params.k_fold_flag:
-    kfold = KFold(n_splits=5, shuffle=True)
 
 now = datetime.datetime.now()
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -181,7 +175,8 @@ for epoch in range(params.epoch):
         val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", params.wandb_flag, params.save_img_flag)
     if min_val_loss > val_loss:
         min_val_loss = val_loss
-        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", params.wandb_flag, params.save_img_flag)
+        running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", params.wandb_flag,
+                               params.save_img_flag)
         if min_test_loss > running_loss:
             min_test_loss = running_loss
             torch.save(model.state_dict(),
