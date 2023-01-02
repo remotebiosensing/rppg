@@ -1,6 +1,6 @@
 import os
 
-import config
+# import config
 import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss

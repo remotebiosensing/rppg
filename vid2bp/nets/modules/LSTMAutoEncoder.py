@@ -4,11 +4,10 @@ import torch.nn as nn
 
 class Encoder(nn.Module):
 
-    def __init__(self, length=360, hidden_size=128, num_layers=1):
+    def __init__(self, input_size=3, hidden_size=128):
         super(Encoder, self).__init__()
         self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.lstm = nn.LSTM(length, hidden_size, num_layers, batch_first=True, bidirectional=False)
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
 
     def forward(self, x):
         outputs, (hidden, cell) = self.lstm(x)
@@ -17,14 +16,13 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
 
-    def __init__(self, length=360, hidden_size=128, num_layers=1):
+    def __init__(self, input_size=3, hidden_size=128, output_size=360):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size
-        self.length = length
-        self.num_layers = num_layers
-        self.lstm = nn.LSTM(length, hidden_size, num_layers, batch_first=True, bidirectional=False)
+        self.length = input_size
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
         self.dropout = nn.Dropout(0.2)
-        self.fc = nn.Linear(hidden_size, length)
+        self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x, hidden):
         output, (hidden, cell) = self.lstm(x, hidden)
@@ -34,13 +32,11 @@ class Decoder(nn.Module):
 
 
 class LSTMAutoEncoder(nn.Module):
-    def __init__(self, hidden_size=128, length=360, num_layers=1, label='ple'):
+    def __init__(self, hidden_size=128, input_size=3, output_size=1, label='ple'):
         super(LSTMAutoEncoder, self).__init__()
-        self.length = length
         self.encoder = Encoder(
-            length=length,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
+            input_size=input_size,
+            hidden_size=hidden_size
         )
 
         if label == 'abp':
@@ -49,17 +45,13 @@ class LSTMAutoEncoder(nn.Module):
             print('encoder is frozen')
 
         self.decoder = Decoder(
-            length=length,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
+            input_size=input_size,
+            output_size=output_size,
+            hidden_size=hidden_size
         )
 
     def forward(self, x):
         # x: tensor of shape (batch_size, seq_length, hidden_size)
-        encoder_hidden = self.encoder(x)
+        reconstruct_output, hidden = self.decoder(x, self.encoder(x))
 
-        hidden = encoder_hidden
-        for t in range(self.length):
-            reconstruct_output, hidden = self.decoder(x, hidden)
-
-        return reconstruct_output
+        return reconstruct_output.view(x.shape[0], -1)

@@ -13,11 +13,9 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train
         for inputs, target in tepoch:
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
-            pred = model(inputs)
+            pred = model(inputs) * dataloaders.dataset.std + dataloaders.dataset.mean
 
-            loss = criterion[0](pred, target)
-            loss += criterion[1](pred, target)
-
+            loss = criterion(pred, target)
 
             if ~torch.isfinite(loss):
                 continue
@@ -29,7 +27,7 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train
         if wandb_flag:
             plt.plot(pred[0].cpu().detach().numpy(), label="pred")
             plt.plot(target[0].cpu().detach().numpy(), label="target")
-            plt.title("epoch " + str(epoch+1))
+            plt.title("epoch " + str(epoch + 1))
             plt.legend()
             wandb.log({"train pred and target": wandb.Image(plt),
                        step + "_loss": running_loss / tepoch.__len__()},
@@ -46,9 +44,8 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
         with torch.no_grad():
             for inputs, target in tepoch:
                 tepoch.set_description(step + "%d" % epoch)
-                pred = model(inputs)
-                loss = criterion[0](pred, target)
-                loss += criterion[1](pred, target)
+                pred = model(inputs) * dataloaders.dataset.std + dataloaders.dataset.mean
+                loss = criterion(pred, target)
                 if ~torch.isfinite(loss):
                     continue
                 running_loss += loss.item()
@@ -58,7 +55,7 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
         if wandb_flag:
             plt.plot(pred[0].cpu().detach().numpy(), label="pred")
             plt.plot(target[0].cpu().detach().numpy(), label="target")
-            plt.title("epoch " + str(epoch+1))
+            plt.title("epoch " + str(epoch + 1))
             plt.legend()
             wandb.log({step + " pred and target": wandb.Image(plt),
                        step + "_loss": running_loss / tepoch.__len__()},
