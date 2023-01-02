@@ -7,66 +7,66 @@ import torch.nn.modules.loss as loss
 
 from log import log_warning
 
-
-def loss_fn(loss_fn: str = "mse", log_flag: bool = True):
+from params import params
+def loss_fn():
     """
     :param loss_fn: implement loss function for training
     :return: loss function module(class)
     """
-    if log_flag:
+    if params.log_flag:
         print("========= loss_fn() in" + os.path.basename(__file__))
 
-    if loss_fn == "mse":
+    if params.loss_fn == "mse":
         return loss.MSELoss()
-    elif loss_fn == "fft":
+    elif params.loss_fn == "fft":
         return fftLoss()
-    elif loss_fn == "L1":
+    elif params.loss_fn == "L1":
         return loss.L1Loss()
-    elif loss_fn == "neg_pearson":
+    elif params.loss_fn == "neg_pearson":
         return NegPearsonLoss()
-    elif loss_fn == "multi_margin":
+    elif params.loss_fn == "multi_margin":
         return loss.MultiMarginLoss()
-    elif loss_fn == "bce":
+    elif params.loss_fn == "bce":
         return loss.BCELoss()
-    elif loss_fn == "huber":
+    elif params.loss_fn == "huber":
         return loss.HuberLoss()
-    elif loss_fn == "cosine_embedding":
+    elif params.loss_fn == "cosine_embedding":
         return loss.CosineEmbeddingLoss()
-    elif loss_fn == "cross_entropy":
+    elif params.loss_fn == "cross_entropy":
         return loss.CrossEntropyLoss()
-    elif loss_fn == "ctc":
+    elif params.loss_fn == "ctc":
         return loss.CTCLoss()
-    elif loss_fn == "bce_with_logits":
+    elif params.loss_fn == "bce_with_logits":
         return loss.BCEWithLogitsLoss()
-    elif loss_fn == "gaussian_nll":
+    elif params.loss_fn == "gaussian_nll":
         return loss.GaussianNLLLoss()
-    elif loss_fn == "hinge_embedding":
+    elif params.loss_fn == "hinge_embedding":
         return loss.HingeEmbeddingLoss()
-    elif loss_fn == "KLDiv":
+    elif params.loss_fn == "KLDiv":
         return loss.KLDivLoss()
-    elif loss_fn == "margin_ranking":
+    elif params.loss_fn == "margin_ranking":
         return loss.MarginRankingLoss()
-    elif loss_fn == "multi_label_margin":
+    elif params.loss_fn == "multi_label_margin":
         return loss.MultiLabelMarginLoss()
-    elif loss_fn == "multi_label_soft_margin":
+    elif params.loss_fn == "multi_label_soft_margin":
         return loss.MultiLabelSoftMarginLoss()
-    elif loss_fn == "nll":
+    elif params.loss_fn == "nll":
         return loss.NLLLoss()
-    elif loss_fn == "nll2d":
+    elif params.loss_fn == "nll2d":
         return loss.NLLLoss2d()
-    elif loss_fn == "pairwise":
+    elif params.loss_fn == "pairwise":
         return loss.PairwiseDistance()
-    elif loss_fn == "poisson_nll":
+    elif params.loss_fn == "poisson_nll":
         return loss.PoissonNLLLoss()
-    elif loss_fn == "smooth_l1":
+    elif params.loss_fn == "smooth_l1":
         return loss.SmoothL1Loss()
-    elif loss_fn == "soft_margin":
+    elif params.loss_fn == "soft_margin":
         return loss.SoftMarginLoss()
-    elif loss_fn == "triplet_margin":
+    elif params.loss_fn == "triplet_margin":
         return loss.TripletMarginLoss()
-    elif loss_fn == "triplet_margin_distance":
+    elif params.loss_fn == "triplet_margin_distance":
         return loss.TripletMarginWithDistanceLoss()
-    elif loss_fn == "RhythmNetLoss":
+    elif params.loss_fn == "RhythmNetLoss":
         return RhythmNetLoss()
     else:
         log_warning("use implemented loss functions")

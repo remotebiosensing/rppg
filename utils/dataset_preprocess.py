@@ -12,10 +12,15 @@ from utils.text_preprocess import label_preprocess
 
 import math
 
+from params import params
+
+from log import log_info_time
+
 import cv2
 
 
-def dataset_split(dataset, ratio):
+def dataset_split(**kwargs):
+    dataset, ratio = kwargs["dataset"], kwargs["ratio"]
     dataset_len = len(dataset)
     if ratio.__len__() == 3:
         train_len = int(np.floor(dataset_len * ratio[0]))
@@ -29,7 +34,7 @@ def dataset_split(dataset, ratio):
         return random_split(dataset, [train_len, test_len])
 
 
-def preprocessing(params, model_params, preprocessing_params, log_flag):
+def preprocessing(**kwargs):
     """
     :param save_root_path: save file destination path
     :param model_name: select preprocessing method
@@ -41,19 +46,20 @@ def preprocessing(params, model_params, preprocessing_params, log_flag):
     :param fixed_position: True : fixed position, False : face tracking
     :return:
     """
-    save_root_path = params["save_root_path"]
-    model_name = model_params["name"]
-    data_root_path = params["data_root_path"]
-    dataset_name = preprocessing_params["dataset_name"]
-    train_ratio = params["train_ratio"]
-    face_detect_algorithm = preprocessing_params["face_detect_algorithm"]
-    divide_flag = preprocessing_params["divide_flag"]
-    fixed_position = True
-    time_length = preprocessing_params["time_length"]
-    img_size = preprocessing_params["image_size"]
-    chunk_size = preprocessing_params["chunk_size"]
 
-    if log_flag:
+    save_root_path = params.save_root_path
+    model_name = params.model
+    data_root_path = params.data_root_path
+    dataset_name = params.dataset_name
+    train_ratio = params.train_ratio
+    face_detect_algorithm = params.face_detect_algorithm
+    divide_flag = params.divide_flag
+    fixed_position = params.fixed_position
+    time_length = params.time_length
+    img_size = params.img_size
+    chunk_size = params.chunk_size
+
+    if params.log_flag:
         print("=========== preprocessing() in " + os.path.basename(__file__))
 
     split_flag = False
@@ -129,17 +135,12 @@ def preprocessing(params, model_params, preprocessing_params, log_flag):
         else:
             chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]
 
-        print(chunk_data_list)
-        ## get current time
-        now = datetime.datetime.now()
+        print("chunk_data_list : ", chunk_data_list)
 
         chunk_preprocessing(model_name, chunk_data_list, dataset_root_path, vid_name, ground_truth_name,
                             face_detect_algorithm=face_detect_algorithm, divide_flag=divide_flag,
                             fixed_position=fixed_position, time_length=time_length, img_size=img_size,
                             ssl_flag=ssl_flag, idx=i, time=time)
-        ## calculate evaluate time
-        end = datetime.datetime.now()
-        print("time : ", end - now)
 
 
 def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dict, **kwargs):
