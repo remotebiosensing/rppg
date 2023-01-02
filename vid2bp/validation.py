@@ -7,6 +7,7 @@ import wandb
 import vid2bp.preprocessing.utils.signal_utils as su
 import vid2bp.postprocessing.post_signal_utils as psu
 import numpy as np
+import vid2bp.utils.train_utils as tu
 
 
 # with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
@@ -26,33 +27,27 @@ import numpy as np
 
 def validation(model, dataset, loss, epoch, scaler=True):
     model.eval()
-    valid_avg_cost = 0
-    valid_cost_sum = 0
 
-    valid_epoch = tqdm(dataset, desc='Valid{}'.format(str(epoch)), total=len(dataset), leave=True)
+    avg_cost_list = []
+    for _ in range(len(loss)):
+        avg_cost_list.append(0)
 
-    # with tqdm(dataset, desc='Test{}'.format(str(epoch)), total=len(dataset), leave=True) as test_epoch:
-    with torch.no_grad():
-        for idx, (X_val, Y_val, dia, sys, mean) in enumerate(valid_epoch):
-            hypothesis = model(X_val, scaler=scaler)
+    with tqdm(dataset, desc='Validation{}'.format(str(epoch)), total=len(dataset), leave=True) as valid_epoch:
+        with torch.no_grad():
+            for idx, (X_val, Y_val, dia, sys, size_class) in enumerate(valid_epoch):
+                hypothesis = model(X_val, scaler=scaler)
+                avg_cost_list, cost = tu.calc_losses(avg_cost_list, loss,
+                                                     hypothesis, Y_val,
+                                                     idx + 1)
+                total_cost = np.sum(avg_cost_list)
+                temp = {}
+                for i in range(len(loss)):
+                    temp[(str(loss[i]))[:-2]] = (round(avg_cost_list[i], 3))
 
-            '''Negative Pearson Loss'''
-            rmse_cost = loss[0](hypothesis, Y_val)
-            # neg_cost = 0
-            '''STFT Loss'''
-            stft_cost = loss[1](hypothesis, Y_val)
-            '''DBP Loss'''
-            # d_cost = loss[0](pred_d, dia)
-            '''SBP Loss'''
-            # s_cost = loss[0](pred_s, sys)
-
-            '''Total Loss'''
-            cost = rmse_cost + stft_cost#  + d_cost + s_cost
-            valid_cost_sum += cost.__float__()
-            valid_avg_cost = valid_cost_sum / (idx + 1)
-            valid_epoch.set_postfix(rmse=rmse_cost.__float__(), stft=stft_cost.__float__(), tot=valid_avg_cost)
-        wandb.log({"Valid Loss": valid_avg_cost}, step=epoch)
-        # wandb.log({"Valid Loss": valid_avg_cost,
-        #            'Valid Pearson Loss': neg_cost,
-        #            'STFT Loss': stft_cost}, step=epoch)
-    return valid_avg_cost.__float__()
+                valid_epoch.set_postfix(losses=temp, tot=total_cost)
+            # wandb.init(project="VBPNet", entity="paperchae")
+            # wandb.log({"Valid Loss": total_cost}, step=epoch)
+            # wandb.log({"Valid Loss": valid_avg_cost,
+            #            'Valid Pearson Loss': neg_cost,
+            #            'STFT Loss': stft_cost}, step=epoch)
+        return total_cost.__float__()

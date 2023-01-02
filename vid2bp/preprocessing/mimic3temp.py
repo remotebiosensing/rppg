@@ -13,6 +13,7 @@ import time
 import h5py
 import datetime as dt
 import vid2bp.preprocessing.utils.signal_utils as su
+import vid2bp.preprocessing.utils.sutemp as sutemp
 import vid2bp.preprocessing.utils.math_module as mm
 
 '''
@@ -165,8 +166,8 @@ def get_total_segment_path(read_path: str):
     print('get_test_segment_path...')
     for te in tqdm(test_path, desc='Test_segment'):
         test_segments = get_segments_per_person(te)
-        if len(test_segments) > 5:
-            reduced_test_segments = random.sample(test_segments, 5)
+        if len(test_segments) > 10:
+            reduced_test_segments = random.sample(test_segments, 10)
             test_shuffled_path.extend(reduced_test_segments)
         else:
             test_shuffled_path.extend(test_segments)
@@ -232,7 +233,7 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
         patient_records: list of wfdb record
     """
 
-    for segment in tqdm(segment_list, desc='process-'+str(id)):
+    for segment in tqdm(segment_list, desc='process-' + str(id), leave=False):
         chunk_per_segment = 0
         segment = segment.strip('.hea')
         ple_idx, abp_idx = find_channel_idx(segment)
@@ -248,6 +249,7 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
 
         for p, a in zip(ple_split, abp_split):
             flag, mean_dbp, mean_sbp, mean_map = su.signal_respiration_checker(a, p, threshold=0.9)
+            # flag, mean_dbp, mean_sbp, mean_map = sutemp.signal_slicing(a, p)
             if flag:
                 # ple = down_sampling(p, target_fs=sampling_rate)
                 ple_total.append(mm.channel_cat(down_sampling(p, target_fs=sampling_rate)))
@@ -258,7 +260,7 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                 continue
             # else:
             #     continue
-            if chunk_per_segment == 5:
+            if chunk_per_segment == 10:
                 break
 
 
@@ -284,7 +286,7 @@ def multi_processing(model_name, dataset: str, total_segments):
     # process_num = get_process_num(len(total_segments))
     # if process_num % 2 != 0:
     #     process_num += 1
-    process_num = 192
+    process_num = 144
     print(f'number of processes: {process_num}')
     # processes = []
 
@@ -315,19 +317,25 @@ def multi_processing(model_name, dataset: str, total_segments):
     # heavy_segments = total_segments[int(len(total_segments)*0.70):]
     # segments_per_process = np.array_split(light_segments, process_num)
     # segments_per_process = np.array_split(heavy_segments, process_num)
-    light1 = sorted_by_fsize[:int(len(sorted_by_fsize) * 0.4)]
-    light2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.4):int(len(sorted_by_fsize) * 0.70)]
-    heavy1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.80)]
-    heavy2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)]
-    heavy3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.95):]
-    split_by_size = [light1, light2, heavy1, heavy2, heavy3]
+    light0 = sorted_by_fsize[:int(len(sorted_by_fsize) * 0.25)]
+    light1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.25):int(len(sorted_by_fsize) * 0.4)]
+    light2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.4):int(len(sorted_by_fsize) * 0.55)]
+    light3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.55):int(len(sorted_by_fsize) * 0.7)]
+    # heavy1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.85)]
+    # heavy2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)]
+    # heavy3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.95):]
+    # split_by_size = [light1, light2, heavy1, heavy2]
+    split_by_size = [light1, light2, light3]
     print('reading_total_data...')
-    ple_tot, abp_tot, size_tot = [], [], []
+    # ple_tot, abp_tot, size_tot = [], [], []
     # ple_l1, abp_l1, size_l1 = [], [], []
     # ple_l2, abp_l2, size_l2 = [], [], []
     # ple_h1, abp_h1, size_h1 = [], [], []
     # ple_h2, abp_h2, size_h2 = [], [], []
     # ple_h3, abp_h3, size_h3 = [], [], []
+    ple_tot = np.zeros((1, 3, 360))
+    abp_tot = np.zeros((1, 360))
+    size_tot = np.zeros((1, 3))
     for s in split_by_size:
         segments_per_process = np.array_split(s, process_num)
         print(f'number of segments per process: {len(segments_per_process[0])}')
@@ -349,9 +357,13 @@ def multi_processing(model_name, dataset: str, total_segments):
             # ple_total = np.array(ple_total)
             # abp_total = np.array(abp_total)
             # size_total = np.array(size_total)
-            ple_tot.append(np.array(ple_total))
-            abp_tot.append(np.array(abp_total))
-            size_tot.append(np.array(size_total))
+            ple_tot = np.concatenate((ple_tot, np.array(ple_total)), axis=0)
+            abp_tot = np.concatenate((abp_tot, np.array(abp_total)), axis=0)
+            size_tot = np.concatenate((size_tot, np.array(size_total)), axis=0)
+            # ple_temp = np.array(ple_total, dtype=object)
+            # ple_tot.append(np.array(ple_total, dtype=object))
+            # abp_tot.append(np.array(abp_total, dtype=object))
+            # size_tot.append(np.array(size_total, dtype=object))
 
             # dset = h5py.File(dset_path + str(dataset) + '.hdf5', 'w')
             # dset['ple'] = ple_total
@@ -361,9 +373,10 @@ def multi_processing(model_name, dataset: str, total_segments):
             manager.shutdown()
 
     dset = h5py.File(dset_path + str(dataset) + '.hdf5', 'w')
-    dset['ple'] = np.squeeze(np.array(ple_tot))
-    dset['abp'] = np.squeeze(np.array(abp_tot))
-    dset['size'] = np.squeeze(np.array(size_tot))
+    # dset['ple'] = np.squeeze(np.array(ple_tot))
+    dset['ple'] = ple_tot[1:]
+    dset['abp'] = abp_tot[1:]
+    dset['size'] = size_tot[1:]
     dset.close()
 
     print('total length: ', len(ple_tot))
@@ -371,14 +384,14 @@ def multi_processing(model_name, dataset: str, total_segments):
     print(np.shape(abp_tot))
     print(np.shape(size_tot))
     # print(np.shape(ple_total[0]))
-    print(ple_tot[0][:100])
-    print(abp_tot[0][:100])
-    print(size_tot[0])
+    print(ple_tot[1][:100])
+    print(abp_tot[1][:100])
+    print(size_tot[1])
 
 
 def dataset_split(model_name: str, data_path: str):
+    print('dataset splitting...')
     train_segments, val_segments, test_segments = get_total_segment_path(data_path)
-
     multi_processing(model_name, 'train', train_segments)
     multi_processing(model_name, 'val', val_segments)
     multi_processing(model_name, 'test', test_segments)
@@ -386,4 +399,3 @@ def dataset_split(model_name: str, data_path: str):
 
 
 dataset_split('BPNet', '/hdd/hdd1/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0')
-

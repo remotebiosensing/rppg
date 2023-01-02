@@ -15,8 +15,8 @@ from train import train
 from validation import validation
 from test import test
 from pygame import mixer
-# mixer.init()
-# sound = mixer.Sound('bell-ringing-01c.wav')
+mixer.init()
+sound = mixer.Sound('bell-ringing-01c.wav')
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -66,7 +66,9 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, scaler):
     # TODO use hdf5 file for training Done
 
     """wandb setup"""
-    wandb.init(project="VBPNet", entity="paperchae")
+    wandb_flag = False
+    img_flag = False
+    # wandb.init(project="VBPNet", entity="paperchae")
 
     """model setup"""
     model, loss, optimizer, scheduler = get_model(model_name, device=DEVICE)
@@ -81,24 +83,39 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, scaler):
     print("start training")
     for epoch in range(epochs):
         if is_learning(val_cost_arr):
+            '''train'''
             train_cost_arr.append(train(model, dataset[0], loss, optimizer, scheduler, epoch, scaler=not scaler))
+            '''validation'''
             val_cost_arr.append(validation(model, dataset[1], loss, epoch, scaler=not scaler))
-            """ save model if train cost and val cost are lower than mean of previous epochs """
+            wandb_flag = True
             if epoch != 0:
+                """ save model if train cost and val cost are lower than mean of previous epochs """
                 if train_cost_arr[-1] < train_cost_arr[-2] and val_cost_arr[-1] < val_cost_arr[-2]:
                     current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                     save_point.append(current_time)
                     model_save(train_cost_arr, val_cost_arr, model, save_point, model_name, dataset_name)
-            """ evaluate model for each 10 epochs """
             if epoch % 1 == 0:
-                # sound.play()
-                test_cost_arr.append(test(model, dataset[2], loss, epoch, scaler=not scaler))
+                ''' test model for each 10 epochs'''
+                test_cost, plot_img = test(model, dataset[2], loss, epoch, scaler=not scaler, plot_target=False)
+                test_cost_arr.append(test_cost)
+                img_flag = True
+            ''' wandb logging '''
+            if wandb_flag:
+                wandb.init(project="VBPNet", entity="paperchae")
+                # wandb.watch(model, loss, log="gradients", log_freq=10)
+                wandb.log({"Train_cost": train_cost_arr[-1],
+                           "Val_cost": val_cost_arr[-1],
+                           "Test_cost": test_cost_arr[-1]}, step=epoch)
+                # if epoch!=0:
+                if img_flag:
+                    wandb.log({"Prediction": wandb.Image(plot_img)})
+                    plot_img.close()
         else:
             print("model is not learning, stop training..")
             break
     """ plot Loss graph"""
     t = np.array(range(len(train_cost_arr)))
-    plt.title('Loss')
+    plt.title('Total epochs : {}'.format(len(t)))
     plt.plot(t, train_cost_arr, 'g-', label='Train Loss')
     plt.plot(t, val_cost_arr, 'b--', label='Validation Loss')
     plt.plot(t, test_cost_arr, 'r--', label='Test Loss')
@@ -106,13 +123,13 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, scaler):
     plt.ylabel('Loss')
     plt.legend()
     plt.show()
-    # sound.play()
+    sound.play()
 
     print("training is done")
 
 
 if __name__ == '__main__':
-    main(model_name='BPNet', dataset_name='mimiciii', in_channel='second', epochs=200, batch_size=1024, scaler=False)
+    main(model_name='BPNet', dataset_name='mimiciii', in_channel='second', epochs=200, batch_size=256, scaler=False)
 
 #     if model_name is 'BPNet':
 #         model = bvp2abp(in_channels=channel[0], out_channels=out_channels, case=model_case[0], fft=fft)

@@ -162,34 +162,33 @@ def Neg_Pearson_Loss(predictions, targets):
     # for i in range(predictions.shape[0]):
     #     pearson = torch.corrcoef(torch.stack((predictions[i], targets[i])))[0][1]
     #     rst += 1 - pearson
-    for i in range(predictions.shape[0]):
-        # sum_x = torch.sum(predictions[i]-torch.mean(predictions[i]))
-        # sum_y = torch.sum(targets[i]-torch.mean(targets[i]))
-        sum_xy = torch.sum((predictions[i]-torch.mean(predictions[i])) * (targets[i]-torch.mean(targets[i])))
-        pow_x = torch.sum(torch.pow(predictions[i]-torch.mean(predictions[i]), 2))
-        pow_y = torch.sum(torch.pow(targets[i]-torch.mean(targets[i]), 2))
-        pearson = (sum_xy / torch.sqrt(pow_x * pow_y) + eps).float()
-
-        rst += pearson
-
-    rst = rst / predictions.shape[0]
-    return rst
     # for i in range(predictions.shape[0]):
-    #     # predictions[i] = (predictions[i] - torch.mean(predictions[i])) / torch.std(predictions[i])
-    #     # targets[i] = (targets[i] - torch.mean(targets[i])) / torch.std(targets[i])
-    #     sum_x = torch.sum(predictions[i])  # x
-    #     sum_y = torch.sum(targets[i])  # y
-    #     sum_xy = torch.sum(torch.mul(predictions[i], targets[i]))  # xy
-    #     sum_x2 = torch.sum(torch.pow(predictions[i], 2))  # x^2
-    #     sum_y2 = torch.sum(torch.pow(targets[i], 2))  # y^2
-    #     N = predictions.shape[1]
-    #     pearson = (N * sum_xy - sum_x * sum_y) / (
-    #         torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2)))) + eps
-    #     if torch.isnan(pearson):
-    #         print('pearson is nan')
-    #         print('N :', N, 'sum_xy :', sum_xy, 'sum_x :', sum_x, 'sum_y :', sum_y, 'sum_x2 :', sum_x2, 'sum_y2 :', sum_y2)
-    #         pearson = 0
-    #     rst += 1 - pearson
+    #     # sum_x = torch.sum(predictions[i]-torch.mean(predictions[i]))
+    #     # sum_y = torch.sum(targets[i]-torch.mean(targets[i]))
+    #     sum_xy = torch.sum((predictions[i]-torch.mean(predictions[i])) * (targets[i]-torch.mean(targets[i])))
+    #     pow_x = torch.sum(torch.pow(predictions[i]-torch.mean(predictions[i]), 2))
+    #     pow_y = torch.sum(torch.pow(targets[i]-torch.mean(targets[i]), 2))
+    #     pearson = (sum_xy / torch.sqrt(pow_x * pow_y))
+    #
+    #     rst += 1-pearson
+    #
+
+    for i in range(predictions.shape[0]):
+        # predictions[i] = (predictions[i] - torch.mean(predictions[i])) / torch.std(predictions[i])
+        # targets[i] = (targets[i] - torch.mean(targets[i])) / torch.std(targets[i])
+        sum_x = torch.sum(predictions[i])  # x
+        sum_y = torch.sum(targets[i])  # y
+        sum_xy = torch.sum(torch.mul(predictions[i], targets[i]))  # xy
+        sum_x2 = torch.sum(torch.pow(predictions[i], 2))  # x^2
+        sum_y2 = torch.sum(torch.pow(targets[i], 2))  # y^2
+        N = predictions.shape[1]
+        pearson = (N * sum_xy - sum_x * sum_y) / (
+            torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2)))) + eps
+        if torch.isnan(pearson):
+            print('pearson is nan')
+            print('N :', N, 'sum_xy :', sum_xy, 'sum_x :', sum_x, 'sum_y :', sum_y, 'sum_x2 :', sum_x2, 'sum_y2 :', sum_y2)
+            pearson = 0
+        rst += 1 - pearson
     # n = predictions.shape[0]
     # sum_x = torch.sum(predictions, dim=1)
     # sum_y = torch.sum(targets, dim=1)
@@ -199,9 +198,8 @@ def Neg_Pearson_Loss(predictions, targets):
     # pearson = (sum_xy / (torch.sqrt(sum_x_square * sum_y_square))).mean()
 
 
-    # rst = 1 - pearson
-    # return rst
-
+    rst = rst / predictions.shape[0]
+    return rst
 
 class NegPearsonLoss(nn.Module):
     def __init__(self):

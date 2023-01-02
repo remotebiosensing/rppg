@@ -85,7 +85,7 @@ def signal_respiration_checker(ABP, PPG, threshold=0.9):
     SBP = SBP_detection(ABP, rolling_sec)
     DBP = DBP_detection(ABP, rolling_sec)
     SBP, DBP = SBP_DBP_filter(ABP, SBP, DBP)
-    if len(SBP) == 0 or len(DBP) == 0:
+    if len(SBP) == 0 or len(DBP) == 0 or (abs(len(SBP) - len(DBP)) >= 2):
         return False, None, None, None
     mean_sbp, mean_dbp = np.mean(ABP[SBP]), np.mean(ABP[DBP])
     mean_map = (2 * mean_dbp + mean_sbp) / 3
@@ -481,7 +481,6 @@ def signal_slicing(model_name, rawdata, chunk_size, sampling_rate, fft=True):
                 (len(p_ple) < 5) or
                 (len(p_abp) - len(p_ple) > 1) or
                 (signal_quality_checker(abp, is_abp=True) is False) or
-
                 (signal_quality_checker(ple, is_abp=False) is False)):
             abp = SignalHandler(abp).down_sampling(sampling_rate)
             ple = SignalHandler(ple).down_sampling(sampling_rate)

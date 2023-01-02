@@ -14,7 +14,7 @@ def get_model_parameter(model_name: str = 'BPNet'):
     with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
         j = json.load(f)
         params = j.get("models").get(model_name)
-        out_channels = params.get("out_channels")
+        out_channels = j.get("parameters").get("out_channels")
     learning_rate = params.get("learning_rate")
     weight_decay = params.get("weight_decay")
     gamma = params.get("gamma")
@@ -26,7 +26,7 @@ def get_model(model_name: str, device):
     if model_name == 'BPNet':
         from vid2bp.nets.modules.bvp2abp import bvp2abp
         model = bvp2abp(in_channels=3, out_channels=oc).to(device)
-        model_loss = [loss.NegPearsonLoss().to(device), loss.STFTLoss().to(device), loss.NegPearsonLoss().to(device)]
+        model_loss = [loss.NegPearsonLoss().to(device)]
         model_optim = optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
         model_scheduler = optim.lr_scheduler.ExponentialLR(model_optim, gamma=ga)
     elif model_name == 'Unet':
@@ -55,6 +55,20 @@ def is_learning(cost_arr):
                     flag = False
                     break
     return flag
+
+
+def calc_losses(avg_cost_list, losses, hypothesis, target, cnt):
+    cost = torch.tensor(0.0).to('cuda:0')
+    for idx, l in enumerate(losses):
+        temp_loss = l(hypothesis, target)
+        cost += temp_loss
+        avg_cost_list[idx] = get_avg_cost(avg_cost_list[idx], temp_loss, cnt)
+
+    # cost = sum(cost_list)
+
+    return avg_cost_list, cost
+def get_avg_cost(avg_cost, current_cost, cnt):
+    return (avg_cost * (cnt - 1) + current_cost.__float__()) / cnt
 
 
 def model_save(train_cost_arr, val_cost_arr, model, save_point, model_name, dataset_name):
