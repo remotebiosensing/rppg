@@ -14,10 +14,13 @@ import math
 
 from params import params
 
+from log import log_info_time
+
 import cv2
 
 
-def dataset_split(dataset, ratio):
+def dataset_split(**kwargs):
+    dataset, ratio = kwargs["dataset"], kwargs["ratio"]
     dataset_len = len(dataset)
     if ratio.__len__() == 3:
         train_len = int(np.floor(dataset_len * ratio[0]))
@@ -31,7 +34,7 @@ def dataset_split(dataset, ratio):
         return random_split(dataset, [train_len, test_len])
 
 
-def preprocessing():
+def preprocessing(**kwargs):
     """
     :param save_root_path: save file destination path
     :param model_name: select preprocessing method
@@ -43,6 +46,7 @@ def preprocessing():
     :param fixed_position: True : fixed position, False : face tracking
     :return:
     """
+
     save_root_path = params.save_root_path
     model_name = params.model
     data_root_path = params.data_root_path
@@ -131,17 +135,12 @@ def preprocessing():
         else:
             chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]
 
-        print(chunk_data_list)
-        ## get current time
-        now = datetime.datetime.now()
+        print("chunk_data_list : ", chunk_data_list)
 
         chunk_preprocessing(model_name, chunk_data_list, dataset_root_path, vid_name, ground_truth_name,
                             face_detect_algorithm=face_detect_algorithm, divide_flag=divide_flag,
                             fixed_position=fixed_position, time_length=time_length, img_size=img_size,
                             ssl_flag=ssl_flag, idx=i, time=time)
-        ## calculate evaluate time
-        end = datetime.datetime.now()
-        print("time : ", end - now)
 
 
 def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dict, **kwargs):

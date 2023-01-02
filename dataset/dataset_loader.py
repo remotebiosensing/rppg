@@ -15,8 +15,8 @@ from dataset.VitamonDataset import VitamonDataset
 
 from params import params
 
-
-def split_data_loader(datasets, batch_size, train_shuffle, test_shuffle=False):
+def split_data_loader(**kwargs):
+    datasets, batch_size, train_shuffle, test_shuffle = Falsedatasets, batch_size, train_shuffle, test_shuffle = kwargs["datasets"], kwargs["batch_size"], kwargs["train_shuffle"], kwargs["test_shuffle"]
     if datasets.__len__() == 3:
         train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=train_shuffle)
         validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=test_shuffle)
