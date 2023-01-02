@@ -3,6 +3,8 @@ import scipy.signal
 from matplotlib import pyplot as plt
 from scipy.signal import butter
 from scipy.sparse import spdiags
+import time
+import params as params
 
 
 def detrend(signal, Lambda):

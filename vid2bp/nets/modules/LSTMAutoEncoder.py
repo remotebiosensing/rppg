@@ -22,25 +22,32 @@ class Decoder(nn.Module):
         self.hidden_size = hidden_size
         self.length = length
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(length, hidden_size, num_layers, batch_first=True,
-                            dropout=0.2, bidirectional=False)
+        self.lstm = nn.LSTM(length, hidden_size, num_layers, batch_first=True, bidirectional=False)
+        self.dropout = nn.Dropout(0.2)
         self.fc = nn.Linear(hidden_size, length)
 
     def forward(self, x, hidden):
         output, (hidden, cell) = self.lstm(x, hidden)
+        output = self.dropout(output)
         prediction = self.fc(output)
         return prediction, (hidden, cell)
 
 
 class LSTMAutoEncoder(nn.Module):
-    def __init__(self, hidden_size, length, num_layers):
+    def __init__(self, hidden_size=128, length=360, num_layers=1, label='ple'):
         super(LSTMAutoEncoder, self).__init__()
-
+        self.length = length
         self.encoder = Encoder(
             length=length,
             hidden_size=hidden_size,
             num_layers=num_layers,
         )
+
+        if label == 'abp':
+            for param in self.encoder.parameters():
+                param.requires_grad = False
+            print('encoder is frozen')
+
         self.decoder = Decoder(
             length=length,
             hidden_size=hidden_size,
@@ -51,11 +58,8 @@ class LSTMAutoEncoder(nn.Module):
         # x: tensor of shape (batch_size, seq_length, hidden_size)
         encoder_hidden = self.encoder(x)
 
-        reconstruct_output = []
         hidden = encoder_hidden
         for t in range(self.length):
-            temp_input, hidden = self.decoder(x, hidden)
-            reconstruct_output.append(temp_input)
-        reconstruct_output = torch.cat(reconstruct_output, dim=1)
+            reconstruct_output, hidden = self.decoder(x, hidden)
 
         return reconstruct_output
