@@ -1,11 +1,16 @@
 import os
 
-# import config
+import config
 import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
-
+import numpy as np
 from log import log_warning
+import torch.nn.functional as F
+import scipy
+import math
+
+
 
 from params import params
 def loss_fn():
@@ -213,3 +218,97 @@ class RhythmNet_autograd(torch.autograd.Function):
         output = (1 / ctx.T - 1) * torch.sign(ctx.hr_mean - hr_t) + output
 
         return output, None, None
+
+
+
+def Pearson_Loss(predictions, targets):
+    rst = 0
+    targets = targets[:, :]
+    predictions = torch.squeeze(predictions)
+    # Pearson correlation can be performed on the premise of normalization of input data
+    predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
+    targets = (targets - torch.mean(targets)) / torch.std(targets)
+
+    for i in range(predictions.shape[0]):
+        sum_x = torch.sum(predictions[i])  # x
+        sum_y = torch.sum(targets[i])  # y
+        sum_xy = torch.sum(predictions[i] * targets[i])  # xy
+        sum_x2 = torch.sum(torch.pow(predictions[i], 2))  # x^2
+        sum_y2 = torch.sum(torch.pow(targets[i], 2))  # y^2
+        N = predictions.shape[1]
+        pearson = (N * sum_xy - sum_x * sum_y) / (
+            torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2))))
+
+        rst += pearson
+
+    rst = rst / predictions.shape[0]
+    return rst
+
+def stft(input_signal):
+    stft_sig = torch.stft(input_signal, n_fft=1024, hop_length=512, win_length=1024, window=torch.hamming_window(1024), center=True, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
+    return stft_sig
+
+
+
+class stftLoss(nn.Module):
+    def __init__(self):
+        super(stftLoss, self).__init__()
+
+    def forward(self, predictions, targets):
+        # targets = targets[:, :]
+        # predictions = torch.squeeze(predictions)
+
+        neg = neg_Pearson_Loss(predictions, targets)
+        neg_cossim = torch.mean(1.0 - F.cosine_similarity(targets, predictions))
+        neg_cossim.requires_grad_(True)
+        return neg_cossim + neg
+
+
+class PearsonLoss(nn.Module):
+    def __init__(self):
+        super(PearsonLoss, self).__init__()
+
+    def forward(self, predictions, targets):
+        return Pearson_Loss(predictions, targets)
+
+
+
+def sig_to_BPfiltersig(label,N,fs,hf_low,hf_high):
+    '''
+    label = gt signal
+    N = signal length = len(label)
+    fs = fps
+    hf_low = low cut off frequency
+    hf_high = high cut off frequency
+    '''
+
+    # signal->fft signal
+    fft_label = scipy.fft.fft(label)
+
+    # fft signal->fft signal shift
+    fft_freqs = scipy.fft.fftfreq(N, d=1/fs)
+
+    # bandpass filter
+    x_label = len(fft_freqs)
+    tmp = fft_freqs[x_label // 2:]
+    tmp2 = fft_freqs[:x_label // 2]
+    fft_freqs = np.concatenate((tmp, tmp2))
+
+    for i in range(len(fft_freqs)):
+        if hf_low <= math.fabs(fft_freqs[i]) <= hf_high:
+            continue
+        else:
+            fft_label[i] = 0
+
+    #bp filter signal -> ifft
+    ifft_bp_label = scipy.fft.ifft(fft_label)
+
+    # for i in range(0, len(label), 32):
+    #     plt.title('Comapre original signal and Filtered Time signal every 32frames')
+    #     plt.plot(label[i:i + 32], label='Ground Truth', color='blue', linewidth=2, alpha=0.5)
+    #     plt.plot(ifft_bp_label.real[i:i + 32], label='Filtered', color='red', linewidth=1)
+    #     plt.legend()
+    #     plt.grid()
+    #     plt.show()
+
+    return abs(ifft_bp_label)
