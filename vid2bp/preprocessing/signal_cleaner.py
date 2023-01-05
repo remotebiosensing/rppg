@@ -190,10 +190,12 @@ def signal_shifter(target_signal, gap):
     return shifted_signal
 
 
-def signal_matcher(abp_signal, ple_signal, abp_peaks, ple_peaks, threshold=0.8):
+def signal_matcher(raw_abp, raw_ple, abp_signal, ple_signal, abp_peaks, ple_peaks, abp_bottoms, ple_bottoms,
+                   threshold=0.8):
     best_corr = 0
     best_abp = []
     best_ple = []
+    best_gap = 0
     gaps = []
     if len(abp_peaks) > len(ple_peaks):
         for peak_index in range(len(ple_peaks)):
@@ -213,9 +215,23 @@ def signal_matcher(abp_signal, ple_signal, abp_peaks, ple_peaks, threshold=0.8):
             if length_checker(matched_abp_signal, 6 * 125) and length_checker(matched_ple_signal, 6 * 125):
                 correlation = correlation_checker(matched_abp_signal, matched_ple_signal)
                 if correlation > best_corr:
+                    best_gap = gap
                     best_corr = correlation
                     best_abp = matched_abp_signal
                     best_ple = matched_ple_signal
+        raw_ple = signal_shifter(raw_ple, best_gap)
+        if best_gap > 0:
+            raw_abp = raw_abp[:-best_gap]
+            matched_abp_peaks = abp_peaks[np.argwhere(abp_peaks < len(best_abp)).reshape(-1)]
+            matched_ple_peaks = ple_peaks[np.argwhere(ple_peaks > best_gap).reshape(-1)] - best_gap
+            matched_abp_bottoms = abp_bottoms[np.argwhere(abp_bottoms < len(best_abp)).reshape(-1)]
+            matched_ple_bottoms = ple_bottoms[np.argwhere(ple_bottoms > best_gap).reshape(-1)] - best_gap
+        else:
+            raw_abp = raw_abp[-best_gap:]
+            matched_abp_peaks = abp_peaks[np.argwhere(abp_peaks > -best_gap).reshape(-1)] + best_gap
+            matched_ple_peaks = ple_peaks[np.argwhere(ple_peaks < len(best_ple) + best_gap).reshape(-1)]
+            matched_abp_bottoms = abp_bottoms[np.argwhere(abp_bottoms > -best_gap).reshape(-1)] + best_gap
+            matched_ple_bottoms = ple_bottoms[np.argwhere(ple_bottoms < len(best_ple) + best_gap).reshape(-1)]
     else:
         for peak_index in range(len(abp_peaks)):
             if peak_index - 1 > 0:
@@ -235,13 +251,32 @@ def signal_matcher(abp_signal, ple_signal, abp_peaks, ple_peaks, threshold=0.8):
             if length_checker(matched_abp_signal, 6 * 125) and length_checker(matched_ple_signal, 6 * 125):
                 correlation = correlation_checker(matched_abp_signal, matched_ple_signal)
                 if correlation > best_corr:
+                    best_gap = gap
                     best_corr = correlation
                     best_abp = matched_abp_signal
                     best_ple = matched_ple_signal
+        raw_abp = signal_shifter(raw_abp, best_gap)
+        if best_gap > 0:
+            raw_ple = raw_ple[:-best_gap]
+            matched_ple_peaks = ple_peaks[np.argwhere(ple_peaks < len(best_ple)).reshape(-1)]
+            matched_abp_peaks = abp_peaks[np.argwhere(abp_peaks > best_gap).reshape(-1)] - best_gap
+            matched_ple_bottoms = ple_bottoms[np.argwhere(ple_bottoms < len(best_ple)).reshape(-1)]
+            matched_abp_bottoms = abp_bottoms[np.argwhere(abp_bottoms > best_gap).reshape(-1)] - best_gap
+        else:
+            raw_ple = raw_ple[-best_gap:]
+            matched_ple_peaks = ple_peaks[np.argwhere(ple_peaks > -best_gap).reshape(-1)] + best_gap
+            matched_abp_peaks = abp_peaks[np.argwhere(abp_peaks < len(best_abp) + best_gap).reshape(-1)]
+            matched_ple_bottoms = ple_bottoms[np.argwhere(ple_bottoms > -best_gap).reshape(-1)] + best_gap
+            matched_abp_bottoms = abp_bottoms[np.argwhere(abp_bottoms < len(best_abp) + best_gap).reshape(-1)]
+
     if best_corr < threshold:
-        return False, None, None, None
+        return False, None, None, None, None, None, None, None, None, None
     else:
-        return True, best_abp[:750], best_ple[:750], best_corr
+        return True, raw_abp[:750], raw_ple[:750], best_abp[:750], best_ple[:750], matched_abp_peaks[
+            np.argwhere(matched_abp_peaks < 750)], \
+               matched_ple_peaks[np.argwhere(matched_ple_peaks < 750)], matched_abp_bottoms[
+                   np.argwhere(matched_abp_bottoms < 750)], \
+               matched_ple_bottoms[np.argwhere(matched_ple_bottoms < 750)], best_corr
 
 
 if __name__ == "__main__":
@@ -255,7 +290,12 @@ if __name__ == "__main__":
     best_abp = []
     best_ple = []
     best_corr = []
+    best_abp_peaks = []
+    best_ple_peaks = []
+    best_abp_bottoms = []
+    best_ple_bottoms = []
     total_piece = 0
+    interpolated_pieces = 0
     for segment in tqdm(segment_list, desc='segment'):
         ple_idx, abp_idx = m3t.find_channel_idx(segment)
         ple, abp = np.squeeze(np.split(wfdb.rdrecord(segment, channels=[ple_idx, abp_idx]).p_signal, 2, axis=1))
@@ -282,6 +322,7 @@ if __name__ == "__main__":
                 if num_nan_abp < 0.1 * len(target_abp) and num_nan_ple < 0.1 * len(target_ple):
                     target_abp = nan_interpolator(target_abp)
                     target_ple = nan_interpolator(target_ple)
+                    interpolated_pieces += 1
                 else:
                     continue
             if flat_signal_checker(target_abp) or flat_signal_checker(target_ple):
@@ -295,10 +336,6 @@ if __name__ == "__main__":
         # denoise signal
         lf = 0.5
         hf = 8
-        # denoised_abp = normal_abp
-        # denoised_ple = normal_ple
-        # denoised_abp = [bpfilter(target_abp, t * fs, fs, lf, hf) for target_abp in normal_abp]
-        # denoised_ple = [bpfilter(target_ple, t * fs, fs, lf, hf) for target_ple in normal_ple]
         denoised_abp = [filter_signal(target_abp, cutoff=hf, sample_rate=fs, order=2, filtertype='lowpass') for
                         target_abp in normal_abp]
         denoised_ple = [filter_signal(target_ple, cutoff=hf, sample_rate=fs, order=2, filtertype='lowpass') for
@@ -307,31 +344,57 @@ if __name__ == "__main__":
         rolling_sec = 1.5
         peak_abp = [peak_detector(target_abp, rolling_sec, fs) for target_abp in normal_abp]
         peak_ple = [peak_detector(target_ple, rolling_sec, fs) for target_ple in normal_ple]
+        bottom_abp = [bottom_detector(target_abp, rolling_sec, fs) for target_abp in normal_abp]
+        bottom_ple = [bottom_detector(target_ple, rolling_sec, fs) for target_ple in normal_ple]
 
         # calculate correlation
         # if correlation is less than threshold, remove the signal
         threshold = 0.8
 
-        for target_abp, target_ple, target_peak_abp, target_peak_ple in zip(denoised_abp, denoised_ple, peak_abp,
-                                                                            peak_ple):
+        for raw_abp, raw_ple, target_abp, target_ple, target_peak_abp, target_peak_ple, target_bottom_abp, target_bottom_ple \
+                in zip(normal_abp, normal_ple, denoised_abp, denoised_ple, peak_abp, peak_ple, bottom_abp, bottom_ple):
             # check if peak is valid
             if len(target_peak_abp) == 0 or len(target_peak_ple) == 0:
                 continue
-            # making...
-            match_flag, matched_abp, matched_ple, matched_corr = signal_matcher(target_abp, target_ple, target_peak_abp,
-                                                                                target_peak_ple, threshold)
+            target_peak_abp = np.array(target_peak_abp)
+            target_peak_ple = np.array(target_peak_ple)
+            target_bottom_abp = np.array(target_bottom_abp)
+            target_bottom_ple = np.array(target_bottom_ple)
+            # matching signals then get matched peaks, bottoms and correlation
+            match_flag, matched_raw_abp, matched_raw_ple, matched_target_abp, matched_target_ple, matched_abp_peaks, \
+            matched_ppg_peaks, matched_abp_bottoms, matched_ple_bottoms, matched_corr = signal_matcher(raw_abp, raw_ple,
+                                                                                                       target_abp,
+                                                                                                       target_ple,
+                                                                                                       target_peak_abp,
+                                                                                                       target_peak_ple,
+                                                                                                       target_bottom_abp,
+                                                                                                       target_bottom_ple,
+                                                                                                       threshold)
             if match_flag:
-                best_abp.append(matched_abp)
-                best_ple.append(matched_ple)
+                best_abp.append(matched_target_abp)
+                best_ple.append(matched_target_ple)
                 best_corr.append(matched_corr)
+                best_abp_peaks.append(matched_abp_peaks)
+                best_ple_peaks.append(matched_ppg_peaks)
+                best_abp_bottoms.append(matched_abp_bottoms)
+                best_ple_bottoms.append(matched_ple_bottoms)
+
     print('total matched piece: {}'.format(len(best_abp)))
     print('total piece: {}'.format(total_piece))
 
-    for target_abp, target_ple, target_corr in zip(best_abp, best_ple, best_corr):
+    for target_abp, target_ple, target_corr, target_abp_peaks, target_ple_peaks, target_abp_bottoms, target_ple_bottoms in zip(
+            best_abp, best_ple, best_corr,
+            best_abp_peaks, best_ple_peaks,
+            best_abp_bottoms,
+            best_ple_bottoms):
         target_abp = (target_abp - np.min(target_abp)) / (np.max(target_abp) - np.min(target_abp))
         target_ple = (target_ple - np.min(target_ple)) / (np.max(target_ple) - np.min(target_ple))
         plt.title('correlation: {}'.format(target_corr))
-        plt.plot(target_abp)
-        plt.plot(target_ple)
-        plt.legend(['ABP', 'PLE'])
+        plt.plot(target_abp, 'r')
+        plt.plot(target_ple, 'b')
+        plt.plot(target_abp_peaks, target_abp[target_abp_peaks], 'ro')
+        plt.plot(target_ple_peaks, target_ple[target_ple_peaks], 'bo')
+        plt.plot(target_abp_bottoms, target_abp[target_abp_bottoms], 'rx')
+        plt.plot(target_ple_bottoms, target_ple[target_ple_bottoms], 'bx')
+        plt.legend(['ABP', 'PLE', 'ABP peak', 'PLE peak'])
         plt.show()
