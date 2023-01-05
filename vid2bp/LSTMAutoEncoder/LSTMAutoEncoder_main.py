@@ -6,9 +6,10 @@ from loss import NegPearsonLoss
 import matplotlib.pyplot as plt
 import numpy as np
 import wandb
+import time
 
 
-def main(label='abp', batch_size=4096, learning_rate=0.0025, epochs=50, loss='MSE', wandb_flag=True):
+def main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MSE', wandb_flag=True):
     '''
     set hyperparameter
     '''
@@ -26,9 +27,9 @@ def main(label='abp', batch_size=4096, learning_rate=0.0025, epochs=50, loss='MS
     '''
     load model
     '''
-    model = LSTMAutoEncoder(hidden_size=128, length=360, num_layers=1, label=label).cuda()
+    model = LSTMAutoEncoder(hidden_size=128, input_size=3, output_size=1, label=label).cuda()
     if label == 'abp':
-        model.load_state_dict(torch.load('/home/najy/rppg/model_weights/LSTMAutoEncoder_best.pth'))
+        model.load_state_dict(torch.load("/home/najy/rppg/model_weights/LSTMAutoEncoder_predict_ple_39.pth"))
         print('load ppg2ppg  model weights')
     '''
     load dataset
@@ -40,7 +41,7 @@ def main(label='abp', batch_size=4096, learning_rate=0.0025, epochs=50, loss='MS
     if loss == 'MSE':
         criterion = torch.nn.MSELoss()
     elif loss == 'neg_pearson':
-        criterion = [NegPearsonLoss(), torch.nn.MSELoss()]
+        criterion = NegPearsonLoss()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
@@ -52,7 +53,7 @@ def main(label='abp', batch_size=4096, learning_rate=0.0025, epochs=50, loss='MS
     set wandb parameters
     '''
     wandb.init(project='torch_rPPG', entity="najubae777",
-               name="LSTMAutoEncoder_predict_" + label + "_MSE+" + loss)
+               name="LSTMAutoEncoder_predict_ple_calc_with_norm_" + time.strftime("%Y%m%d_%H", time.localtime()))
     wandb.config = {
         "learning_rate": learning_rate,
         "epochs": epochs,
@@ -93,7 +94,7 @@ def main(label='abp', batch_size=4096, learning_rate=0.0025, epochs=50, loss='MS
             if min_test_loss > running_loss:
                 min_test_loss = running_loss
                 torch.save(model.state_dict(),
-                           "/home/najy/rppg/model_weights/LSTMAutoEncoder_predict_" + label + "_best.pth")
+                           "/home/najy/rppg/model_weights/LSTMAutoEncoder_predict_" + label + "_" + str(epoch) + ".pth")
         if epoch % 10 == 0 or epoch == epochs - 1:
             running_loss = test_fn(epoch, model, criterion, data_loaders[2], "Test")
             test_epochs.append(epoch)
@@ -105,10 +106,10 @@ def main(label='abp', batch_size=4096, learning_rate=0.0025, epochs=50, loss='MS
             if min_test_loss > running_loss:
                 min_test_loss = running_loss
                 torch.save(model.state_dict(),
-                           "/home/najy/rppg/model_weights/LSTMAutoEncoder_predict_" + label + "_best.pth")
+                           "/home/najy/rppg/model_weights/LSTMAutoEncoder_predict_" + label + "_" + str(epoch) + ".pth")
 
     wandb.finish()
 
 
 if __name__ == '__main__':
-    main(label='abp', batch_size=4096, learning_rate=0.0025, epochs=50, loss='neg_pearson', wandb_flag=True)
+    main(label='ple', batch_size=1024, learning_rate=0.0025, epochs=50, loss='neg_pearson', wandb_flag=True)
