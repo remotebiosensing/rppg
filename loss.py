@@ -1,6 +1,6 @@
 import os
 
-import config
+# import config
 import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
@@ -73,6 +73,10 @@ def loss_fn():
         return loss.TripletMarginWithDistanceLoss()
     elif params.loss_fn == "RhythmNetLoss":
         return RhythmNetLoss()
+    elif params.loss_fn == "stftloss":
+        return stftLoss()
+    elif params.loss_fn == "pearson":
+        return PearsonLoss()
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
