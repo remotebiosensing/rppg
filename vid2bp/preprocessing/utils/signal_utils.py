@@ -140,7 +140,7 @@ def SBP_detection(signal, rolling_sec=0.75, fs=125):
     return peak_heartpy['peaklist']
 
 
-def DBP_detection(signal, rolling_sec, fs=125):
+def DBP_detection(signal, rolling_sec=0.75, fs=125):
     signal = -signal
     roll_mean = rolling_mean(signal, rolling_sec, fs)
     peak_heartpy = hp_peak.detect_peaks(signal, roll_mean, ma_perc=20, sample_rate=fs)

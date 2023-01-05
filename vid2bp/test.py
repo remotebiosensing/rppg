@@ -9,6 +9,46 @@ from matplotlib import gridspec
 from preprocessing.utils.signal_utils import ds_detection
 import vid2bp.utils.train_utils as tu
 from sklearn.preprocessing import MinMaxScaler
+from vid2bp.nets.loss.loss import SelfScaler
+
+
+def test(model, dataset, loss, epoch, scaler=True, plot_target=False):
+    model.eval()
+    scale_loss = SelfScaler().to('cuda:0')
+
+    plot_flag = True
+    avg_cost_list = []
+    for _ in range(len(loss)):
+        avg_cost_list.append(0)
+
+    with tqdm(dataset, desc='Test{}'.format(str(epoch)), total=len(dataset), leave=True) as test_epoch:
+        with torch.no_grad():
+            for idx, (X_test, Y_test, dia, sys, size_class) in enumerate(test_epoch):
+                hypothesis, scaled_ple = model(X_test, scaler=scaler)
+                avg_cost_list, cost = tu.calc_losses(avg_cost_list, loss,
+                                                     hypothesis, Y_test,
+                                                     idx + 1)
+
+                ple_cost = scale_loss(scaled_ple, X_test)
+                total_cost = np.sum(avg_cost_list) + ple_cost.__float__()
+
+                postfix_dict = {}
+                for i in range(len(loss)):
+                    postfix_dict[(str(loss[i]))[:-2]] = (round(avg_cost_list[i], 3))
+                postfix_dict['scale_variance'] = round(ple_cost.__float__(), 3)
+                test_epoch.set_postfix(losses=postfix_dict, tot=total_cost)
+
+                if plot_flag:
+                    plot = plot_prediction(X_test[0], Y_test[0], [dia[0], sys[0], size_class[0]],
+                                           hypothesis[0], epoch, plot_target)
+                    plot_flag = False
+            # wandb.init(project="VBPNet", entity="paperchae")
+            # wandb.log({"Test Loss": total_cost}, step=epoch)
+            # wandb.log({"Test Loss": test_avg_cost,
+            #            'Pearson Loss': neg_cost,
+            #            'STFT Loss': stft_cost}, step=epoch)
+        return total_cost.__float__(), plot
+
 
 def plot_prediction(ple, abp, dsm, hypothesis, epoch, plot_target):
     t = np.arange(0, 6, 1 / 60)
@@ -32,15 +72,15 @@ def plot_prediction(ple, abp, dsm, hypothesis, epoch, plot_target):
         ax0.plot(t[sbp_idx], h[sbp_idx], 'r^', label='Prediction SBP')
         ax0.plot(t[dbp_idx], h[dbp_idx], 'gv', label='Prediction DBP')
     else:
-        ax0.plot(t, min_max_scaler.fit_transform(np.reshape(y, (360,1))), label='Target ABP')
+        ax0.plot(t, min_max_scaler.fit_transform(np.reshape(y, (360, 1))), label='Target ABP')
         # ax0.plot(t[target_sbp_idx], y[target_sbp_idx], 'r^', label='Target SBP')
         # ax0.plot(t[target_dbp_idx], y[target_dbp_idx], 'bv', label='Target DBP')
-        ax0.plot(t, min_max_scaler.fit_transform(np.reshape(h,(360,1))), label='Predicted ABP')
+        ax0.plot(t, min_max_scaler.fit_transform(np.reshape(h, (360, 1))), label='Predicted ABP')
         # ax0.plot(t[sbp_idx], h[sbp_idx], 'r^', label='Prediction SBP')
         # ax0.plot(t[dbp_idx], h[dbp_idx], 'gv', label='Prediction DBP')
     ax0.set_title("Epoch :" + str(epoch + 1) +
-                  "\nTarget ( s:" + str(np.round(dsm[1].cpu().detach(), 2)) +
-                  " / d:" + str(np.round(dsm[0].cpu().detach(), 2)) + ")" +
+                  "\nTarget ( s:" + str(np.round(dsm[1].detach().cpu().numpy(), 2)) +
+                  " / d:" + str(np.round(dsm[0].detach().cpu().numpy(), 2)) + ")" +
                   "  Prediction ( s:" + str(np.round(mean_sbp, 2)) +
                   " / d:" + str(np.round(mean_dbp, 2)) + ")")
     # ax0.set_xlabel('Time (s)')
@@ -56,36 +96,3 @@ def plot_prediction(ple, abp, dsm, hypothesis, epoch, plot_target):
     # plt.show()
     # plt.close()
     return plt
-
-
-def test(model, dataset, loss, epoch, scaler=True, plot_target=False):
-    model.eval()
-
-    plot_flag = True
-    avg_cost_list = []
-    for _ in range(len(loss)):
-        avg_cost_list.append(0)
-
-    with tqdm(dataset, desc='Test{}'.format(str(epoch)), total=len(dataset), leave=True) as test_epoch:
-        with torch.no_grad():
-            for idx, (X_test, Y_test, dia, sys, size_class) in enumerate(test_epoch):
-                hypothesis = model(X_test, scaler=scaler)
-                avg_cost_list, cost = tu.calc_losses(avg_cost_list, loss,
-                                                     hypothesis, Y_test,
-                                                     idx + 1)
-                total_cost = np.sum(avg_cost_list)
-                temp = {}
-                for i in range(len(loss)):
-                    temp[(str(loss[i]))[:-2]] = (round(avg_cost_list[i], 3))
-                test_epoch.set_postfix(losses=temp, tot=total_cost)
-
-                if plot_flag:
-                    plot = plot_prediction(X_test[0], Y_test[0], [dia[0], sys[0], size_class[0]], hypothesis[0], epoch,
-                                           plot_target)
-                    plot_flag = False
-            # wandb.init(project="VBPNet", entity="paperchae")
-            # wandb.log({"Test Loss": total_cost}, step=epoch)
-            # wandb.log({"Test Loss": test_avg_cost,
-            #            'Pearson Loss': neg_cost,
-            #            'STFT Loss': stft_cost}, step=epoch)
-        return total_cost.__float__(), plot

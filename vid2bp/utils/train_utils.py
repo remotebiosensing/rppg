@@ -27,6 +27,9 @@ def get_model(model_name: str, device):
         from vid2bp.nets.modules.bvp2abp import bvp2abp
         model = bvp2abp(in_channels=3, out_channels=oc).to(device)
         model_loss = [loss.NegPearsonLoss().to(device)]
+        # model_loss = [loss.NegPearsonLoss().to(device), loss.ScaledVectorCosineSimilarity().to(device)]
+        # model_loss = [loss.ScaledVectorCosineSimilarity().to(device)]
+        # model_loss = [loss.SelfScaler().to(device)]
         model_optim = optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
         model_scheduler = optim.lr_scheduler.ExponentialLR(model_optim, gamma=ga)
     elif model_name == 'Unet':
@@ -67,15 +70,17 @@ def calc_losses(avg_cost_list, losses, hypothesis, target, cnt):
     # cost = sum(cost_list)
 
     return avg_cost_list, cost
+
+
 def get_avg_cost(avg_cost, current_cost, cnt):
     return (avg_cost * (cnt - 1) + current_cost.__float__()) / cnt
 
 
 def model_save(train_cost_arr, val_cost_arr, model, save_point, model_name, dataset_name):
-    print('current train cost :', train_cost_arr[-1], '/ avg_cost :', train_cost_arr[-2], ' >> trained :',
-          train_cost_arr[-2] - train_cost_arr[-1])
-    print('current val cost :', val_cost_arr[-1], '/ avg_cost :', val_cost_arr[-2], ' >> trained :',
-          val_cost_arr[-2] - val_cost_arr[-1])
+    print('\ncurrent train cost :', round(train_cost_arr[-1], 4), '/ avg_cost :', round(train_cost_arr[-2], 4),
+          ' >> trained :', round(train_cost_arr[-2] - train_cost_arr[-1], 4))
+    print('current val cost :', round(val_cost_arr[-1], 4), '/ avg_cost :', round(val_cost_arr[-2], 4),
+          ' >> trained :', round(val_cost_arr[-2] - val_cost_arr[-1], 4))
     save_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + '{}_{}_{}.pt'.format(model_name,
                                                                                                     dataset_name,
                                                                                                     save_point[-1])

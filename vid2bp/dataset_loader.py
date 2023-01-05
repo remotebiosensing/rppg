@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 from torch.utils.data import DataLoader
 
-from BPNetDataset import BPNetDataset
+from vid2bp.BPNetDataset import BPNetDataset
 
 
 def dataset_loader(dataset_name: str = 'mimiciii', channel: int = 1, batch_size: int = 512):
@@ -32,18 +32,22 @@ def dataset_loader(dataset_name: str = 'mimiciii', channel: int = 1, batch_size:
     with h5py.File(dataset_root_path, 'r') as dataset:
         train_ple, train_abp, train_size = np.array(dataset['train']['ple']['0'][:, :channel, :]), \
             np.array(dataset['train']['abp']['0']), np.array(dataset['train']['size']['0'])
-        valid_ple, valid_abp, valid_size = np.array(dataset['validation']['ple']['0'][:20000][:, :channel, :]), \
-            np.array(dataset['validation']['abp']['0'][:20000]), np.array(dataset['validation']['size']['0'][:20000])
-        test_ple, test_abp, test_size = np.array(dataset['validation']['ple']['0'][20000:][:, :channel, :]), \
-            np.array(dataset['validation']['abp']['0'][20000:]), np.array(dataset['validation']['size']['0'][20000:])
+        valid_ple, valid_abp, valid_size = np.array(dataset['validation']['ple']['0'][:, :channel, :]), \
+            np.array(dataset['validation']['abp']['0']), np.array(dataset['validation']['size']['0'])
+        test_ple, test_abp, test_size = np.array(dataset['validation']['ple']['0'][:, :channel, :]), \
+            np.array(dataset['validation']['abp']['0']), np.array(dataset['validation']['size']['0'])
 
-    train_dataset = BPNetDataset(train_ple[:10000], train_abp[:10000], train_size[:10000])
-    valid_dataset = BPNetDataset(valid_ple[:2000], valid_abp[:2000], valid_size[:2000])
-    test_dataset = BPNetDataset(test_ple[:2000], test_abp[:2000], test_size[:2000])
+    train_dataset = BPNetDataset(train_ple[:20000], train_abp[:20000], train_size[:20000])
+    # valid_dataset = BPNetDataset(valid_ple[:4000], valid_abp[:4000], valid_size[:4000])
+    valid_dataset = BPNetDataset(valid_ple, valid_abp, valid_size)
+    # test_dataset = BPNetDataset(test_ple[:4000], test_abp[:4000], test_size[:4000])
+    test_dataset = BPNetDataset(test_ple, test_abp, test_size)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=train_shuffle)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=test_shuffle)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=test_shuffle)
+    # valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=test_shuffle)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
+    # test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=test_shuffle)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     return [train_loader, valid_loader, test_loader]
 

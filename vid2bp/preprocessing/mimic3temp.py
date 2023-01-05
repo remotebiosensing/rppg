@@ -13,7 +13,7 @@ import time
 import h5py
 import datetime as dt
 import vid2bp.preprocessing.utils.signal_utils as su
-import vid2bp.preprocessing.utils.sutemp as sutemp
+# import vid2bp.preprocessing.utils.sutemp as sutemp
 import vid2bp.preprocessing.utils.math_module as mm
 
 '''

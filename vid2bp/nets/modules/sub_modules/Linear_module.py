@@ -7,8 +7,8 @@ class Linear_module_1D(nn.Module):
 
     def __init__(self):
         super(Linear_module_1D, self).__init__()
-        self.linear1 = nn.Linear(100, 100)
-        self.linear2 = nn.Linear(100, 270)
+        self.linear1 = nn.Linear(100, 180)
+        self.linear2 = nn.Linear(180, 270)
         self.linear3 = nn.Linear(270, 360)
         self.elu = nn.ELU()
 

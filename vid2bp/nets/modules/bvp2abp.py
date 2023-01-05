@@ -9,6 +9,8 @@ from torch.nn.functional import cosine_similarity
 import matplotlib.pyplot as plt
 from vid2bp.nets.modules.sub_modules.Frequency_block import frequency_block
 from vid2bp.nets.modules.ver2.FeatureExtractor import FeatureExtractor
+from vid2bp.nets.modules.ver2.Amplifier import PleAmplifier
+
 
 class bvp2abp(nn.Module):
     def __init__(self, in_channels, out_channels, dilation_val=2):
@@ -25,6 +27,10 @@ class bvp2abp(nn.Module):
         self.amplitude_model = Amplitude_module()
         # self.channel_reduction = nn.Conv1d(in_channels=256, out_channels=1, kernel_size=1)
         self.feature_extractor = FeatureExtractor(in_channels=1, out_channels=self.out_channels)
+        '''Amplify the small photoplethysmography signal'''
+        self.ple_amplifier = PleAmplifier(in_channels=self.trend_in_channel)
+        self.weights = nn.Parameter(torch.randn(360, 360))
+        self.bias = nn.Parameter(torch.randn(256, 1))
         # self.res_module = ResBlock_1D(self.trend_in_channel, self.out_channel, dilation=dilation_val)
         # self.res_list = []
         # for i in range(4):
@@ -34,10 +40,12 @@ class bvp2abp(nn.Module):
     def forward(self, ple_input, scaler=True):
         batchN, channelN, seqN = ple_input.shape
         ple_sig = ple_input[:, 0, :].reshape(batchN, self.trend_in_channel, seqN)
-        ple_sig = (ple_sig - torch.mean(ple_sig, dim=-1, keepdim=True)) / torch.std(ple_sig, dim=-1, keepdim=True)
-        f_out = self.feature_extractor(ple_sig)
+        # ple_sig = (ple_sig - torch.mean(ple_sig, dim=-1, keepdim=True)) / torch.std(ple_sig, dim=-1, keepdim=True)
+        # amplification = ple_sig.view(256,-1) @ self.weights + self.bias
+        scaled_ple = self.ple_amplifier(ple_sig)
+        # l_out = self.linear_model(scaled_ple)
+        f_out = self.feature_extractor(scaled_ple)
         l_out = self.linear_model(f_out.view(batchN, -1))
         ''''''
 
-
-        return l_out#, d_out[0], d_fuse1[0], d_fuse2[0], d_fuse3[0]
+        return l_out, scaled_ple  # , d_out[0], d_fuse1[0], d_fuse2[0], d_fuse3[0]

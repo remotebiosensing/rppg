@@ -52,11 +52,11 @@ def stft_similarity_loss(predictions, targets):
     # for i in range(predictions.shape[0]):
     #     Zxx_pred = torch.stft(predictions[i], n_fft=60, hop_length=None)
     #     Zxx_tar = torch.stft(targets[i], n_fft=60, hop_length=None)
-        # f_pred, t_pred, Zxx_pred = signal.stft(predictions[i], fs=60, nperseg=100)
-        # f_tar, t_tar, Zxx_tar = signal.stft(targets[i], fs=60, nperseg=100)
-        # test1 = cos_sim(Zxx_pred, Zxx_tar)
-        # test2 = cos_sim2(Zxx_pred, Zxx_tar)
-        # rst += 1 - cos_sim(Zxx_pred, Zxx_tar)
+    # f_pred, t_pred, Zxx_pred = signal.stft(predictions[i], fs=60, nperseg=100)
+    # f_tar, t_tar, Zxx_tar = signal.stft(targets[i], fs=60, nperseg=100)
+    # test1 = cos_sim(Zxx_pred, Zxx_tar)
+    # test2 = cos_sim2(Zxx_pred, Zxx_tar)
+    # rst += 1 - cos_sim(Zxx_pred, Zxx_tar)
 
     # rst = rst / predictions.shape[0]
     return 1 - torch.mean(cos_sim1(abs(pred), abs(tar)))
@@ -101,7 +101,50 @@ def rmse_Loss(predictions, targets):
 #     rst /= predictions.shape[0]
 #     return rst
 
-# def Spearman_Loss(predictions, targets):
+def Self_Scale_Loss(scaled_ple, _):
+    scaled_ple = scaled_ple.view(scaled_ple.shape[0], -1)
+    # sbp_var = torch.var(scaled_ple[:, 0])
+
+    sbp_var = torch.std(torch.max(scaled_ple, dim=1).values)
+    dbp_var = torch.std(torch.min(scaled_ple, dim=1).values)
+
+    rst = torch.abs(sbp_var + dbp_var)
+
+    return rst
+
+
+
+
+def Scaled_Vector_Cos_Sim_Loss(predictions, targets):
+    pred_max = torch.max(predictions, dim=-1, keepdim=True).values
+    pred_min = torch.min(predictions, dim=-1, keepdim=True).values
+    pred_min_max_vector = torch.cat((pred_min, pred_max), dim=-1).view(-1, 1, 2)
+    pred_mean_std_vector = torch.cat((torch.mean(predictions, dim=-1, keepdim=True),
+                                      torch.std(predictions, dim=-1, keepdim=True)), dim=-1).view(-1, 1, 2)
+    # pred_vec = (predictions - pred_min[0]) / (pred_max[0] - pred_min[0])
+    # pred_start_point = torch.cat((pred_min, pred_min), dim=-1).view(-1, 1, 2)
+    # pred_end_point = torch.cat((pred_max, pred_max), dim=-1).view(-1, 1, 2)
+    pred_vector = torch.cat((pred_min_max_vector, pred_mean_std_vector), dim=1)
+    tar_max = torch.max(targets, dim=-1, keepdim=True).values
+    tar_min = torch.min(targets, dim=-1, keepdim=True).values
+    tar_min_max_vector = torch.cat((tar_min, tar_max), dim=-1).view(-1, 1, 2)
+    tar_mean_std_vector = torch.cat((torch.mean(targets, dim=-1, keepdim=True),
+                                     torch.std(targets, dim=-1, keepdim=True)),
+                                    dim=-1).view(-1, 1, 2)
+    # tar_vec = (targets - tar_min[0]) / (tar_max[0] - tar_min[0])
+    # tar_start_point = torch.cat((tar_min, tar_min), dim=-1).view(-1, 1, 2)
+    # tar_end_point = torch.cat((tar_max, tar_max), dim=-1).view(-1, 1, 2)
+    tar_vector = torch.cat((tar_min_max_vector, tar_mean_std_vector), dim=1)
+    cos_sim = nn.CosineSimilarity(dim=-1, eps=1e-6)
+
+    # return 1 - torch.mean(cos_sim(pred_vector, tar_vector))
+    return 1 - torch.mean(cos_sim(predictions, targets))
+    # for i in range(predictions.shape[0]):
+    #     cos_s1 = cos_sim(pred_vector[i], tar_vector[i])
+    #     cos_s2 = cos_sim(pred_test[i], tar_test[i])
+    # rst += 2 - (torch.mean(cos_s1) + torch.mean(cos_s2))
+    # rst /= predictions.shape[0]
+    # return rst
 
 
 def Neg_Pearson_Loss(predictions, targets):
@@ -111,20 +154,23 @@ def Neg_Pearson_Loss(predictions, targets):
     :param targets: target label of input data
     :return: negative pearson loss
     '''
-    eps = 1e-6
+    eps = 1e-8
     rst = 0
-    # targets = targets[:,:]
-    # print('before squeeze', predictions.shape)
-    # predictions = torch.squeeze(predictions, 1)
-    # print('after squeeze', predictions.shape)
+
     '''
     Pearson correlation can be performed on the premise of normalization of input data
     '''
     # predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
     # targets = (targets - torch.mean(targets)) / torch.std(targets)
-    predictions = (predictions - torch.mean(predictions, dim=-1, keepdim=True)) / torch.std(predictions, dim=-1, keepdim=True)
+    predictions = (predictions - torch.mean(predictions, dim=-1, keepdim=True)) / torch.std(predictions, dim=-1,
+                                                                                            keepdim=True)
     targets = (targets - torch.mean(targets, dim=-1, keepdim=True)) / torch.std(targets, dim=-1, keepdim=True)
-
+    # masked_predictions = (targets - predictions).masked_select(targets == 0)
+    # masked_predictions_test = (test_targets - test_predictions).masked_select(test_targets == 0.)
+    # false_mask = (test_targets - test_predictions).greater(0.5)
+    # true_mask = (test_targets - test_predictions).le(0.)
+    # false_masked_prediction_test1 = test_predictions.masked_select(false_mask)
+    # true_masked_prediction_test1 = test_predictions.masked_select(true_mask)
     # for i in range(predictions.shape[0]):
     #     # predictions[i] = predictions[i] - torch.mean(predictions[i])
     #     # targets[i] = targets[i] - torch.mean(targets[i])
@@ -138,7 +184,6 @@ def Neg_Pearson_Loss(predictions, targets):
     #         torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2)))) + eps
     #
     #     rst += 1 - pearson
-
 
     # targets = targets[:,:]
     # print('before squeeze', predictions.shape)
@@ -186,7 +231,8 @@ def Neg_Pearson_Loss(predictions, targets):
             torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2)))) + eps
         if torch.isnan(pearson):
             print('pearson is nan')
-            print('N :', N, 'sum_xy :', sum_xy, 'sum_x :', sum_x, 'sum_y :', sum_y, 'sum_x2 :', sum_x2, 'sum_y2 :', sum_y2)
+            print('N :', N, 'sum_xy :', sum_xy, 'sum_x :', sum_x, 'sum_y :', sum_y, 'sum_x2 :', sum_x2, 'sum_y2 :',
+                  sum_y2)
             pearson = 0
         rst += 1 - pearson
     # n = predictions.shape[0]
@@ -197,9 +243,9 @@ def Neg_Pearson_Loss(predictions, targets):
     # sum_y_square = torch.sum(torch.pow(targets-torch.mean(targets), 2), dim=1)
     # pearson = (sum_xy / (torch.sqrt(sum_x_square * sum_y_square))).mean()
 
-
     rst = rst / predictions.shape[0]
     return rst
+
 
 class NegPearsonLoss(nn.Module):
     def __init__(self):
@@ -207,6 +253,14 @@ class NegPearsonLoss(nn.Module):
 
     def forward(self, predictions, targets):
         return Neg_Pearson_Loss(predictions, targets)
+
+
+class ScaledVectorCosineSimilarity(nn.Module):
+    def __init__(self):
+        super(ScaledVectorCosineSimilarity, self).__init__()
+
+    def forward(self, predictions, targets):
+        return Scaled_Vector_Cos_Sim_Loss(predictions, targets)
 
 
 class FFTLoss(nn.Module):
@@ -247,3 +301,12 @@ class DBPLoss(nn.Module):
 
     def forward(self, predictions, targets):
         return Diastolic_Loss(predictions, targets)
+
+class SelfScaler(nn.Module):
+    def __init__(self):
+        super(SelfScaler, self).__init__()
+        # self.sbp_std = nn.Parameter(torch.tensor(1.0))
+        # self.dbp_std = nn.Parameter(torch.tensor(1.0))
+
+    def forward(self, predictions, _):
+        return Self_Scale_Loss(predictions, _)
