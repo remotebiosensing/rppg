@@ -1,11 +1,7 @@
 import torch
-import numpy as np
 import matplotlib.pyplot as plt
-from vid2bp.nets.modules.UNetDS64 import UNetDS64
-from vid2bp.nets.modules.torch_multiresunet1d import MultiResUNet1D
-from vid2bp.PPG2ABP.PPG2ABP_dataset_lodaer import dataset_loader
-from vid2bp.nets.modules import UNetDS64
-from vid2bp.PPG2ABP.train_fn import train_fn, test_fn
+from vid2bp.nets.modules.MultiResUNet1D import MultiResUNet1D
+from vid2bp.PPG2ABP.dataset.PPG2ABP_dataset_loader import dataset_loader
 
 learning_rate = 0.001
 batch_size = 1

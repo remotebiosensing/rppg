@@ -5,7 +5,8 @@ from torch.utils.data import Dataset
 
 
 class PPG2ABPDataset(Dataset):
-    def __init__(self, ppg, abp_out, abp_level1, abp_level2, abp_level3, abp_level4):
+    def __init__(self, ppg, abp_out, abp_level1, abp_level2, abp_level3, abp_level4, max_abp, min_abp, max_ppg,
+                 min_ppg):
         self.transform = transforms.Compose([transforms.ToTensor()])
         self.ppg = ppg
         self.abp_out = abp_out
@@ -13,6 +14,10 @@ class PPG2ABPDataset(Dataset):
         self.abp_level2 = abp_level2
         self.abp_level3 = abp_level3
         self.abp_level4 = abp_level4
+        self.max_abp = max_abp
+        self.min_abp = min_abp
+        self.max_ppg = max_ppg
+        self.min_ppg = min_ppg
 
     def __getitem__(self, index):
         if torch.is_tensor(index):
@@ -39,3 +44,6 @@ class PPG2ABPDataset(Dataset):
 
     def __len__(self):
         return len(self.ppg)
+
+    def min_max_data(self):
+        return self.max_abp, self.min_abp, self.max_ppg, self.min_ppg

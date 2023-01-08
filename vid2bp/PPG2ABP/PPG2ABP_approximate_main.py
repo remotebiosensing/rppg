@@ -1,14 +1,12 @@
 import torch
-from vid2bp.PPG2ABP.PPG2ABP_dataset_lodaer import dataset_loader
-from vid2bp.nets.modules import torch_multiresunet1d
-from vid2bp.PPG2ABP.ref_train_fn import train_fn, test_fn
+from vid2bp.PPG2ABP.dataset.PPG2ABP_dataset_loader import dataset_loader
+from vid2bp.nets.modules import UNetDS64
+from vid2bp.PPG2ABP.utils.train_fn import train_fn, test_fn
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def main():
-    '''
-    set hyperparameter
-    '''
     learning_rate = 0.001
     batch_size = 256
     epochs = 100
@@ -22,16 +20,17 @@ def main():
     '''
     load model
     '''
-    model = torch_multiresunet1d.MultiResUNet1D().cuda()
+    model = UNetDS64.UNetDS64(length=length).cuda()
+
     '''
     load dataset
     '''
-    data_loaders = dataset_loader(channel=1, batch_size=batch_size, dataset_name='MultiResUNet1D')
+    data_loaders = dataset_loader(channel=1, batch_size=batch_size)
 
     '''
     set training parameters
     '''
-    criterion = torch.nn.MSELoss()
+    criterion = torch.nn.L1Loss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 
@@ -58,7 +57,7 @@ def main():
         plt.tight_layout()
         plt.show()
 
-        if min_val_loss > val_loss and epoch > 5:
+        if min_val_loss > val_loss and epoch > 10:
             min_val_loss = val_loss
             test_epochs.append(epoch)
             running_loss = test_fn(epoch, model, criterion, data_loaders[2], "Test")
@@ -69,8 +68,8 @@ def main():
             plt.show()
             if min_test_loss > running_loss:
                 min_test_loss = running_loss
-                torch.save(model.state_dict(), "/home/najy/PycharmProjects/PPG2ABP_weights/MultiResUNet1Dbest.pth")
-
+                torch.save(model.state_dict(),
+                           "/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_" + str(running_loss) + ".pth")
         if epoch % 10 == 0 or epoch == epochs - 1:
             running_loss = test_fn(epoch, model, criterion, data_loaders[2], "Test")
             test_epochs.append(epoch)
@@ -81,7 +80,5 @@ def main():
             plt.show()
             if min_test_loss > running_loss:
                 min_test_loss = running_loss
-                torch.save(model.state_dict(), "/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_best.pth")
-
-if __name__ == '__main__':
-    main()
+                torch.save(model.state_dict(),
+                           "/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_" + str(running_loss) + ".pth")
