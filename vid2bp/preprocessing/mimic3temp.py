@@ -215,7 +215,7 @@ def find_channel_idx(path):
 
 # def read_record(path):
 def length_checker(target_signal, length):
-    if len(target_signal) < length:
+    if type(target_signal) != np.ndarray or len(target_signal) < length:
         return False
     else:
         return True
@@ -360,9 +360,9 @@ def signal_matcher(raw_abp, raw_ple, abp_signal, ple_signal, abp_peaks, ple_peak
     else:
         return True, raw_abp[:750], raw_ple[:750], best_abp[:750], best_ple[:750], matched_abp_peaks[
             np.argwhere(matched_abp_peaks < 750)], \
-               matched_ple_peaks[np.argwhere(matched_ple_peaks < 750)], matched_abp_bottoms[
-                   np.argwhere(matched_abp_bottoms < 750)], \
-               matched_ple_bottoms[np.argwhere(matched_ple_bottoms < 750)], best_corr
+            matched_ple_peaks[np.argwhere(matched_ple_peaks < 750)], matched_abp_bottoms[
+            np.argwhere(matched_abp_bottoms < 750)], \
+            matched_ple_bottoms[np.argwhere(matched_ple_bottoms < 750)], best_corr
 
 
 def peak_detector(target_signal, rol_sec, fs=125):
@@ -464,20 +464,25 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
             target_bottom_ple = np.array(target_bottom_ple)
             # matching signals then get matched peaks, bottoms and correlation
             match_flag, matched_raw_abp, matched_raw_ple, matched_target_abp, matched_target_ple, matched_abp_peaks, \
-            matched_ppg_peaks, matched_abp_bottoms, matched_ple_bottoms, matched_corr = signal_matcher(raw_abp, raw_ple,
-                                                                                                       target_abp,
-                                                                                                       target_ple,
-                                                                                                       target_peak_abp,
-                                                                                                       target_peak_ple,
-                                                                                                       target_bottom_abp,
-                                                                                                       target_bottom_ple,
-                                                                                                       threshold)
-            if match_flag:
-                ple_total.append(np.array(matched_raw_ple))
-                abp_total.append(np.array(matched_raw_abp))
-                dbp_array = np.array([matched_raw_abp[matched_abp_bottoms], matched_abp_bottoms]).squeeze()
-                sbp_array = np.array([matched_raw_abp[matched_abp_peaks], matched_abp_peaks]).squeeze()
-                size_total.append(np.array([dbp_array, sbp_array]))
+                matched_ppg_peaks, matched_abp_bottoms, matched_ple_bottoms, matched_corr = signal_matcher(raw_abp,
+                                                                                                           raw_ple,
+                                                                                                           target_abp,
+                                                                                                           target_ple,
+                                                                                                           target_peak_abp,
+                                                                                                           target_peak_ple,
+                                                                                                           target_bottom_abp,
+                                                                                                           target_bottom_ple,
+                                                                                                           threshold)
+            if match_flag and len(matched_abp_peaks) > 0 and len(matched_abp_bottoms) > 0 \
+                    and abs(len(matched_abp_peaks) - len(matched_abp_bottoms))<2:
+                ple_total.append(mm.channel_cat(down_sampling(matched_raw_ple, target_fs=sampling_rate)))
+                abp_total.append(down_sampling(matched_raw_abp, target_fs=sampling_rate))
+                # ple_total.append(np.array(matched_raw_ple))
+                # abp_total.append(np.array(matched_raw_abp))
+                dbp_mean = np.mean(matched_raw_abp[matched_abp_bottoms])
+                sbp_mean = np.mean(matched_raw_abp[matched_abp_peaks])
+                # sbp_array = np.array([matched_raw_abp[matched_abp_peaks], matched_abp_peaks]).squeeze()
+                size_total.append(np.array([dbp_mean, sbp_mean]))
                 chunk_per_segment += 1
             else:
                 continue
@@ -566,11 +571,11 @@ def multi_processing(model_name, dataset: str, total_segments):
     light1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.25):int(len(sorted_by_fsize) * 0.4)]
     light2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.4):int(len(sorted_by_fsize) * 0.55)]
     light3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.55):int(len(sorted_by_fsize) * 0.7)]
-    # heavy1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.85)]
-    # heavy2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)]
+    heavy1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.85)]
+    heavy2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)]
     # heavy3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.95):]
-    # split_by_size = [light1, light2, heavy1, heavy2]
-    split_by_size = [light1, light2, light3]
+    # split_by_size = [light2, heavy1, heavy2]
+    split_by_size = [light0, light1, light2, light3, heavy1, heavy2]
     print('reading_total_data...')
     # ple_tot, abp_tot, size_tot = [], [], []
     # ple_l1, abp_l1, size_l1 = [], [], []
@@ -580,7 +585,7 @@ def multi_processing(model_name, dataset: str, total_segments):
     # ple_h3, abp_h3, size_h3 = [], [], []
     ple_tot = np.zeros((1, 3, 360))
     abp_tot = np.zeros((1, 360))
-    size_tot = np.zeros((1, 3))
+    size_tot = np.zeros((1, 2))
     for s in split_by_size:
         segments_per_process = np.array_split(s, process_num)
         print(f'number of segments per process: {len(segments_per_process[0])}')
@@ -602,9 +607,16 @@ def multi_processing(model_name, dataset: str, total_segments):
             # ple_total = np.array(ple_total)
             # abp_total = np.array(abp_total)
             # size_total = np.array(size_total)
-            ple_tot = np.concatenate((ple_tot, np.array(ple_total)), axis=0)
-            abp_tot = np.concatenate((abp_tot, np.array(abp_total)), axis=0)
-            size_tot = np.concatenate((size_tot, np.array(size_total)), axis=0)
+            try:
+                ple_tot = np.concatenate((ple_tot, np.array(ple_total)), axis=0)
+                abp_tot = np.concatenate((abp_tot, np.array(abp_total)), axis=0)
+                size_tot = np.concatenate((size_tot, np.array(size_total)), axis=0)
+                manager.shutdown()
+
+            except:
+                print('no data added')
+                manager.shutdown()
+                continue
             # ple_temp = np.array(ple_total, dtype=object)
             # ple_tot.append(np.array(ple_total, dtype=object))
             # abp_tot.append(np.array(abp_total, dtype=object))
@@ -615,7 +627,6 @@ def multi_processing(model_name, dataset: str, total_segments):
             # dset['abp'] = abp_total
             # dset['size'] = size_total
             # dset.close()
-            manager.shutdown()
 
     dset = h5py.File(dset_path + str(dataset) + '.hdf5', 'w')
     # dset['ple'] = np.squeeze(np.array(ple_tot))
@@ -629,9 +640,9 @@ def multi_processing(model_name, dataset: str, total_segments):
     print(np.shape(abp_tot))
     print(np.shape(size_tot))
     # print(np.shape(ple_total[0]))
-    print(ple_tot[1][:100])
-    print(abp_tot[1][:100])
-    print(size_tot[1])
+    # print(ple_tot[1][:100])
+    # print(abp_tot[1][:100])
+    # print(size_tot[1])
 
 
 def dataset_split(model_name: str, data_path: str):
@@ -642,4 +653,5 @@ def dataset_split(model_name: str, data_path: str):
     multi_processing(model_name, 'test', test_segments)
     pass
 
-# dataset_split('BPNet', '/hdd/hdd1/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0')
+
+dataset_split('BPNet', '/hdd/hdd1/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0')
