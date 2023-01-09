@@ -1,0 +1,58 @@
+from tqdm import tqdm
+import torch
+import wandb
+import matplotlib.pyplot as plt
+from utils.funcs import plot_graph
+from vid2bp.nets.modules import UNetDS64
+
+def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = False):
+    with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
+        model.train()
+        running_loss = 0.0
+        app_model = UNetDS64.UNetDS64(352)
+        if torch.cuda.is_available():
+            app_model = app_model.cuda()
+        app_model.load_state_dict(torch.load('/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_best.pth'))
+        for inputs, target in tepoch:
+            inputs, level1, level2, level3, level4 = app_model(inputs)
+            optimizer.zero_grad()
+            tepoch.set_description(step + "%d" % epoch)
+            pred = model(inputs)
+            loss = criterion(pred, target)
+
+            if ~torch.isfinite(loss):
+                continue
+            loss.backward()
+            running_loss += loss.item()
+            optimizer.step()
+
+            tepoch.set_postfix(loss=running_loss / tepoch.__len__())
+        if wandb_flag:
+            wandb.log({step + "_loss": running_loss / tepoch.__len__()},
+                      step=epoch)
+    return running_loss / tepoch.__len__()
+
+
+def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag: bool = True, save_img: bool = True):
+    with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
+        model.eval()
+        running_loss = 0.0
+        app_model = UNetDS64.UNetDS64(352)
+        if torch.cuda.is_available():
+            app_model = app_model.cuda()
+        app_model.load_state_dict(torch.load('/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_best.pth'))
+
+        with torch.no_grad():
+            for inputs, target in tepoch:
+                inputs, level1, level2, level3, level4 = app_model(inputs)
+                tepoch.set_description(step + "%d" % epoch)
+                pred = model(inputs)
+                loss = criterion(pred, target)
+
+                if ~torch.isfinite(loss):
+                    continue
+                running_loss += loss.item()
+
+                tepoch.set_postfix(loss=running_loss / tepoch.__len__())
+
+        return running_loss / tepoch.__len__()

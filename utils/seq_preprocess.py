@@ -1,6 +1,8 @@
 import heartpy as hp
 import numpy as np
 from scipy.io import loadmat
+import scipy
+import math
 
 
 def PPNet_preprocess_Mat(path):
@@ -86,3 +88,43 @@ def PPNet_preprocess_Mat(path):
 
 
     return ppg, sbp, dbp, hr
+
+def sig_to_BPfiltersig(label,N,fs,hf_low,hf_high):
+    '''
+    label = gt signal
+    N = signal length = len(label)
+    fs = fps
+    hf_low = low cut off frequency
+    hf_high = high cut off frequency
+    '''
+
+    # signal->fft signal
+    fft_label = scipy.fft.fft(label)
+
+    # fft signal->fft signal shift
+    fft_freqs = scipy.fft.fftfreq(N, d=1/fs)
+
+    # bandpass filter
+    x_label = len(fft_freqs)
+    tmp = fft_freqs[x_label // 2:]
+    tmp2 = fft_freqs[:x_label // 2]
+    fft_freqs = np.concatenate((tmp, tmp2))
+
+    for i in range(len(fft_freqs)):
+        if hf_low <= math.fabs(fft_freqs[i]) <= hf_high:
+            continue
+        else:
+            fft_label[i] = 0
+
+    #bp filter signal -> ifft
+    ifft_bp_label = scipy.fft.ifft(fft_label)
+
+    # for i in range(0, len(label), 32):
+    #     plt.title('Comapre original signal and Filtered Time signal every 32frames')
+    #     plt.plot(label[i:i + 32], label='Ground Truth', color='blue', linewidth=2, alpha=0.5)
+    #     plt.plot(ifft_bp_label.real[i:i + 32], label='Filtered', color='red', linewidth=1)
+    #     plt.legend()
+    #     plt.grid()
+    #     plt.show()
+
+    return abs(ifft_bp_label)

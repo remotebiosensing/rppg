@@ -66,8 +66,8 @@ class params():
     epoch = 500
 
     #wandb params
-    wandb_project_name = "SeqNet"
-    wandb_entity = "daeyeolkim"
+    wandb_project_name = "torch_rPPG"
+    wandb_entity = "najubae777"
 
 
 params = params()
