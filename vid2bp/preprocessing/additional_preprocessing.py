@@ -11,17 +11,31 @@ from heartpy.filtering import filter_signal
 import vid2bp.preprocessing.signal_cleaner as cleaner
 
 
+def arrange_by_index(data, index):
+    arranged_data = []
+    for target_data in data:
+        arranged_target_data = []
+        for i in range(len(index)):
+            arranged_target_data.append(target_data[index[i]])
+        arranged_data.append(arranged_target_data)
+    return arranged_data
+
+
 def preprocessing(original_data_path, save_path, mode):
     manager = multiprocessing.Manager()
     abp_total = manager.list()
     ple_total = manager.list()
+    size_total = manager.list()
+    eliminate_total = manager.list()
+
+    eliminate_total.extend([0, 0, 0, 0, 0, 0])
 
     data_file = original_data_path + mode + ".hdf5"
     data_file = h5py.File(data_file, 'r')
 
     local_std_sbp = manager.list()
     local_std_sbp.append(0)
-
+    original_data_size = len(data_file['abp'])
     # multiprocessing
     num_cpu = multiprocessing.cpu_count()
     loop = int(len(data_file['abp']) / num_cpu)
@@ -48,12 +62,14 @@ def preprocessing(original_data_path, save_path, mode):
             p = multiprocessing.Process(target=additional_filter,
                                         args=(data_file['abp'][i * loop:],
                                               data_file['ple'][i * loop:],
-                                              global_std_sbp, abp_total, ple_total))
+                                              data_file['size'][i * loop:],
+                                              global_std_sbp, abp_total, ple_total, size_total, eliminate_total))
         else:
             p = multiprocessing.Process(target=additional_filter,
                                         args=(data_file['abp'][i * loop:(i + 1) * loop],
                                               data_file['ple'][i * loop:(i + 1) * loop],
-                                              global_std_sbp, abp_total, ple_total))
+                                              data_file['size'][i * loop:(i + 1) * loop],
+                                              global_std_sbp, abp_total, ple_total, size_total, eliminate_total))
 
         p.start()
         process.append(p)
@@ -66,11 +82,23 @@ def preprocessing(original_data_path, save_path, mode):
 
     data_file.create_dataset('ple', data=np.array(ple_total))
     data_file.create_dataset('abp', data=np.array(abp_total))
+    data_file.create_dataset('size', data=np.array(size_total))
 
     data_file.close()
+    print('Eliminated by SBP vs DBP: ', eliminate_total[0],'(',eliminate_total[0]/sum(eliminate_total)*100,'%)')
+    print('Eliminated by PLE peak vs PLE bottom: ', eliminate_total[1], '(', eliminate_total[1] / sum(eliminate_total) * 100, '%)')
+    print('Eliminated by non-peak signal: ', eliminate_total[2], '(', eliminate_total[2] / sum(eliminate_total) * 100, '%)')
+    print('Eliminated by SBP vs PLE peak: ', eliminate_total[3], '(', eliminate_total[3] / sum(eliminate_total) * 100, '%)')
+    print('Eliminated by DBP vs PLE bottom: ', eliminate_total[4], '(', eliminate_total[4] / sum(eliminate_total) * 100, '%)')
+    print('Eliminated by SBP standard deviation: ', eliminate_total[5], '(', eliminate_total[5] / sum(eliminate_total) * 100, '%)')
+    print('----------------------------------------------')
+    print('Original data size: ', original_data_size)
+    print('Eliminated total: ', sum(eliminate_total))
+    print('Final data size: ', len(abp_total))
+    print('Ratio of eliminated data: ', np.sum(eliminate_total) / original_data_size * 100, '%')
 
 
-def additional_filter(ABP, PLE, global_std_sbp, abp_total, ple_total):
+def additional_filter(ABP, PLE, SIZE, global_std_sbp, abp_total, ple_total, size_total, eliminate_total):
     # select normal range ABP
     normal_index = []
     for idx, target_abp in enumerate(ABP):
@@ -81,6 +109,7 @@ def additional_filter(ABP, PLE, global_std_sbp, abp_total, ple_total):
 
     ABP = [ABP[i] for i in normal_index]
     PLE = [PLE[i] for i in normal_index]
+    SIZE = [SIZE[i] for i in normal_index]
 
     # denoise signals
     hf = 8
@@ -121,19 +150,40 @@ def additional_filter(ABP, PLE, global_std_sbp, abp_total, ple_total):
     # find number of peaks
     num_abp_peak = [len(target_abp) for target_abp in peak_abp]
     num_ple_peak = [len(target_ple) for target_ple in peak_ple]
+    num_abp_bottom = [len(target_abp) for target_abp in bottom_abp]
+    num_ple_bottom = [len(target_ple) for target_ple in bottom_ple]
+
+    # find index where difference of abp peaks and abp bottoms are less than or equal to 2
+    diff_index_abp = [i for i, (a, b) in enumerate(zip(num_abp_peak, num_abp_bottom)) if abs(a - b) <= 2]
+
+    # number of eliminated signals
+    eliminate_total[0] += len(ABP) - len(diff_index_abp)
+
+    # arrange target signal by index
+    ABP, PLE, SIZE, peak_abp, peak_ple, bottom_abp, bottom_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom \
+        = arrange_by_index([ABP, PLE, SIZE, peak_abp, peak_ple, bottom_abp, bottom_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom], diff_index_abp)
+
+    # find index where difference of peaks and bottoms are less than or equal to 2
+    diff_index_ple = [i for i, (a, b) in enumerate(zip(num_ple_peak, num_ple_bottom)) if abs(a - b) <= 2]
+
+    # number of eliminated signals
+    eliminate_total[1] += len(ABP) - len(diff_index_ple)
+
+    # arrange target signal by index
+    ABP, PLE, SIZE, peak_abp, peak_ple, bottom_abp, bottom_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom \
+        = arrange_by_index([ABP, PLE, SIZE, peak_abp, peak_ple, bottom_abp, bottom_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom], diff_index_ple)
 
     # find index where number of both peaks is more than or equal to 1
-    positive_index = [i for i in range(len(num_abp_peak)) if num_abp_peak[i] >= 1 and num_ple_peak[i] >= 1]
+    positive_index = [i for i in range(len(num_abp_peak))
+                      if num_abp_peak[i] >= 1 and num_ple_peak[i] >= 1
+                      and num_abp_bottom[i] >= 1 and num_ple_bottom[i] >= 1]
 
-    # 1. arrange target signals by positive index
-    ABP = [ABP[i] for i in positive_index]
-    PLE = [PLE[i] for i in positive_index]
-    peak_abp = [peak_abp[i] for i in positive_index]
-    peak_ple = [peak_ple[i] for i in positive_index]
-    denoised_abp = [denoised_abp[i] for i in positive_index]
-    denoised_ple = [denoised_ple[i] for i in positive_index]
-    num_abp_peak = [num_abp_peak[i] for i in positive_index]
-    num_ple_peak = [num_ple_peak[i] for i in positive_index]
+    # number of eliminated signals
+    eliminate_total[2] += len(ABP) - len(positive_index)
+
+    # arrange target signals by positive index
+    ABP, PLE, SIZE, peak_abp, peak_ple, denoised_abp, denoised_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom \
+        = arrange_by_index([ABP, PLE, SIZE, peak_abp, peak_ple, denoised_abp, denoised_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom], positive_index)
 
     # compare number of peaks
     num_peak_diff = np.array(num_abp_peak) - np.array(num_ple_peak)
@@ -142,36 +192,42 @@ def additional_filter(ABP, PLE, global_std_sbp, abp_total, ple_total):
     # find index where num_peak_diff is less than or equal to 2
     diff_index = np.where(num_peak_diff <= 2)[0]
 
-    # 2. arrange target signals by diff_index
-    ABP = [ABP[i] for i in diff_index]
-    PLE = [PLE[i] for i in diff_index]
-    denoised_ple = [denoised_ple[i] for i in diff_index]
-    denoised_abp = [denoised_abp[i] for i in diff_index]
-    peak_abp = [peak_abp[i] for i in diff_index]
-    peak_ple = [peak_ple[i] for i in diff_index]
+    # number of eliminated signals
+    eliminate_total[3] += len(ABP) - len(diff_index)
+
+    # arrange target signals by diff_index
+    ABP, PLE, SIZE, denoised_ple, denoised_abp, peak_abp, peak_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom \
+        = arrange_by_index([ABP, PLE, SIZE, denoised_ple, denoised_abp, peak_abp, peak_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom], diff_index)
+
+    # compare number of bottoms
+    num_bottom_diff = np.array(num_abp_bottom) - np.array(num_ple_bottom)
+    num_bottom_diff = np.abs(num_bottom_diff)
+
+    # find index where num_bottom_diff is less than or equal to 2
+    diff_index = np.where(num_bottom_diff <= 2)[0]
+
+    # number of eliminated signals
+    eliminate_total[4] += len(ABP) - len(diff_index)
+
+    # arrange target signals by diff_index
+    ABP, PLE, SIZE, denoised_ple, denoised_abp, peak_abp, peak_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom \
+        = arrange_by_index([ABP, PLE, SIZE, denoised_ple, denoised_abp, peak_abp, peak_ple, num_abp_peak, num_ple_peak, num_abp_bottom, num_ple_bottom], diff_index)
 
     # find peak std
     peak_std = [np.std(target_abp[target_peak]) for target_abp, target_peak in zip(denoised_abp, peak_abp)]
 
     # find peak std where std is smaller than global std
-    peak_std_index = np.where(np.array(peak_std) < global_std_sbp)[0]
-    # peak_std_index = [np.where(target_peak_std <= global_std_sbp * 1.341)[0] for target_peak_std in peak_std]
+    peak_std_index = np.where(np.array(peak_std) < global_std_sbp * 1.341)[0]
 
-    # 3. arrange target signals by peak_std_index
-    ABP = [ABP[i] for i in peak_std_index]
-    PLE = [PLE[i] for i in peak_std_index]
-    denoised_ple = [denoised_ple[i] for i in peak_std_index]
-    denoised_abp = [denoised_abp[i] for i in peak_std_index]
-    peak_abp = [peak_abp[i] for i in peak_std_index]
-    peak_ple = [peak_ple[i] for i in peak_std_index]
+    # number of eliminated signals
+    eliminate_total[5] += len(ABP) - len(peak_std_index)
 
-    # plt.plot((denoised_abp[0] - np.min(denoised_abp[0])) / (np.max(denoised_abp[0]) - np.min(denoised_abp[0])))
-    # plt.plot((denoised_ple[0] - np.min(denoised_ple[0])) / (np.max(denoised_ple[0]) - np.min(denoised_ple[0])))
-    # plt.legend()
-    # plt.show()
+    # arrange target signals by peak_std_index
+    ABP, PLE, SIZE = arrange_by_index([ABP, PLE, SIZE], peak_std_index)
 
     abp_total.extend(ABP)
     ple_total.extend(PLE)
+    size_total.extend(SIZE)
 
 
 def global_std_sbp_calculator(ABP, global_sbp):
@@ -196,8 +252,10 @@ def global_std_sbp_calculator(ABP, global_sbp):
 
 
 if __name__ == '__main__':
-    original_data_path = "/home/najy/PycharmProjects/PPG2ABP_datasets/raw/"
+    original_data_path = "/home/najy/PycharmProjects/vid2bp_datasets/raw/"
     save_path = "/home/najy/PycharmProjects/vid2bp_datasets/vid2bp_additional_preprocessed/"
 
     for mode in ['train', 'val', 'test']:
+        print('------ ' + mode + ' start ------')
         preprocessing(original_data_path, save_path, mode)
+        print('------ ' + mode + ' end ------')

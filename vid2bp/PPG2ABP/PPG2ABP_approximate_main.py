@@ -8,8 +8,8 @@ import numpy as np
 
 def main():
     learning_rate = 0.001
-    batch_size = 256
-    epochs = 100
+    batch_size = 2048
+    epochs = 50
     length = 352
 
     if torch.cuda.is_available():
@@ -82,3 +82,6 @@ def main():
                 min_test_loss = running_loss
                 torch.save(model.state_dict(),
                            "/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_" + str(running_loss) + ".pth")
+
+if __name__ == '__main__':
+    main()
