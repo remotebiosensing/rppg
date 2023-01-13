@@ -19,6 +19,7 @@ import vid2bp.preprocessing.utils.math_module as mm
 import heartpy.peakdetection as hp_peak
 from heartpy.datautils import rolling_mean
 from heartpy.filtering import filter_signal
+import vid2bp.preprocessing.signal_cleaner as cleaner
 
 '''
 signal_utils.py 로 이동해야 할 함수
@@ -379,7 +380,7 @@ def bottom_detector(target_signal, rol_sec, fs=125):
 
 
 def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: list, size_total: list, chunk_size: int,
-                    sampling_rate: int):
+                    sampling_rate: int, eliminated_total):
     """
 
     * if single record is shorter than 6 seconds, skip it to consider only long enough to have respiratory cycles
@@ -414,6 +415,10 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
         sliced_abp = signal_slicer(abp, fs=fs, t=t, overlap=overlap)
         sliced_ple = signal_slicer(ple, fs=fs, t=t, overlap=overlap)
 
+        # eliminated_total[6] : total number of sliced signals
+        if len(sliced_abp) > 0:
+            eliminated_total[-1] += len(sliced_abp)
+
         # check if sliced signal is valid
         # if not, remove the signal
         normal_abp = []
@@ -425,9 +430,15 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                 if num_nan_abp < 0.1 * len(target_abp) and num_nan_ple < 0.1 * len(target_ple):
                     target_abp = nan_interpolator(target_abp)
                     target_ple = nan_interpolator(target_ple)
+                    # eliminated_total[5] : total number of signals after nan interpolation
+                    eliminated_total[5] += 1
                 else:
+                    # eliminated_total[0] : total number of signals with nan
+                    eliminated_total[0] += 1
                     continue
             if flat_signal_checker(target_abp) or flat_signal_checker(target_ple):
+                # eliminated_total[1] : total number of signals with flat signal
+                eliminated_total[1] += 1
                 continue
             else:
                 normal_abp.append(target_abp)
@@ -444,10 +455,30 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                         target_ple in normal_ple]
         # find peak index
         rolling_sec = 1.5
-        peak_abp = [peak_detector(target_abp, rolling_sec, fs) for target_abp in normal_abp]
-        peak_ple = [peak_detector(target_ple, rolling_sec, fs) for target_ple in normal_ple]
-        bottom_abp = [bottom_detector(target_abp, rolling_sec, fs) for target_abp in normal_abp]
-        bottom_ple = [bottom_detector(target_ple, rolling_sec, fs) for target_ple in normal_ple]
+        peak_abp = [peak_detector(target_abp, rolling_sec, fs) for target_abp in denoised_abp]
+        peak_ple = [peak_detector(target_ple, rolling_sec, fs) for target_ple in denoised_ple]
+        bottom_abp = [bottom_detector(target_abp, rolling_sec, fs) for target_abp in denoised_abp]
+        bottom_ple = [bottom_detector(target_ple, rolling_sec, fs) for target_ple in denoised_ple]
+
+        # arrange peak index
+        arranged_peak_abp = []
+        arranged_peak_ple = []
+        arranged_bottom_abp = []
+        arranged_bottom_ple = []
+        for target_signal, target_peak, target_bottom in zip(denoised_abp, peak_abp, bottom_abp):
+            arranged_peak = cleaner.SBP_DBP_arranger(target_signal, target_peak, target_bottom)
+            arranged_peak_abp.append(arranged_peak[0])
+            arranged_bottom_abp.append(arranged_peak[1])
+
+        for target_signal, target_peak, target_bottom in zip(denoised_ple, peak_ple, bottom_ple):
+            arranged_peak = cleaner.SBP_DBP_arranger(target_signal, target_peak, target_bottom)
+            arranged_peak_ple.append(arranged_peak[0])
+            arranged_bottom_ple.append(arranged_peak[1])
+
+        peak_abp = arranged_peak_abp
+        peak_ple = arranged_peak_ple
+        bottom_abp = arranged_bottom_abp
+        bottom_ple = arranged_bottom_ple
 
         # calculate correlation
         # if correlation is less than threshold, remove the signal
@@ -457,6 +488,8 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                 in zip(normal_abp, normal_ple, denoised_abp, denoised_ple, peak_abp, peak_ple, bottom_abp, bottom_ple):
             # check if peak is valid
             if len(target_peak_abp) == 0 or len(target_peak_ple) == 0:
+                # eliminated_total[2] : total number of signals with zero peak
+                eliminated_total[2] += 1
                 continue
             target_peak_abp = np.array(target_peak_abp)
             target_peak_ple = np.array(target_peak_ple)
@@ -485,8 +518,12 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                 size_total.append(np.array([dbp_mean, sbp_mean]))
                 chunk_per_segment += 1
             else:
+                # eliminated_total[3] : total number of signals with low correlation
+                eliminated_total[3] += 1
                 continue
             if chunk_per_segment == 10:
+                # eliminated_total[4] : total number of signals with excess number of signals
+                eliminated_total[4] += len(normal_abp) - 10
                 break
 
         # # check segment length if it is longer than 6 seconds
@@ -594,10 +631,12 @@ def multi_processing(model_name, dataset: str, total_segments):
             ple_total = manager.list()
             abp_total = manager.list()
             size_total = manager.list()
+            eliminated_total = manager.list()
+            eliminated_total.extend(np.zeros(7))
             workers = [mp.Process(target=read_total_data,
                                   args=(i, segments_per_process[i],
                                         ple_total, abp_total, size_total,
-                                        sig_len, samp_rate)) for i in range(process_num)]
+                                        sig_len, samp_rate, eliminated_total)) for i in range(process_num)]
             for worker in workers:
                 worker.start()
             for worker in workers:
@@ -633,9 +672,20 @@ def multi_processing(model_name, dataset: str, total_segments):
     dset['ple'] = ple_tot[1:]
     dset['abp'] = abp_tot[1:]
     dset['size'] = size_tot[1:]
+    dset['eliminated'] = np.array(eliminated_total)
     dset.close()
 
-    print('total length: ', len(ple_tot))
+    print('Eliminated nan signals: {} ({})'.format(eliminated_total[0], eliminated_total[0]/sum(eliminated_total[:5])*100))
+    print('Eliminated flat signals: {} ({})'.format(eliminated_total[1], eliminated_total[1]/sum(eliminated_total[:5])*100))
+    print('Eliminated signals with no peaks: {} ({})'.format(eliminated_total[2], eliminated_total[2]/sum(eliminated_total[:5])*100))
+    print('Eliminated low correlation signals: {} ({})'.format(eliminated_total[3], eliminated_total[3]/sum(eliminated_total[:5])*100))
+    print('Eliminated excess chunks: {} ({})'.format(eliminated_total[4], eliminated_total[4]/sum(eliminated_total[:5])*100))
+    print('----------------------------------------------')
+    print('Interpolated signals: {} ({})'.format(eliminated_total[5], eliminated_total[5]/sum(eliminated_total[:5])*100))
+    print('Total sliced signals: {}'.format(eliminated_total[6]))
+    print('Total Eliminated signals: {} ({})'.format(sum(eliminated_total[:5]), sum(eliminated_total[:5])/eliminated_total[6]*100))
+    print('----------------------------------------------')
+    print('Survived total length: {} ({})'.format(len(ple_tot), len(ple_tot) / eliminated_total[-1] * 100))
     print(np.shape(ple_tot))
     print(np.shape(abp_tot))
     print(np.shape(size_tot))

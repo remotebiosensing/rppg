@@ -151,11 +151,13 @@ def preprocessing(original_data_path, save_path, length, mode):
         if i == num_cpu - 1:
             p = multiprocessing.Process(target=preprocess_approximate_Dataset,
                                         args=(data_file['abp'][i * loop:],
-                                              data_file['ple'][i * loop:, 0], length, return_dict))
+                                              data_file['ple'][i * loop:, 0], length, return_dict, abp_max, abp_min,
+                                              ple_max, ple_min))
         else:
             p = multiprocessing.Process(target=preprocess_approximate_Dataset,
                                         args=(data_file['abp'][i * loop:(i + 1) * loop],
-                                              data_file['ple'][i * loop:(i + 1) * loop, 0], length, return_dict))
+                                              data_file['ple'][i * loop:(i + 1) * loop, 0], length, return_dict,
+                                              abp_max, abp_min, ple_max, ple_min))
 
         p.start()
         process.append(p)
@@ -179,8 +181,8 @@ def preprocessing(original_data_path, save_path, length, mode):
 
 
 def preprocess_approximate_Dataset(ABP, PLE, length, return_dict, max_abp, min_abp, max_ple, min_ple):
-    ABP = (ABP[:, :length]-min_abp) / (max_abp-min_abp)
-    PLE = (PLE[:]-min_ple) / (max_ple-min_ple)
+    ABP = (ABP[:, :length] - min_abp) / (max_abp - min_abp)
+    PLE = (PLE[:, :length] - min_ple) / (max_ple - min_ple)
 
     ABP = prepareLabel(ABP)
     return_dict['abp']['out'].extend(ABP['out'])
@@ -192,8 +194,8 @@ def preprocess_approximate_Dataset(ABP, PLE, length, return_dict, max_abp, min_a
 
 
 if __name__ == '__main__':
-    original_data_path = "/home/najy/PycharmProjects/vid2bp_datasets/"
-    save_path = "/home/najy/PycharmProjects/PPG2ABP_datasets/"
+    original_data_path = "/home/najy/PycharmProjects/vid2bp_datasets/vid2bp_additional_preprocessed/"
+    save_path = "/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/"
 
     for mode in ['train', 'val', 'test']:
         preprocessing(original_data_path, save_path, 352, mode)

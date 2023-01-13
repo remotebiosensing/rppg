@@ -11,7 +11,7 @@ def dataset_loader(dataset_name: str = 'mimiciii', channel: int = 1, batch_size:
     train_shuffle: bool = True
     test_shuffle: bool = False
 
-    dataset_root_path: str = '/home/najy/PycharmProjects/PPG2ABP_datasets/'
+    dataset_root_path: str = "/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/"
     train_file_path = dataset_root_path + "train.hdf5"
     valid_file_path = dataset_root_path + "val.hdf5"
     test_file_path = dataset_root_path + "test.hdf5"

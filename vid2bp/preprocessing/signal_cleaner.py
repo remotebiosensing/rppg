@@ -16,7 +16,6 @@ import wfdb
 import vid2bp.preprocessing.utils.signal_utils as su
 import vid2bp.preprocessing.utils.math_module as mm
 import vid2bp.preprocessing.mimic3temp as m3t
-from loss import sig_to_BPfiltersig as bpfilter
 
 """unused"""
 
@@ -135,6 +134,55 @@ def length_checker(target_signal, length):
 """signal analysing modules"""
 
 
+def SBP_DBP_arranger(ABP, SBP, DBP):
+    i = 0
+    total = len(SBP) - 1
+    while i < total:
+        flag = False
+        # Distinguish SBP[i] < DBP < SBP[i+1]
+        for idx_dbp in DBP:
+            # Normal situation
+            if (SBP[i] < idx_dbp) and (idx_dbp < SBP[i + 1]):
+                flag = True
+                break
+            # abnormal situation
+        if flag:
+            i += 1
+        else:
+            # compare peak value
+            # delete smaller one @SBP
+            if ABP[SBP[i]] < ABP[SBP[i + 1]]:
+                SBP = np.delete(SBP, i)
+            else:
+                SBP = np.delete(SBP, i + 1)
+            total -= 1
+
+    i = 0
+    total = len(DBP) - 1
+    while i < total:
+        flag = False
+        # Distinguish DBP[i] < SBP < DBP[i+1]
+        for idx_sbp in SBP:
+            # Normal situation
+            if (DBP[i] < idx_sbp) and (idx_sbp < DBP[i + 1]):
+                flag = True
+                break
+        # normal situation
+        if flag:
+            i += 1
+        # abnormal situation, there is no SBP between DBP[i] and DBP[i+1]
+        else:
+            # compare peak value
+            # delete bigger one @DBP
+            if ABP[DBP[i]] < ABP[DBP[i + 1]]:
+                DBP = np.delete(DBP, i + 1)
+            else:
+                DBP = np.delete(DBP, i)
+            total -= 1
+
+    return SBP, DBP
+
+
 def peak_detector(target_signal, rol_sec, fs=125):
     roll_mean = rolling_mean(target_signal, rol_sec, fs)
     peak_heartpy = hp_peak.detect_peaks(target_signal, roll_mean, ma_perc=20, sample_rate=fs)
@@ -149,7 +197,7 @@ def bottom_detector(target_signal, rol_sec, fs=125):
 
 
 def correlation_checker(target_signal, reference_signal):
-    return np.abs(np.corrcoef(target_signal, reference_signal)[0, 1])
+    return np.corrcoef(target_signal, reference_signal)[0, 1]
 
 
 """flag signal checking modules"""
@@ -342,10 +390,10 @@ if __name__ == "__main__":
                         target_ple in normal_ple]
         # find peak index
         rolling_sec = 1.5
-        peak_abp = [peak_detector(target_abp, rolling_sec, fs) for target_abp in normal_abp]
-        peak_ple = [peak_detector(target_ple, rolling_sec, fs) for target_ple in normal_ple]
-        bottom_abp = [bottom_detector(target_abp, rolling_sec, fs) for target_abp in normal_abp]
-        bottom_ple = [bottom_detector(target_ple, rolling_sec, fs) for target_ple in normal_ple]
+        peak_abp = [peak_detector(target_abp, rolling_sec, fs) for target_abp in denoised_abp]
+        peak_ple = [peak_detector(target_ple, rolling_sec, fs) for target_ple in denoised_ple]
+        bottom_abp = [bottom_detector(target_abp, rolling_sec, fs) for target_abp in denoised_abp]
+        bottom_ple = [bottom_detector(target_ple, rolling_sec, fs) for target_ple in denoised_ple]
 
         # calculate correlation
         # if correlation is less than threshold, remove the signal
