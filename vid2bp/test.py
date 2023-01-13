@@ -12,34 +12,43 @@ from sklearn.preprocessing import MinMaxScaler
 from vid2bp.nets.loss.loss import SelfScaler
 
 
-def test(model, dataset, loss, epoch, scaler=True, plot_target=False):
+def test(model, dataset, loss_list, epoch, scaler=True, plot_target=False):
     model.eval()
     scale_loss = SelfScaler().to('cuda:0')
 
     plot_flag = True
     avg_cost_list = []
-    for _ in range(len(loss)):
+    dy_avg_cost_list = []
+    ddy_avg_cost_list = []
+    for _ in range(len(loss_list)):
         avg_cost_list.append(0)
+        dy_avg_cost_list.append(0)
+        ddy_avg_cost_list.append(0)
 
     with tqdm(dataset, desc='Test{}'.format(str(epoch)), total=len(dataset), leave=True) as test_epoch:
         with torch.no_grad():
-            for idx, (X_test, Y_test, dia, sys, size_class) in enumerate(test_epoch):
-                hypothesis, scaled_ple = model(X_test, scaler=scaler)
-                avg_cost_list, cost = tu.calc_losses(avg_cost_list, loss,
-                                                     hypothesis, Y_test,
-                                                     idx + 1)
+            for idx, (X_test, dx, ddx, Y_test, dy, ddy, d, s) in enumerate(test_epoch):
+                hypothesis, dy_hypothesis, ddy_hypothesis, scaled_ple = model(X_test, dx, ddx, scaler=scaler)
+                avg_cost_list, _ = tu.calc_losses(avg_cost_list, loss_list,
+                                                  hypothesis, Y_test, idx + 1)
+                dy_avg_cost_list, _ = tu.calc_losses(dy_avg_cost_list, loss_list,
+                                                     dy_hypothesis, dy, idx + 1)
+                ddy_avg_cost_list, _ = tu.calc_losses(ddy_avg_cost_list, loss_list,
+                                                      ddy_hypothesis, ddy, idx + 1)
 
                 ple_cost = scale_loss(scaled_ple, X_test)
-                total_cost = np.sum(avg_cost_list) + ple_cost.__float__()
+                total_cost = torch.sum(torch.tensor(avg_cost_list)) + torch.sum(
+                    torch.tensor(dy_avg_cost_list)) + torch.sum(torch.tensor(ddy_avg_cost_list)) + \
+                             ple_cost
 
                 postfix_dict = {}
-                for i in range(len(loss)):
-                    postfix_dict[(str(loss[i]))[:-2]] = (round(avg_cost_list[i], 3))
+                for i in range(len(loss_list)):
+                    postfix_dict[(str(loss_list[i]))[:-2]] = (round(avg_cost_list[i], 3))
                 postfix_dict['scale_variance'] = round(ple_cost.__float__(), 3)
                 test_epoch.set_postfix(losses=postfix_dict, tot=total_cost)
 
                 if plot_flag:
-                    plot = plot_prediction(X_test[0], Y_test[0], [dia[0], sys[0], size_class[0]],
+                    plot = plot_prediction(X_test[0], Y_test[0], [d[0], s[0]],
                                            hypothesis[0], epoch, plot_target)
                     plot_flag = False
             # wandb.init(project="VBPNet", entity="paperchae")
@@ -54,7 +63,7 @@ def plot_prediction(ple, abp, dsm, hypothesis, epoch, plot_target):
     t = np.arange(0, 6, 1 / 60)
     h = np.squeeze(hypothesis.cpu().detach())
     y = abp.detach().cpu().numpy()
-    x = ple[0].detach().cpu().numpy()
+    x = ple.detach().cpu().numpy()
     min_max_scaler = MinMaxScaler()
     mean_sbp, mean_dbp, mean_map, sbp_idx, dbp_idx = ds_detection(h)
     target_sbp, target_dbp, target_map, target_sbp_idx, target_dbp_idx = ds_detection(y)

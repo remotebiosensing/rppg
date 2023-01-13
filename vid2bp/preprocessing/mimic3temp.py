@@ -474,7 +474,7 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                                                                                                            target_bottom_ple,
                                                                                                            threshold)
             if match_flag and len(matched_abp_peaks) > 0 and len(matched_abp_bottoms) > 0 \
-                    and abs(len(matched_abp_peaks) - len(matched_abp_bottoms))<2:
+                    and abs(len(matched_abp_peaks) - len(matched_abp_bottoms)) < 2:
                 ple_total.append(mm.channel_cat(down_sampling(matched_raw_ple, target_fs=sampling_rate)))
                 abp_total.append(down_sampling(matched_raw_abp, target_fs=sampling_rate))
                 # ple_total.append(np.array(matched_raw_ple))
