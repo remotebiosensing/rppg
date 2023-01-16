@@ -1,27 +1,22 @@
 from tqdm import tqdm
 import torch
 import matplotlib.pyplot as plt
-from vid2bp.nets.modules.MultiResUNet1D import MultiResUNet1D
-from vid2bp.nets.modules.UNetDS64 import UNetDS64
-from vid2bp.PPG2ABP.dataset.PPG2ABP_dataset_loader import dataset_loader
+from vid2bp.nets.modules.LSTMAutoEncoder import LSTMAutoEncoder
+from vid2bp.LSTMAutoEncoder.dataset.LSTMAutoEncoder_dataset_loader import dataset_loader
 from loss import NegPearsonLoss
 
 
 def main(plot_flag=False,
-         app_model_weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_best.pth',
-         ref_model_weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/MultiResUNet1D_best.pth',
+         weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/MultiResUNet1D_0.017421271360944957.pth',
          dataset_root_path="/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/"):
-    batch_size = 128
-    length = 352
+    batch_size = 2
 
     # load weights
-    app_model = UNetDS64(length=length).cuda()
-    app_model.load_state_dict(torch.load(app_model_weight_path))
-    ref_model = MultiResUNet1D().cuda()
-    ref_model.load_state_dict(torch.load(ref_model_weight_path))
+    model = LSTMAutoEncoder().cuda()
+    model.load_state_dict(torch.load(weight_path))
 
     # load data
-    data_loaders = dataset_loader(channel=1, batch_size=batch_size, dataset_root_path=dataset_root_path)
+    data_loaders, meta_params = dataset_loader(batch_size=batch_size, label='abp', dataset_root_path=dataset_root_path)
     criterion1 = torch.nn.L1Loss()
     criterion2 = torch.nn.MSELoss()
     criterion3 = NegPearsonLoss()
@@ -34,14 +29,12 @@ def main(plot_flag=False,
     mse_loss_ref = 0
     pearson_loss_ref = 0
 
-    max_abp, min_abp, max_ppg, min_ppg = data_loaders[0].dataset.min_max_data()
-    test_max_abp, test_min_abp, test_max_ppg, test_min_ppg = data_loaders[2].dataset.min_max_data()
+    train_ple_std, train_ple_mean, train_abp_std, train_abp_mean = meta_params
 
-    for ppg, abp_out, _, _, _, _ in tqdm(data_loaders[2]):
-        app_pred = app_model(ppg)[0]
-        abp_signal_approximate = app_pred.squeeze() * (max_abp - min_abp) + min_abp
-        abp_signal_refined = ref_model(app_pred).squeeze() * (max_abp - min_abp) + min_abp
-        abp_signal = abp_out.squeeze() * (test_max_abp - test_min_abp) + test_min_abp
+    for ppg, abp in tqdm(data_loaders[2]):
+        app_pred = model(ppg)
+        abp_signal_pred = app_pred * train_abp_std + train_abp_mean
+        abp_signal = abp * train_abp_std + train_abp_mean
 
         l1_loss_app += criterion1(abp_signal_approximate, abp_signal).__float__()
         mse_loss_app += criterion2(abp_signal_approximate, abp_signal).__float__()
@@ -93,7 +86,4 @@ def main(plot_flag=False,
 
 
 if __name__ == '__main__':
-    main(plot_flag=False,
-         app_model_weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_best.pth',
-         ref_model_weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/MultiResUNet1D_best.pth',
-         dataset_root_path="/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/")
+    main(True)

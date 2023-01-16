@@ -34,7 +34,7 @@ def main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MS
     '''
     load dataset
     '''
-    data_loaders = dataset_loader(channel=1, batch_size=batch_size, label=label)
+    data_loaders, meta_params = dataset_loader(channel=1, batch_size=batch_size, label=label)
     '''
     set training parameters
     '''
@@ -112,4 +112,10 @@ def main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MS
 
 
 if __name__ == '__main__':
-    main(label='ple', batch_size=1024, learning_rate=0.0025, epochs=50, loss='neg_pearson', wandb_flag=True)
+    print("start ple train")
+    main(label='ple', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MSE', wandb_flag=True)
+    print("end ple train")
+
+    print("start abp train")
+    main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MSE', wandb_flag=True)
+    print("end abp train")

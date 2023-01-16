@@ -4,25 +4,23 @@ from torch.utils.data import Dataset
 
 
 class LSTMAutoEncoderDataset(Dataset):
-    def __init__(self, ppg, abp, mean, std):
+    def __init__(self, input_signal, target_signal):
         self.transform = transforms.Compose([transforms.ToTensor()])
-        self.ppg = ppg
-        self.abp = abp
-        self.mean = mean
-        self.std = std
+        self.input_signal = input_signal
+        self.target_signal = target_signal
 
     def __getitem__(self, index):
         if torch.is_tensor(index):
             index = index.tolist()
 
-        ppg = torch.tensor(self.ppg[index], dtype=torch.float32).transpose(1, 0)
-        abp = torch.tensor(self.abp[index], dtype=torch.float32)
+        input_signal = torch.tensor(self.input_signal[index], dtype=torch.float32).transpose(1, 0)
+        target_signal = torch.tensor(self.target_signal[index], dtype=torch.float32)
 
         if torch.cuda.is_available():
-            ppg = ppg.to('cuda')
-            abp = abp.to('cuda')
+            input_signal = input_signal.to('cuda')
+            target_signal = target_signal.to('cuda')
 
-        return ppg, abp
+        return input_signal, target_signal
 
     def __len__(self):
-        return len(self.ppg)
+        return len(self.input_signal)
