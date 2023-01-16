@@ -16,11 +16,11 @@ import pandas as pd
 
 # local
 def label_preprocess(model_name, path,**kwargs):
-    if model_name == 'DeepPhys':
+    if model_name == ['DeepPhys']:
         return Deepphys_preprocess_Label(path, **kwargs)
     elif model_name == 'GCN':
         return GCN_preprocess_Label(path, **kwargs)
-    elif model_name == 'PhysNet':
+    elif model_name == ['PhysNet','TEST']:
         return PhysNet_preprocess_Label(path, **kwargs)
     elif model_name == 'Axis':
         return Axis_preprocess_Label(path, **kwargs)

@@ -17,7 +17,7 @@ import OpenGL.GL as gl
 def video_preprocess(model_name, path,**kwargs):
     if model_name == 'Deepphys':
         return Deepphys_preprocess_Video(path, **kwargs)
-    elif model_name in 'PhysNet':
+    elif model_name in ['PhysNet','TEST']:
         return PhysNet_preprocess_Video(path, **kwargs)
     elif model_name == 'RTNet':
         return RTNet_preprocess_Video(path, **kwargs)

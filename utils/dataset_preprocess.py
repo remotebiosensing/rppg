@@ -176,6 +176,11 @@ def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dic
             'keypoint' : rst_dict["keypoint"],
             'raw_video' : rst_dict["raw_video"],
             'preprocessed_label': preprocessed_label}
+    elif model_name in ["TEST"]:
+        return_dict[path.replace('/', '')] = {
+            'keypoint': rst_dict["keypoint"],
+            'raw_video': rst_dict["raw_video"],
+            'preprocessed_label': preprocessed_label}
         # 'preprocessed_hr': preprocessed_hr}
     elif model_name in ["PPNet"]:
         return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}

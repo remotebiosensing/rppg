@@ -53,6 +53,10 @@ def dataset_loader():
         video_data = []
         label_data = []
         bpm_data = []
+    elif params.model in ["TEST"]:
+        video_data = []
+        keypoint_data = []
+        target_data = []
     elif params.model in ["PPNet"]:
         ppg = []
         sbp = []
@@ -94,6 +98,10 @@ def dataset_loader():
                 appearance_data.extend(file[key]['preprocessed_video'][:, :, :, -3:])
                 motion_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
                 target_data.extend(file[key]['preprocessed_label'])
+            elif params.model in ["TEST"]:
+                video_data.extend(file[key]['raw_video'])
+                keypoint_data.extend(file[key]['keypoint'])
+                target_data.extend(file[key]['preprocessed_label'])
             elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
                 if len(file[key]['preprocessed_video']) == len(file[key]['preprocessed_label']):
                     video_data.extend(file[key]['preprocessed_video'])
@@ -126,6 +134,7 @@ def dataset_loader():
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
+
     elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
         if params.model in ["GCN"]:
             dataset = GCNDataset(video_data=np.asarray(video_data),
