@@ -16,7 +16,10 @@ def log_info(message):
 def time_checker(msg, func,**kwargs):
     if params.__TIME__:
         start = time.time()
-    rst = func(kwargs)
+    if len(kwargs) == 0:
+        rst = func()
+    else :
+        rst = func(**kwargs)
     if params.__TIME__:
         end = time.time()
         log_info_time(msg, end - start)

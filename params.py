@@ -9,21 +9,22 @@ class params():
     save_img_flag = False
 
     __TIME__ = 0  # 1: print time, 0: not print time
-    __PREPROCESSING__ = 1  # 1: preprocessing, 0: not preprocessing
+    __PREPROCESSING__ = 0  # 1: preprocessing, 0: not preprocessing
     __MODEL_SUMMARY__ = 0  # 1: print model summary, 0: not print model summary
 
-    model = "DeepPhys"
+    model = "PhysNet"
     model_list = ["DeepPhys", "DeepPhys_DA", "PhysNet", "PhysNet_LSTM", "PPNet", "GCN", "AxisNet", "RhythmNet"]
 
     # preprocessing parameters
     # dataset
     dataset_name = "UBFC"
     # UBFC / PURE / V4V / VIPL_HR
-    save_root_path = "/media/hdd1/dy_dataset/"
+    save_root_path = "/media/hdd1/dy/dataset/"
+    dataset_date = "2023-01-12"
     data_root_path = "/media/hdd1/"
     model_root_path = "/media/hdd1/dy/model/"
     train_ratio = 0.8
-    face_detect_algorithm = 0
+    face_detect_algorithm = 5
     divide_flag = 1  # 1 : divide by number 0: divide by subject
     fixed_position = 1  # 1 : fixed position 0: not fixed position
     time_length = 32  # The number of frames in dataset.__GetItem__
@@ -35,11 +36,12 @@ class params():
     val_ratio = 0.1
     test_ratio = 0.1
 
-    train_batch_size = 32
+    batch_size = 32
     train_shuffle = 1
 
-    test_batch_size = 32
     test_shuffle = 1
+
+    img_size = 128
 
     loss_fn = "fft"
     '''

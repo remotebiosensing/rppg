@@ -16,7 +16,7 @@ from dataset.VitamonDataset import VitamonDataset
 from params import params
 
 def split_data_loader(**kwargs):
-    datasets, batch_size, train_shuffle, test_shuffle = Falsedatasets, batch_size, train_shuffle, test_shuffle = kwargs["datasets"], kwargs["batch_size"], kwargs["train_shuffle"], kwargs["test_shuffle"]
+    datasets, batch_size, train_shuffle, test_shuffle = kwargs["datasets"], kwargs["batch_size"], kwargs["train_shuffle"], kwargs["test_shuffle"]
     if datasets.__len__() == 3:
         train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=train_shuffle)
         validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=test_shuffle)
@@ -45,89 +45,88 @@ def dataset_loader():
     if params.model == "GCN" or params.model == "GCN_TEST":
         name = "PhysNet"
 
-    train_file = params.save_root_path + name + "_" + params.dataset_name + "_" + "train" + ".hdf5"
-    valid_file = params.save_root_path + name + "_" + params.dataset_name + "_" + "valid" + ".hdf5"
-    test_file = params.save_root_path + name + "_" + params.dataset_name + "_" + "test" + ".hdf5"
-    if os.path.isfile(train_file):
-        print("train dataset exist")
-    else:
-        print("Need to preprocess/train")
-    if os.path.isfile(test_file):
-        print("test dataset exist")
-    else:
-        print("Need to preprocess/test")
-
-    hpy_train_file = h5py.File(train_file, "r")
-    hpy_test_file = h5py.File(test_file, "r")
-    hpy_valid_file = h5py.File(valid_file, "r")
-
-
-    print("train file size : ", os.path.getsize(train_file)/1024/1024,'MB')
-    print("test file size : ", os.path.getsize(test_file)/1024/1024,'MB')
-
     if params.model in ["DeepPhys", "MTTS"]:
         appearance_data = []
         motion_data = []
         target_data = []
-
-        # for key in hpy_train_file.keys():
-        #     appearance_data.extend(hpy_train_file[key]['preprocessed_video'][:, :, :, -3:])
-        #     motion_data.extend(hpy_train_file[key]['preprocessed_video'][:, :, :, :3])
-        #     target_data.extend(hpy_train_file[key]['preprocessed_label'])
-        #
-        # hpy_train_file.close()
-
-        for key in hpy_test_file.keys():
-            cnt += 1
-            if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
-                appearance_data.extend(hpy_test_file[key]['preprocessed_video'][:, :, :, -3:])
-                motion_data.extend(hpy_test_file[key]['preprocessed_video'][:, :, :, :3])
-                target_data.extend(hpy_test_file[key]['preprocessed_label'])
-            if cnt == 5:
-                break
-        hpy_test_file.close()
-
-
-        dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
-                                  motion_data=np.asarray(motion_data),
-                                  target=np.asarray(target_data))
     elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
         video_data = []
         label_data = []
         bpm_data = []
-        cnt = 0
-        # for key in hpy_train_file.keys():
-        #     cnt += 1
-        #     if len(hpy_train_file[key]['preprocessed_video']) == len(hpy_train_file[key]['preprocessed_label']):
-        #         video_data.extend(hpy_train_file[key]['preprocessed_video'])
-        #         label_data.extend(hpy_train_file[key]['preprocessed_label'])
-        # bpm_data.extend(hpy_train_file[key]['preprocessed_hr'])
+    elif params.model in ["PPNet"]:
+        ppg = []
+        sbp = []
+        dbp = []
+        hr = []
+    elif params.model in ["RTNet"]:
+        face_data = []
+        mask_data = []
+        target_data = []
+    elif params.model in ["AxisNet"]:
+        video_data = []
+        label_data = []
+        ptt_data = []
+    elif params.model in ["RhythmNet"]:
+        st_map_data = []
+        target_data = []
+    elif params.model in ["ETArPPGNet"]:
+        video_data = []
+        label_data = []
+    elif params.model in ["Vitamon","Vitamon_phase2"]:
+        video_data = []
+        label_data = []
 
-        # if option == "test" or flag :
-        # if cnt == 4:
-        # break
-        # hpy_train_file.close()
-        for key in hpy_test_file.keys():
-            cnt += 1
-            # if cnt <cflag:
-            #     continue
-            # if cnt < cflag:
-            #     continue
-            # if cnt > cflag:
-            #     break
-            if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
-                video_data.extend(hpy_test_file[key]['preprocessed_video'])
-                label_data.extend(hpy_test_file[key]['preprocessed_label'])
-                # bpm_data.extend(hpy_test_file[key]['preprocessed_hr'])
-            if cnt == 5:
-                break
-            # if cnt == cflag:
-            #     break
 
-            # if option == "test" or flag :
-            #     break
-        hpy_test_file.close()
+    root_file_path = params.save_root_path + name + "_" + params.dataset_name + "_" + params.dataset_date +"_"
+    idx = 0
+    while True:
+        file_name = root_file_path + str(idx) + ".hdf5"
+        if not os.path.isfile(file_name):
+            print("Stop at ", idx)
+            break
+        else:
+            print("file size : ", os.path.getsize(file_name) / 1024 / 1024, 'MB')
+        idx += 1
+        file = h5py.File(file_name, "r")
+        h5_tree(file)
+        for key in file.keys():
+            if params.model in ["DeepPhys", "MTTS"]:
+                appearance_data.extend(file[key]['preprocessed_video'][:, :, :, -3:])
+                motion_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
+                target_data.extend(file[key]['preprocessed_label'])
+            elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+                if len(file[key]['preprocessed_video']) == len(file[key]['preprocessed_label']):
+                    video_data.extend(file[key]['preprocessed_video'])
+                    label_data.extend(file[key]['preprocessed_label'])
+            elif params.model in ["PPNet"]:
+                ppg.extend(file[key]['ppg'])
+                sbp.extend(file[key]['sbp'])
+                dbp.extend(file[key]['dbp'])
+                hr.extend(file[key]['hr'])
+            elif params.model in ["RTNet"]:
+                face_data.extend(file[key]['preprocessed_video'][:, :, :, -3:])
+                mask_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
+                target_data.extend(file[key]['preprocessed_label'])
+            elif params.model in ["AxisNet"]:
+                video_data.extend(file[key]['preprocessed_video'])
+                ptt_data.extend(file[key]['preprocessed_ptt'])
+                label_data.extend(file[key]['preprocessed_label'])
+            elif params.model in ["RhythmNet"]:
+                st_map_data.extend(file[key]['preprocessed_video'])
+                target_data.extend(file[key]['preprocessed_label'])
+            elif params.model in ["ETArPPGNet"]:
+                video_data.extend(file[key]['preprocessed_video'])
+                label_data.extend(file[key]['preprocessed_label'])
+            elif params.model in ["Vitamon", "Vitamon_phase2"]:
+                video_data.extend(file[key]['preprocessed_video'])
+                label_data.extend(file[key]['preprocessed_label'])
+        file.close()
 
+    if params.model in ["DeepPhys", "MTTS"]:
+        dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
+                                  motion_data=np.asarray(motion_data),
+                                  target=np.asarray(target_data))
+    elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
         if params.model in ["GCN"]:
             dataset = GCNDataset(video_data=np.asarray(video_data),
                                  label_data=np.asarray(label_data),
@@ -136,129 +135,54 @@ def dataset_loader():
         elif params.model in ["AxisNet"]:
             dataset = AxisNetDataset(video_data=np.asarray(video_data),
                                      label_data=np.asarray(label_data))
-
         else:
             dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                      label_data=np.asarray(label_data))
-
     elif params.model in ["PPNet"]:
-        ppg = []
-        sbp = []
-        dbp = []
-        hr = []
-
-        for key in hpy_file.keys():
-            ppg.extend(hpy_file[key]['ppg'])
-            sbp.extend(hpy_file[key]['sbp'])
-            dbp.extend(hpy_file[key]['dbp'])
-            hr.extend(hpy_file[key]['hr'])
-        hpy_file.close()
-
         dataset = PPNetDataset(ppg=np.asarray(ppg),
                                sbp=np.asarray(sbp),
                                dbp=np.asarray(dbp),
                                hr=np.asarray(hr))
-
-    elif model_name in ["RTNet"]:
-        face_data = []
-        mask_data = []
-        target_data = []
-
-        for key in hpy_file.keys():
-            face_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, -3:])
-            mask_data.extend(hpy_file[key]['preprocessed_video'][:, :, :, :3])
-            target_data.extend(hpy_file[key]['preprocessed_label'])
-        hpy_file.close()
-
+    elif params.model in ["RTNet"]:
         dataset = PPNetDataset(face_data=np.asarray(face_data),
                                mask_data=np.asarray(mask_data),
                                target=np.asarray(target_data))
     elif params.model in ["AxisNet"]:
-        video_data = []
-        label_data = []
-        ptt_data = []
-
-        for key in hpy_file.keys():
-            video_data.extend(hpy_file[key]['preprocessed_video'])
-            ptt_data.extend(hpy_file[key]['preprocessed_ptt'])
-            label_data.extend(hpy_file[key]['preprocessed_label'])
-        hpy_file.close()
-
         std_shape = (320, 472, 3)  # ptt_data[0].shape
         for i in range(len(ptt_data)):
             if ptt_data[i].shape != std_shape:
                 ptt_data[i] = np.resize(ptt_data[i], std_shape)
-
         dataset = AxisNetDataset(video_data=np.asarray(video_data),
                                  ptt_data=np.asarray(ptt_data),
                                  label_data=np.asarray(label_data), )
     elif params.model in ["RhythmNet"]:
-        st_map_data = []
-        target_data = []
-        if option == "train":
-            for key in hpy_train_file.keys():
-                st_map_data.extend(hpy_train_file[key]['preprocessed_video'])
-                target_data.extend(hpy_train_file[key]['preprocessed_label'])
-
-            hpy_train_file.close()
-        elif option == "test":
-            for key in hpy_test_file.keys():
-                cnt += 1
-                if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
-                    st_map_data.extend(hpy_test_file[key]['preprocessed_video'])
-                    target_data.extend(hpy_test_file[key]['preprocessed_label'])
-                if cnt == 5:
-                    break
-            hpy_test_file.close()
-
         dataset = RhythmNetDataset(st_map_data=np.asarray(st_map_data),
                                    target_data=np.asarray(target_data))
-
     elif params.model in ["ETArPPGNet"]:
-        video_data = []
-        label_data = []
-        if option == "train":
-            for key in hpy_train_file.keys():
-                video_data.extend(hpy_train_file[key]['preprocessed_video'])
-                label_data.extend(hpy_train_file[key]['preprocessed_label'])
-
-            hpy_train_file.close()
-        elif option == "test":
-            for key in hpy_test_file.keys():
-                cnt += 1
-                if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
-                    video_data.extend(hpy_test_file[key]['preprocessed_video'])
-                    label_data.extend(hpy_test_file[key]['preprocessed_label'])
-                if cnt == 5:
-                    break
-            hpy_test_file.close()
-
         dataset = ETArPPGNetDataset(video_data=np.asarray(video_data),
                                     label_data=np.asarray(label_data))
 
     elif params.model in ["Vitamon","Vitamon_phase2"]:
-        video_data = []
-        label_data = []
-        if option == "train":
-            for key in hpy_train_file.keys():
-                video_data.extend(hpy_train_file[key]['preprocessed_video'])
-                label_data.extend(hpy_train_file[key]['preprocessed_label'])
-            hpy_train_file.close()
-
-            for key in hpy_test_file.keys():
-                if len(hpy_test_file[key]['preprocessed_video']) == len(hpy_test_file[key]['preprocessed_label']):
-                    video_data.extend(hpy_test_file[key]['preprocessed_video'])
-                    label_data.extend(hpy_test_file[key]['preprocessed_label'])
-            hpy_test_file.close()
-
-            for key in hpy_valid_file.keys():
-                if len(hpy_valid_file[key]['preprocessed_video']) == len(hpy_valid_file[key]['preprocessed_label']):
-                    video_data.extend(hpy_valid_file[key]['preprocessed_video'])
-                    label_data.extend(hpy_valid_file[key]['preprocessed_label'])
-            hpy_valid_file.close()
-
         dataset = VitamonDataset(video_data=np.asarray(video_data),
                                     label_data=np.asarray(label_data))
 
 
     return dataset
+
+def h5_tree(val, pre=''):
+    items = len(val)
+    for key, val in val.items():
+        items -= 1
+        if items == 0:
+            # the last item
+            if type(val) == h5py._hl.group.Group:
+                print(pre + '└── ' + key)
+                h5_tree(val, pre+'    ')
+            else:
+                print(pre + '└── ' + key + ' (%d)' % len(val))
+        else:
+            if type(val) == h5py._hl.group.Group:
+                print(pre + '├── ' + key)
+                h5_tree(val, pre+'│   ')
+            else:
+                print(pre + '├── ' + key + ' (%d)' % len(val))

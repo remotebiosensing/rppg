@@ -34,7 +34,7 @@ def dataset_split(**kwargs):
         return random_split(dataset, [train_len, test_len])
 
 
-def preprocessing(**kwargs):
+def preprocessing():
     """
     :param save_root_path: save file destination path
     :param model_name: select preprocessing method
@@ -46,6 +46,9 @@ def preprocessing(**kwargs):
     :param fixed_position: True : fixed position, False : face tracking
     :return:
     """
+    if not params.__PREPROCESSING__:
+        return
+
 
     save_root_path = params.save_root_path
     model_name = params.model
@@ -141,6 +144,8 @@ def preprocessing(**kwargs):
                             face_detect_algorithm=face_detect_algorithm, divide_flag=divide_flag,
                             fixed_position=fixed_position, time_length=time_length, img_size=img_size,
                             ssl_flag=ssl_flag, idx=i, time=time)
+        if i == 0 :
+            break
 
 
 def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dict, **kwargs):
@@ -168,6 +173,8 @@ def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dic
             'preprocessed_video': rst_dict["video_data"],
             'frame_number': rst_dict["frame_number"],
             'flip_arr': rst_dict["flip_arr"],
+            'keypoint' : rst_dict["keypoint"],
+            'raw_video' : rst_dict["raw_video"],
             'preprocessed_label': preprocessed_label}
         # 'preprocessed_hr': preprocessed_hr}
     elif model_name in ["PPNet"]:
@@ -235,12 +242,15 @@ def chunk_preprocessing(model_name, data_list, dataset_root_path, vid_name, grou
 
     if model_name in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
         for index, data_path in enumerate(return_dict.keys()):
+            print(index)
             dset = dataset_path.create_group(data_path)
             dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
             dset['frame_number'] = return_dict[data_path]['frame_number']
             dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label'][0]
             dset['preprocessed_hr'] = return_dict[data_path]['preprocessed_label'][1]
             dset['flip_arr'] = return_dict[data_path]['flip_arr']
+            dset['keypoint'] = return_dict[data_path]['keypoint']
+            dset['raw_video'] = return_dict[data_path]['raw_video']
     elif model_name in ["PPNet"]:
         for index, data_path in enumerate(return_dict.keys()):
             dset = dataset_path.create_group(data_path)

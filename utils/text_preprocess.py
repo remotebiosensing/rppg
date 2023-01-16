@@ -16,7 +16,7 @@ import pandas as pd
 
 # local
 def label_preprocess(model_name, path,**kwargs):
-    if model_name == 'Deepphys':
+    if model_name == 'DeepPhys':
         return Deepphys_preprocess_Label(path, **kwargs)
     elif model_name == 'GCN':
         return GCN_preprocess_Label(path, **kwargs)
