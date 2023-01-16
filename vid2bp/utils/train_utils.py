@@ -25,7 +25,10 @@ def get_model(model_name: str, device):
     lr, wd, ga, oc = get_model_parameter(model_name)
     if model_name == 'BPNet':
         from vid2bp.nets.modules.bvp2abp import bvp2abp
-        model = bvp2abp(in_channels=3, out_channels=oc).to(device)
+        model = bvp2abp(in_channels=3,
+                        out_channels=oc,
+                        target_samp_rate=60,
+                        dilation_val=2).to(device)
         model_loss = [loss.NegPearsonLoss().to(device)]
         # model_loss = [loss.NegPearsonLoss().to(device), loss.ScaledVectorCosineSimilarity().to(device)]
         # model_loss = [loss.ScaledVectorCosineSimilarity().to(device)]
@@ -60,16 +63,16 @@ def is_learning(cost_arr):
     return flag
 
 
-def calc_losses(avg_cost_list, losses, hypothesis, target, cnt):
-    cost = torch.tensor(0.0).to('cuda:0')
-    for idx, l in enumerate(losses):
-        temp_loss = l(hypothesis, target)
-        cost += temp_loss
-        avg_cost_list[idx] = get_avg_cost(avg_cost_list[idx], temp_loss, cnt)
+def calc_losses(avg_cost_list, loss_list, hypothesis, target, cnt):
+    total_cost = torch.tensor(0.0).to('cuda:0')
+    for idx, l in enumerate(loss_list):
+        current_cost = l(hypothesis, target)
+        total_cost += current_cost
+        avg_cost_list[idx] = get_avg_cost(avg_cost_list[idx], current_cost, cnt)
 
     # cost = sum(cost_list)
 
-    return avg_cost_list, cost
+    return avg_cost_list, total_cost
 
 
 def get_avg_cost(avg_cost, current_cost, cnt):

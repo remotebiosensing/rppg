@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class BPNetDataset(Dataset):
@@ -14,7 +15,10 @@ class BPNetDataset(Dataset):
         self.len = self.y_data.shape[0]
 
     def __getitem__(self, index):
-        x = self.x_data[index].to('cuda')
+        x = self.x_data[index][0].to('cuda')
+        dx = torch.diff(x, dim=0)[89:269]
+        # torch.cat((torch.diff(x), torch.zeros(1).to('cuda:0')))
+        ddx = torch.diff(torch.diff(x, dim=0), dim=0)[88:268]
         # x = (self.x_data[index] - torch.mean(self.x_data[index])) / torch.std(self.x_data[index]).to('cuda')
         # x_size = torch.mean(self.x_data[index]).to('cuda')
         # if x_size < 0.5:
@@ -28,8 +32,8 @@ class BPNetDataset(Dataset):
         # else:
         #     size_class = 5
         y = self.y_data[index].to('cuda')
-        y_first_derivative = torch.diff(y, dim=0)
-        y_second_derivative = torch.diff(y_first_derivative, dim=0)
+        dy = torch.diff(y, dim=0)[89:269]
+        ddy = torch.diff(torch.diff(y, dim=0), dim=0)[88:268]
         '''
         size[index][0] = np.min(diastolic list) 
         size[index][1] = np.max(systolic list) 
@@ -38,7 +42,7 @@ class BPNetDataset(Dataset):
         s = self.size[index][1].to('cuda')
         # m = self.size[index][2].to('cuda')
 
-        return x, y, d, s
+        return x, dx, ddx, y, dy, ddy, d, s
 
     def __len__(self):
         return self.len

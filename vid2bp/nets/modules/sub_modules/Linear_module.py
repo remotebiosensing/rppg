@@ -7,7 +7,7 @@ class Linear_module_1D(nn.Module):
 
     def __init__(self):
         super(Linear_module_1D, self).__init__()
-        self.linear1 = nn.Linear(100, 180)
+        self.linear1 = nn.Linear(84, 180)
         self.linear2 = nn.Linear(180, 270)
         self.linear3 = nn.Linear(270, 360)
         self.elu = nn.ELU()
@@ -45,3 +45,35 @@ class Linear_module_1D(nn.Module):
     #     l3 = self.linear3(l2)
     #
     #     return l3
+
+class Linear_module_1D_dy(nn.Module):
+
+    def __init__(self):
+        super(Linear_module_1D_dy, self).__init__()
+        self.linear1 = nn.Linear(39, 90)
+        self.linear2 = nn.Linear(90, 180)
+        self.linear3 = nn.Linear(180, 180)
+
+    def forward(self, feature):
+        l1 = self.linear1(feature)
+        l2 = self.linear2(l1)
+        l3 = self.linear3(l2)
+        out = l3
+
+        return out
+
+
+class Linear_module_1D_ddy(nn.Module):
+
+    def __init__(self):
+        super(Linear_module_1D_ddy, self).__init__()
+        self.linear1 = nn.Linear(39, 90)
+        self.linear2 = nn.Linear(90, 180)
+        self.linear3 = nn.Linear(180, 180)
+    def forward(self, feature):
+        l1 = self.linear1(feature)
+        l2 = self.linear2(l1)
+        l3 = self.linear3(l2)
+        out = l3
+
+        return out
