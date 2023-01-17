@@ -7,7 +7,7 @@ from vid2bp.LSTMAutoEncoder.dataset.LSTMAutoEncoderDataset import LSTMAutoEncode
 
 
 def dataset_loader(batch_size: int = 8, label: str = 'ple',
-                   dataset_root_path: str = '/home/najy/PycharmProjects/vid2bp_datasets/'):
+                   dataset_root_path: str = '/home/najy/PycharmProjects/vid2bp_datasets/raw/'):
     train_shuffle: bool = True
     test_shuffle: bool = False
 
@@ -70,16 +70,16 @@ def dataset_loader(batch_size: int = 8, label: str = 'ple',
         test_abp = (test_abp - test_abp_mean) / test_abp_std
 
     if label == 'ple':
-        train_dataset = LSTMAutoEncoderDataset(train_ple, train_ple)
-        valid_dataset = LSTMAutoEncoderDataset(valid_ple, valid_ple)
-        test_dataset = LSTMAutoEncoderDataset(test_ple, test_ple)
+        train_dataset = LSTMAutoEncoderDataset(train_ple, train_ple, train_ple_mean, train_ple_std)
+        valid_dataset = LSTMAutoEncoderDataset(valid_ple, valid_ple, valid_ple_mean, valid_ple_std)
+        test_dataset = LSTMAutoEncoderDataset(test_ple, test_ple, test_ple_mean, test_ple_std)
     elif label == 'abp':
-        train_dataset = LSTMAutoEncoderDataset(train_ple, train_abp)
-        valid_dataset = LSTMAutoEncoderDataset(valid_ple, valid_abp)
-        test_dataset = LSTMAutoEncoderDataset(test_ple, test_abp)
+        train_dataset = LSTMAutoEncoderDataset(train_ple, train_abp, train_abp_mean, train_abp_std)
+        valid_dataset = LSTMAutoEncoderDataset(valid_ple, valid_abp, valid_abp_mean, valid_abp_std)
+        test_dataset = LSTMAutoEncoderDataset(test_ple, test_abp, test_abp_mean, test_abp_std)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=train_shuffle)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=test_shuffle)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=test_shuffle)
 
-    return [train_loader, valid_loader, test_loader], [train_ple_std, train_ple_mean, train_abp_std, train_abp_mean]
+    return [train_loader, valid_loader, test_loader], [train_ple_std, train_ple_mean]

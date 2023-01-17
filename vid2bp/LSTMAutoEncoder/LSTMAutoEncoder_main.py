@@ -22,7 +22,7 @@ def main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MS
     else:
         print('cuda is not available')
 
-    print('predict label: ', label)
+    print('predicting label: ', label)
 
     '''
     load model
@@ -34,7 +34,7 @@ def main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MS
     '''
     load dataset
     '''
-    data_loaders, meta_params = dataset_loader(channel=1, batch_size=batch_size, label=label)
+    data_loaders, meta_params = dataset_loader(batch_size=batch_size, label=label)
     '''
     set training parameters
     '''
@@ -53,7 +53,7 @@ def main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MS
     set wandb parameters
     '''
     wandb.init(project='torch_rPPG', entity="najubae777",
-               name="LSTMAutoEncoder_predict_ple_calc_with_norm_" + time.strftime("%Y%m%d_%H", time.localtime()))
+               name="LSTMAutoEncoder_predict_"+label + time.strftime("%Y%m%d_%H", time.localtime()))
     wandb.config = {
         "learning_rate": learning_rate,
         "epochs": epochs,
@@ -71,26 +71,26 @@ def main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MS
         val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", wandb_flag=wandb_flag)
         val_loss_list.append(val_loss)
 
-        plt.subplot(2, 1, 1)
-        plt.title("epoch " + str(epoch + 1) + " train loss")
-        plt.plot(np.arange(epoch + 1), train_loss_list, label="train")
-        plt.legend()
-        plt.subplot(2, 1, 2)
-        plt.title("epoch " + str(epoch + 1) + " valid loss")
-        plt.plot(np.arange(epoch + 1), val_loss_list, label="val")
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
+        # plt.subplot(2, 1, 1)
+        # plt.title("epoch " + str(epoch + 1) + " train loss")
+        # plt.plot(np.arange(epoch + 1), train_loss_list, label="train")
+        # plt.legend()
+        # plt.subplot(2, 1, 2)
+        # plt.title("epoch " + str(epoch + 1) + " valid loss")
+        # plt.plot(np.arange(epoch + 1), val_loss_list, label="val")
+        # plt.legend()
+        # plt.tight_layout()
+        # plt.show()
 
         if min_val_loss > val_loss and epoch > 10:
             min_val_loss = val_loss
             test_epochs.append(epoch)
             running_loss = test_fn(epoch, model, criterion, data_loaders[2], "Test")
             test_loss_list.append(running_loss)
-            plt.title("epoch " + str(epoch + 1) + " test loss")
-            plt.plot(test_epochs, test_loss_list, label="test")
-            plt.legend()
-            plt.show()
+            # plt.title("epoch " + str(epoch + 1) + " test loss")
+            # plt.plot(test_epochs, test_loss_list, label="test")
+            # plt.legend()
+            # plt.show()
             if min_test_loss > running_loss:
                 min_test_loss = running_loss
                 torch.save(model.state_dict(),
@@ -99,10 +99,10 @@ def main(label='abp', batch_size=1024, learning_rate=0.0025, epochs=50, loss='MS
             running_loss = test_fn(epoch, model, criterion, data_loaders[2], "Test")
             test_epochs.append(epoch)
             test_loss_list.append(running_loss)
-            plt.title("epoch " + str(epoch + 1) + " test loss")
-            plt.plot(test_epochs, test_loss_list, label="test")
-            plt.legend()
-            plt.show()
+            # plt.title("epoch " + str(epoch + 1) + " test loss")
+            # plt.plot(test_epochs, test_loss_list, label="test")
+            # plt.legend()
+            # plt.show()
             if min_test_loss > running_loss:
                 min_test_loss = running_loss
                 torch.save(model.state_dict(),
