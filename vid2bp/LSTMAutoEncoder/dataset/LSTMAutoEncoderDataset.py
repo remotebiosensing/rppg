@@ -15,8 +15,12 @@ class LSTMAutoEncoderDataset(Dataset):
         if torch.is_tensor(index):
             index = index.tolist()
 
-        input_signal = torch.tensor(self.input_signal[index], dtype=torch.float32)  # .transpose(1, 0)
-        target_signal = torch.tensor(self.target_signal[index], dtype=torch.float32)
+        input_signal = torch.tensor(self.input_signal[index], dtype=torch.float32).transpose(1, 0)
+
+        if self.target_signal.ndim < 3:
+            target_signal = torch.tensor(self.target_signal[index], dtype=torch.float32)
+        else:
+            target_signal = torch.tensor(self.target_signal[index], dtype=torch.float32).transpose(1, 0)
 
         if torch.cuda.is_available():
             input_signal = input_signal.to('cuda')

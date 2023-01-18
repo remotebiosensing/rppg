@@ -7,83 +7,71 @@ from loss import NegPearsonLoss
 
 
 def main(plot_flag=False,
-         weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/MultiResUNet1D_0.017421271360944957.pth',
-         dataset_root_path="/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/"):
-    batch_size = 2
-
+         weight_path='/home/najy/rppg/model_weights/LSTMAutoEncoder_predict_abp_49.pth',
+         dataset_root_path="/home/najy/PycharmProjects/vid2bp_datasets/raw/",
+         batch_size=2):
     # load weights
-    model = LSTMAutoEncoder().cuda()
+    model = LSTMAutoEncoder(hidden_size=128, input_size=3, output_size=1, label='abp').cuda()
     model.load_state_dict(torch.load(weight_path))
 
     # load data
     data_loaders, meta_params = dataset_loader(batch_size=batch_size, label='abp', dataset_root_path=dataset_root_path)
+    train_ple_std, train_ple_mean = meta_params
+
     criterion1 = torch.nn.L1Loss()
     criterion2 = torch.nn.MSELoss()
     criterion3 = NegPearsonLoss()
 
-    l1_loss_app = 0
-    mse_loss_app = 0
-    pearson_loss_app = 0
+    l1_loss = 0
+    mse_loss = 0
+    pearson_loss = 0
 
-    l1_loss_ref = 0
-    mse_loss_ref = 0
-    pearson_loss_ref = 0
-
-    train_ple_std, train_ple_mean, train_abp_std, train_abp_mean = meta_params
+    train_abp_std, train_abp_mean = data_loaders[0].dataset.get_mean_std()
+    test_abp_std, test_abp_mean = data_loaders[2].dataset.get_mean_std()
 
     for ppg, abp in tqdm(data_loaders[2]):
         app_pred = model(ppg)
         abp_signal_pred = app_pred * train_abp_std + train_abp_mean
-        abp_signal = abp * train_abp_std + train_abp_mean
+        abp_signal_target = abp * test_abp_std + test_abp_mean
 
-        l1_loss_app += criterion1(abp_signal_approximate, abp_signal).__float__()
-        mse_loss_app += criterion2(abp_signal_approximate, abp_signal).__float__()
-        pearson_loss_app += criterion3(abp_signal_approximate, abp_signal).__float__()
-
-        l1_loss_ref += criterion1(abp_signal_refined, abp_signal).__float__()
-        mse_loss_ref += criterion2(abp_signal_refined, abp_signal).__float__()
-        pearson_loss_ref += criterion3(abp_signal_refined, abp_signal).__float__()
+        l1_loss += criterion1(abp_signal_pred, abp_signal_target).__float__()
+        mse_loss += criterion2(abp_signal_pred, abp_signal_target).__float__()
+        pearson_loss += criterion3(abp_signal_pred, abp_signal_target).__float__()
 
         if plot_flag:
-            ppg_signal = ppg.detach().cpu().numpy()[0].squeeze() * (max_ppg - min_ppg) + min_ppg
-            abp_signal = abp_out.detach().cpu().numpy()[0].squeeze() * (max_abp - min_abp) + min_abp
-            abp_signal_approximate = abp_signal_approximate.detach().cpu().numpy()[0].squeeze()
-            abp_signal_refined = abp_signal_refined.detach().cpu().numpy()[0].squeeze()
+            ppg_signal = ppg.detach().cpu().numpy()[0].squeeze() * train_ple_std + train_ple_mean
+            abp_signal_target = abp_signal_target.detach().cpu().numpy()[0].squeeze()
+            abp_signal_pred = abp_signal_pred.detach().cpu().numpy()[0].squeeze()
 
+            plt.clf()
             plt.figure(figsize=(30, 15))
-            plt.subplot(5, 1, 1)
-            plt.plot(ppg_signal, label='PPG')
+            plt.subplot(4, 1, 1)
+            plt.plot(ppg_signal[:, 0], label='PPG')
             plt.title("PPG")
 
-            plt.subplot(5, 1, 2)
-            plt.plot(abp_signal, label='ABP', c='r')
+            plt.subplot(4, 1, 2)
+            plt.plot(abp_signal_target, label='ABP', c='r')
             plt.title("Target ABP")
 
-            plt.subplot(5, 1, 3)
-            plt.plot(abp_signal_approximate, label='ABP Approximate', c='g')
-            plt.title("ABP Approximate")
+            plt.subplot(4, 1, 3)
+            plt.plot(abp_signal_pred, label='ABP Approximate', c='g')
+            plt.title("Prediction ABP")
 
-            plt.subplot(5, 1, 4)
-            plt.plot(abp_signal_refined, label='ABP Refined', c='b')
-            plt.title("ABP Refinement")
-
-            plt.subplot(5, 1, 5)
-            plt.plot(abp_signal, label='ABP', color='r')
-            plt.plot(abp_signal_approximate, label='ABP Approximate', color='g')
-            plt.plot(abp_signal_refined, label='ABP Refined', color='b')
-            plt.title("ABP, ABP Approximate, ABP Refinement")
+            plt.subplot(4, 1, 4)
+            plt.plot(abp_signal_target, label='ABP', color='r')
+            plt.plot(abp_signal_pred, label='ABP Approximate', color='g')
+            plt.title("ABP Target, ABP Prediction")
             plt.legend()
             plt.tight_layout()
             plt.show()
 
-    print('L1 Loss App: ', l1_loss_app / len(data_loaders[2]))
-    print('MSE Loss App: ', mse_loss_app / len(data_loaders[2]))
-    print('Pearson Loss App: ', pearson_loss_app / len(data_loaders[2]))
-
-    print('L1 Loss Ref: ', l1_loss_ref / len(data_loaders[2]))
-    print('MSE Loss Ref: ', mse_loss_ref / len(data_loaders[2]))
-    print('Pearson Loss Ref: ', pearson_loss_ref / len(data_loaders[2]))
+    print('L1 Loss: ', l1_loss / len(data_loaders[2]))
+    print('MSE Loss: ', mse_loss / len(data_loaders[2]))
+    print('Pearson Loss: ', pearson_loss / len(data_loaders[2]))
 
 
 if __name__ == '__main__':
-    main(True)
+    main(plot_flag=False,
+         weight_path='/home/najy/rppg/model_weights/LSTMAutoEncoder_predict_abp_49.pth',
+         dataset_root_path="/home/najy/PycharmProjects/vid2bp_datasets/raw/",
+         batch_size=128)
