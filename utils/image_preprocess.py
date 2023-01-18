@@ -665,6 +665,7 @@ class FaceMeshDetector:
         return img, faces
 def avg(a, b):
     return [(int)((x + y) / 2) for x, y in zip(a, b)]
+
 def crop_mediapipe(detector, frame):
     _, dot = detector.findFaceMesh(frame)
     if len(dot) > 0:
@@ -678,7 +679,14 @@ def crop_mediapipe(detector, frame):
             w_2 = (int)((x_max - x_min) / 2)
         else:
             w_2 = (int)((y_max - y_min) / 2)
-        f = frame[y_center - w_2 - 10:y_center + w_2 + 10, x_center - w_2 - 10:x_center + w_2 + 10]
+
+        x_min = max(x_center - w_2 - 10, 0)
+        y_min = max(y_center - w_2 - 10, 0)
+        x_max = min(x_center + w_2 + 10, frame.shape[1])
+        y_max = min(y_center + w_2 + 10, frame.shape[0])
+
+        f = frame[y_min:y_max, x_min:x_max]
+        # f = frame[y_center - w_2 - 10:y_center + w_2 + 10, x_center - w_2 - 10:x_center + w_2 + 10]
         _, dot = detector.findFaceMesh(f)
         return f, dot[0]
 def make_specific_mask(bin_mask, dot):
