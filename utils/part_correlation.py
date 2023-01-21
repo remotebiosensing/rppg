@@ -49,7 +49,7 @@ def analyze_signal_combinations(methods, names, signal_dict):
             plt.plot(head_signal)
             plt.plot(tail_signal)
             plt.legend([head["name"], tail["name"]])
-            plt.title("{} - {} : {:.3f}".format(head["name"], tail["name"], correlation))
+            plt.title("{} {} - {} : {:.3f}".format(method, head["name"], tail["name"], correlation))
     plt.tight_layout()
     plt.show()
 
@@ -100,7 +100,7 @@ def main(data_root_path: str = "/media/hdd1/dy/dataset/TEST_UBFC_2023-01-19_0.hd
         for idx_key, name in enumerate(names[2:]):  # skip label, full_face
             video_dict[name] = {}
             # get face part video
-            video_dict[name]["video"] = full_face[:, y_p[idx_key]:y_p[idx_key + 1], x_p[idx_key]:x_p[idx_key + 1], :]
+            video_dict[name]["video"] = full_face[:, y_p[idx_key * 2]:y_p[idx_key * 2 + 1], x_p[idx_key * 2]:x_p[idx_key * 2 + 1], :]
             # get face part rgb mean
             video_dict[name]["rgb_mean"] = su.get_rgb_mean(video_dict[name]["video"])
 
@@ -176,7 +176,7 @@ if __name__ == '__main__':
     main(data_root_path='/media/hdd1/dy/dataset/TEST_UBFC_2023-01-19_0.hdf5',
          slicing=False,
          methods=["pos", "chrom"],
-         names=["label","full_face", "forehead", "left_cheek", "right_cheek"])
+         names=["label", "full_face", "forehead", "left_cheek", "right_cheek"])
 
 # import h5py
 # import numpy as np
