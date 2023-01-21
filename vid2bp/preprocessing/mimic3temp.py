@@ -19,7 +19,7 @@ import vid2bp.preprocessing.utils.math_module as mm
 import heartpy.peakdetection as hp_peak
 from heartpy.datautils import rolling_mean
 from heartpy.filtering import filter_signal
-import vid2bp.preprocessing.signal_cleaner as cleaner
+import vid2bp.preprocessing.signal_cleaner as sc
 
 '''
 signal_utils.py 로 이동해야 할 함수
@@ -48,7 +48,10 @@ def down_sampling(original_signal, fs: int = 125, target_fs: int = 60):
     #     return original_signal
     # else:
     #     return signal.resample(original_signal, int(len(original_signal) * target_fs / fs))
-    return signal.resample(original_signal, int(len(original_signal) * target_fs / fs))
+    # return signal.resample(original_signal, int(len(original_signal) * target_fs / fs))
+    # resampled_signal = np.array(original_signal)[15:735:int(fs / target_fs)]
+    # return np.array(original_signal)[15:735:int(fs / target_fs)]
+    return original_signal
 
 
 def signal_QC(ple_chunk, abp_chunk):
@@ -380,7 +383,7 @@ def bottom_detector(target_signal, rol_sec, fs=125):
 
 
 def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: list, size_total: list, chunk_size: int,
-                    sampling_rate: int, eliminated_total):
+                    sampling_rate: int, eliminated_total: list):
     """
 
     * if single record is shorter than 6 seconds, skip it to consider only long enough to have respiratory cycles
@@ -417,7 +420,7 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
 
         # eliminated_total[6] : total number of sliced signals
         if len(sliced_abp) > 0:
-            eliminated_total[-1] += len(sliced_abp)
+            eliminated_total[6] += len(sliced_abp)
 
         # check if sliced signal is valid
         # if not, remove the signal
@@ -444,10 +447,13 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                 normal_abp.append(target_abp)
                 normal_ple.append(target_ple)
 
+        # delete no more needed variables
+        # del sliced_abp, sliced_ple
+
         if len(normal_abp) == 0 or len(normal_ple) == 0:
             continue
         # denoise signal
-        lf = 0.5
+        # lf = 0.5
         hf = 8
         denoised_abp = [filter_signal(target_abp, cutoff=hf, sample_rate=fs, order=2, filtertype='lowpass') for
                         target_abp in normal_abp]
@@ -466,12 +472,12 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
         arranged_bottom_abp = []
         arranged_bottom_ple = []
         for target_signal, target_peak, target_bottom in zip(denoised_abp, peak_abp, bottom_abp):
-            arranged_peak = cleaner.SBP_DBP_arranger(target_signal, target_peak, target_bottom)
+            arranged_peak = sc.SBP_DBP_arranger(target_signal, target_peak, target_bottom)
             arranged_peak_abp.append(arranged_peak[0])
             arranged_bottom_abp.append(arranged_peak[1])
 
         for target_signal, target_peak, target_bottom in zip(denoised_ple, peak_ple, bottom_ple):
-            arranged_peak = cleaner.SBP_DBP_arranger(target_signal, target_peak, target_bottom)
+            arranged_peak = sc.SBP_DBP_arranger(target_signal, target_peak, target_bottom)
             arranged_peak_ple.append(arranged_peak[0])
             arranged_bottom_ple.append(arranged_peak[1])
 
@@ -479,6 +485,9 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
         peak_ple = arranged_peak_ple
         bottom_abp = arranged_bottom_abp
         bottom_ple = arranged_bottom_ple
+
+        # delete no more needed variables
+        del arranged_peak_abp, arranged_peak_ple, arranged_bottom_abp, arranged_bottom_ple
 
         # calculate correlation
         # if correlation is less than threshold, remove the signal
@@ -508,8 +517,8 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                                                                                                            threshold)
             if match_flag and len(matched_abp_peaks) > 0 and len(matched_abp_bottoms) > 0 \
                     and abs(len(matched_abp_peaks) - len(matched_abp_bottoms)) < 2:
-                ple_total.append(mm.channel_cat(down_sampling(matched_raw_ple, target_fs=sampling_rate)))
-                abp_total.append(down_sampling(matched_raw_abp, target_fs=sampling_rate))
+                ple_total.append(mm.channel_cat(matched_raw_ple))
+                abp_total.append(matched_raw_abp[15:735:2])
                 # ple_total.append(np.array(matched_raw_ple))
                 # abp_total.append(np.array(matched_raw_abp))
                 dbp_mean = np.mean(matched_raw_abp[matched_abp_bottoms])
@@ -523,7 +532,7 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                 continue
             if chunk_per_segment == 10:
                 # eliminated_total[4] : total number of signals with excess number of signals
-                eliminated_total[4] += len(normal_abp) - 10
+                eliminated_total[4] += len(sliced_abp) - 10
                 break
 
         # # check segment length if it is longer than 6 seconds
@@ -607,11 +616,11 @@ def multi_processing(model_name, dataset: str, total_segments):
     light0 = sorted_by_fsize[:int(len(sorted_by_fsize) * 0.25)]
     light1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.25):int(len(sorted_by_fsize) * 0.4)]
     light2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.4):int(len(sorted_by_fsize) * 0.55)]
-    light3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.55):int(len(sorted_by_fsize) * 0.7)]
+    light3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.55):int(len(sorted_by_fsize) * 0.7)]  # htop best
     heavy1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.85)]
     heavy2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)]
     # heavy3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.95):]
-    # split_by_size = [light2, heavy1, heavy2]
+    # split_by_size = [light3]
     split_by_size = [light0, light1, light2, light3, heavy1, heavy2]
     print('reading_total_data...')
     # ple_tot, abp_tot, size_tot = [], [], []
@@ -623,6 +632,7 @@ def multi_processing(model_name, dataset: str, total_segments):
     ple_tot = np.zeros((1, 3, 360))
     abp_tot = np.zeros((1, 360))
     size_tot = np.zeros((1, 2))
+    eliminated_tot = np.zeros((7))
     for s in split_by_size:
         segments_per_process = np.array_split(s, process_num)
         print(f'number of segments per process: {len(segments_per_process[0])}')
@@ -632,7 +642,7 @@ def multi_processing(model_name, dataset: str, total_segments):
             abp_total = manager.list()
             size_total = manager.list()
             eliminated_total = manager.list()
-            eliminated_total.extend(np.zeros(7))
+            eliminated_total.extend([0, 0, 0, 0, 0, 0, 0])
             workers = [mp.Process(target=read_total_data,
                                   args=(i, segments_per_process[i],
                                         ple_total, abp_total, size_total,
@@ -650,6 +660,7 @@ def multi_processing(model_name, dataset: str, total_segments):
                 ple_tot = np.concatenate((ple_tot, np.array(ple_total)), axis=0)
                 abp_tot = np.concatenate((abp_tot, np.array(abp_total)), axis=0)
                 size_tot = np.concatenate((size_tot, np.array(size_total)), axis=0)
+                eliminated_tot = np.array(eliminated_total)
                 manager.shutdown()
 
             except:
@@ -666,33 +677,38 @@ def multi_processing(model_name, dataset: str, total_segments):
             # dset['abp'] = abp_total
             # dset['size'] = size_total
             # dset.close()
+    eliminated_percent = np.zeros(7)
+    for i in range(7):
+        eliminated_percent[i] = eliminated_tot[i] / eliminated_tot[6] * 100
 
+    print('Eliminated nan signals: {} ({}%)'.format(eliminated_tot[0], eliminated_percent[0]))
+    print('Eliminated flat signals: {} ({}%)'.format(eliminated_tot[1], eliminated_percent[1]))
+    print('Eliminated signals with no peaks: {} ({}%)'.format(eliminated_tot[2], eliminated_percent[2]))
+    print('Eliminated low correlation signals: {} ({}%)'.format(eliminated_tot[3], eliminated_percent[3]))
+    print('Eliminated excess chunks: {} ({}%)'.format(eliminated_tot[4], eliminated_percent[4]))
+    print('----------------------------------------------')
+    print('Interpolated signals: {} ({}%)'.format(eliminated_tot[5], eliminated_percent[5]))
+    print('Total sliced signals: {}'.format(eliminated_tot[6]))
+    print('Total Eliminated signals: {} ({})%'.format(sum(eliminated_tot[:5]),
+                                                      sum(eliminated_tot[:5]) / eliminated_tot[6] * 100))
+    print('----------------------------------------------')
+    print('Survived total length: {} ({}%)'.format(len(ple_tot), len(ple_tot) / eliminated_tot[6] * 100))
+    print(np.shape(ple_tot))
+    print(np.shape(abp_tot))
+    print(np.shape(size_tot))
+
+    eliminated_tot = np.hstack((eliminated_tot, eliminated_percent))
+    # print(np.shape(ple_total[0]))
+    # print(ple_tot[1][:100])
+    # print(abp_tot[1][:100])
+    # print(size_tot[1])
     dset = h5py.File(dset_path + str(dataset) + '.hdf5', 'w')
     # dset['ple'] = np.squeeze(np.array(ple_tot))
     dset['ple'] = ple_tot[1:]
     dset['abp'] = abp_tot[1:]
     dset['size'] = size_tot[1:]
-    dset['eliminated'] = np.array(eliminated_total)
+    dset['eliminated'] = eliminated_tot
     dset.close()
-
-    print('Eliminated nan signals: {} ({})'.format(eliminated_total[0], eliminated_total[0]/sum(eliminated_total[:5])*100))
-    print('Eliminated flat signals: {} ({})'.format(eliminated_total[1], eliminated_total[1]/sum(eliminated_total[:5])*100))
-    print('Eliminated signals with no peaks: {} ({})'.format(eliminated_total[2], eliminated_total[2]/sum(eliminated_total[:5])*100))
-    print('Eliminated low correlation signals: {} ({})'.format(eliminated_total[3], eliminated_total[3]/sum(eliminated_total[:5])*100))
-    print('Eliminated excess chunks: {} ({})'.format(eliminated_total[4], eliminated_total[4]/sum(eliminated_total[:5])*100))
-    print('----------------------------------------------')
-    print('Interpolated signals: {} ({})'.format(eliminated_total[5], eliminated_total[5]/sum(eliminated_total[:5])*100))
-    print('Total sliced signals: {}'.format(eliminated_total[6]))
-    print('Total Eliminated signals: {} ({})'.format(sum(eliminated_total[:5]), sum(eliminated_total[:5])/eliminated_total[6]*100))
-    print('----------------------------------------------')
-    print('Survived total length: {} ({})'.format(len(ple_tot), len(ple_tot) / eliminated_total[-1] * 100))
-    print(np.shape(ple_tot))
-    print(np.shape(abp_tot))
-    print(np.shape(size_tot))
-    # print(np.shape(ple_total[0]))
-    # print(ple_tot[1][:100])
-    # print(abp_tot[1][:100])
-    # print(size_tot[1])
 
 
 def dataset_split(model_name: str, data_path: str):

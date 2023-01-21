@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
+import torch.cuda as cuda
 import torch.backends.cudnn as cudnn
 
 from dataset_loader import dataset_loader
@@ -15,31 +16,33 @@ from train import train
 from validation import validation
 from test import test
 from pygame import mixer
+from vid2bp import stage2_main
 
 mixer.init()
 sound = mixer.Sound('bell-ringing-01c.wav')
 
-torch.autograd.set_detect_anomaly(True)
+''' warning: do not turn on set_detect_anomaly(True) when training, only for debugging '''
+# torch.autograd.set_detect_anomaly(True)
 
 with open('config/parameter.json') as f:
     json_data = json.load(f)
-    param = json_data.get("parameters")
+    # param = json_data.get("parameters")
     channels = json_data.get("parameters").get("in_channels")
-    out_channels = json_data.get("parameters").get("out_channels")
-    hyper_param = json_data.get("hyper_parameters")
-    wb = json_data.get("wandb")
+    # out_channels = json_data.get("parameters").get("out_channels")
+    # hyper_param = json_data.get("hyper_parameters")
+    # wb = json_data.get("wandb")
     root_path = json_data.get("parameters").get("root_path")  # mimic uci containing folder
     data_path = json_data.get("parameters").get("dataset_path")  # raw mimic uci selection
-    sampling_rate = json_data.get("parameters").get("sampling_rate")
+    # sampling_rate = json_data.get("parameters").get("sampling_rate")
     models = json_data.get("parameters").get("models")
-    cases = json_data.get("parameters").get("cases")
+    # cases = json_data.get("parameters").get("cases")
 
 print(sys.version)
 
 # GPU Setting
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print('----- GPU INFO -----\nDevice:', DEVICE)  # 출력결과: cuda
+print('----- GPU INFO -----\nDevice:', DEVICE)
 print('Count of using GPUs:', torch.cuda.device_count())
 print('Current cuda device:', torch.cuda.current_device())
 gpu_ids = list(map(str, list(range(torch.cuda.device_count()))))
@@ -49,38 +52,41 @@ for gpu_id in gpu_ids:
 print('Total GPU Memory :', total_gpu_memory, '\n--------------------')
 
 if torch.cuda.is_available():
-    torch.cuda.manual_seed_all(125)
+    random_seed = 125
+    np.random.seed(random_seed)
+    torch.manual_seed(random_seed)
+    cuda.manual_seed(random_seed)
+    cuda.allow_tf32 = True
+    # torch.cuda.manual_seed_all(random_seed) # if use multi-GPU
     cudnn.enabled = True
+    cudnn.deterministic = True  # turn on for reproducibility ( if turned on, slow down training )
     cudnn.benchmark = False
-    cudnn.deterministic = True
+    cudnn.allow_tf32 = True
 else:
-    torch.manual_seed(125)
     print("cuda not available")
 
 
 def main(model_name, dataset_name, in_channel, epochs, batch_size, scaler, wandb_on):
     # sound.play()
-
-    # samp_rate = sampling_rate["60"]
     channel = channels[in_channel]
-    # read_path = root_path + data_path[dataset_name][1]
     # TODO use hdf5 file for training Done
 
     """wandb setup"""
-    # wandb_flag = True
     img_flag = False
-    # wandb.init(project="VBPNet", entity="paperchae")
 
     """model setup"""
-    model, loss, optimizer, scheduler = get_model(model_name, device=DEVICE)
+    model, loss, optimizer, scheduler = get_model(model_name, device=DEVICE, stage=1)
+    # model_2, loss_2, optimizer_2, scheduler_2 = get_model(model_name, device=DEVICE, stage=2)
 
     """dataset setup"""
-    dataset = dataset_loader(dataset_name=dataset_name, channel=channel[0], batch_size=batch_size)
+    dataset = dataset_loader(dataset_name=dataset_name, channel=channel[0], batch_size=batch_size, device=DEVICE)
     train_cost_arr = []
     val_cost_arr = []
     test_cost_arr = []
     save_point = []
 
+    print('----- model info -----')
+    print(model)
     print("start training")
     for epoch in range(epochs):
         if is_learning(val_cost_arr):
@@ -95,10 +101,16 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, scaler, wandb
                 img_flag = True
             if epoch != 0:
                 """ save model if train cost and val cost are lower than mean of previous epochs """
-                if train_cost_arr[-1] < train_cost_arr[-2] and val_cost_arr[-1] < val_cost_arr[-2]:
+                # if train_cost_arr[-1] < train_cost_arr[-2] and val_cost_arr[-1] < val_cost_arr[-2]:
+                if train_cost_arr[-1] < np.min(train_cost_arr[:-1]) and val_cost_arr[-1] < np.min(val_cost_arr[:-1]):
                     current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                     save_point.append(current_time)
-                    model_save(train_cost_arr, val_cost_arr, model, save_point, model_name, dataset_name)
+                    best_model_path = model_save(train_cost_arr, val_cost_arr, model, save_point, model_name,
+                                                 dataset_name)
+                else:
+                    print("model not saved")
+                    print('min train cost :', np.min(train_cost_arr[:-1]), 'min val cost :', np.min(val_cost_arr[:-1]))
+                    print('current train cost :', train_cost_arr[-1], 'current val cost :', val_cost_arr[-1])
             if wandb_on:
                 ''' wandb logging '''
                 if epoch == 0:
@@ -113,8 +125,9 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, scaler, wandb
                     plot_img.close()
         else:
             print("model is not learning, stop training..")
+            print("best model path : {}".format(best_model_path))
             break
-    """ plot Loss graph """
+    """ plot stage 1 Loss graph """
     t = np.array(range(len(train_cost_arr)))
     plt.title('Total epochs : {}'.format(len(t)))
     plt.plot(t, train_cost_arr, 'g-', label='Train Loss')
@@ -125,10 +138,13 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, scaler, wandb
     plt.legend()
     plt.show()
     sound.play()
+    print("training stage 1 is done")
 
-    print("training is done")
+    '''stage 2'''
+    # stage2_main.main2(best_model_path, model, model_2,
+    #                   loss_2, optimizer_2, scheduler_2, epochs, dataset, wandb_on, model_name, dataset_name)
 
 
 if __name__ == '__main__':
     main(model_name='BPNet', dataset_name='mimiciii', in_channel='second',
-         epochs=200, batch_size=1024, scaler=False, wandb_on=True)
+         epochs=200, batch_size=4096, scaler=False, wandb_on=True)
