@@ -243,8 +243,9 @@ def PhysNet_preprocess_Video(path, **kwargs):
 
                     frame = crop_face_with_face_mesh(frame,keypoints)
                     frame = get_forward_face(frame, keypoints)
-
+                    frame = cv2.resize(frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
                     results = face_mesh.process(frame)
+
                     keypoints = get_face_mesh_keypoints(results, frame.shape)
 
                     if type(keypoints) != type(None):
@@ -281,7 +282,8 @@ def PhysNet_preprocess_Video(path, **kwargs):
                 else:
                     crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
-                crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
+                if face_detect_algorithm !=5:
+                    crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
                 crop_frame = generate_Floatimage(crop_frame)
 
                 raw_video[j] = crop_frame

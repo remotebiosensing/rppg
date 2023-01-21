@@ -18,6 +18,7 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train
 
             if ~torch.isfinite(loss):
                 continue
+            loss.requires_grad_(True)
             loss.backward()
             running_loss += loss.item()
             optimizer.step()

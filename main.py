@@ -8,6 +8,9 @@ import torch
 import wandb
 from torch.optim import lr_scheduler
 
+from ignite.handlers.param_scheduler import create_lr_scheduler_with_warmup
+
+import optim
 from dataset.dataset_loader import dataset_loader, split_data_loader
 from log import log_info_time, time_checker
 from loss import loss_fn
@@ -76,27 +79,23 @@ Setting Optimizer
 # scheduler = [lr_scheduler.ExponentialLR(optim,gamma=0.99) for optim in optimizer]
 
 
-opt = []
-sch = []
-idx = 0
-for ver in range(10):
-    model = get_ver_model(ver).cuda()
-    if params.wandb_flag:
-        wandb.init(project=params.wandb_project_name, entity=params.wandb_entity,
-                   name="APNET_" + str(ver) + "_" + params.loss_fn)
 
-    opt.append(optimizer(model.parameters(), params.lr, params.optimizer))
-    # optimizer = optimizer(model.parameters(), hyper_params["learning_rate"], hyper_params["optimizer"])
-    # scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
-    sch.append(lr_scheduler.ExponentialLR(opt[idx], gamma=0.99))
 
-    if params.wandb_flag:
-        wandb.config = {
-            "learning_rate": params.lr,
-            "epochs": params.epoch,
-            "batch_size": params.train_batch_size
-        }
+opt = optimizer(model.parameters(), params.lr, params.optimizer)
+sch = create_lr_scheduler_with_warmup(lr_scheduler.ExponentialLR(opt,0.998),
+                                      warmup_start_value=params.warmup_initial_lr,
+                                      warmup_duration=params.warmup_iteration,
+                                      warmup_end_value=params.initial_lr)
+#linear scheduler with warmup
 
+if params.wandb_flag:
+    wandb.init(project=params.wandb_project_name, entity=params.wandb_entity,
+               name=datetime.datetime.now().strftime('%m-%d%H:%M:%S'))
+    wandb.config = {
+        "learning_rate": params.lr,
+        "epochs": params.epoch,
+        "batch_size": params.batch_size
+    }
     '''
     Model Training Step
     '''
@@ -105,7 +104,8 @@ for ver in range(10):
     # dataloaders
 
 for epoch in range(params.epoch):
-    train_fn(epoch, model, optimizer, criterion, data_loaders[0], "Train", params.wandb_flag)
+    sch(None)
+    train_fn(epoch, model, opt, criterion, data_loaders[0], "Train", params.wandb_flag)
     if data_loaders.__len__() == 3:
         val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", params.wandb_flag, params.save_img_flag)
     if min_val_loss > val_loss:
@@ -118,5 +118,5 @@ for epoch in range(params.epoch):
                        params.model_root_path + params.dataset_name + "_" + params.model + "_" + params.loss_fn)
     # if epoch % 10 == 0:
 
-    if params.wandb_flag:
-        wandb.finish()
+if params.wandb_flag:
+    wandb.finish()

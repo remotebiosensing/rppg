@@ -77,6 +77,8 @@ def loss_fn():
         return stftLoss()
     elif params.loss_fn == "pearson":
         return PearsonLoss()
+    elif params.loss_fn == "BVPVelocityLoss":
+        return BVPVelocityLoss()
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
@@ -275,5 +277,13 @@ class PearsonLoss(nn.Module):
     def forward(self, predictions, targets):
         return Pearson_Loss(predictions, targets)
 
+class BVPVelocityLoss(nn.Module):
+    def __init__(self):
+        super(BVPVelocityLoss,self).__init__()
+
+    def forward(self, predictions, targets):
+        pearson = [neg_Pearson_Loss(prediction,targets) for prediction in predictions ]
+
+        return pearson[0]#torch.mean(torch.tensor(pearson))
 
 

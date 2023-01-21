@@ -12,15 +12,15 @@ class params():
     __PREPROCESSING__ = 0  # 1: preprocessing, 0: not preprocessing
     __MODEL_SUMMARY__ = 0  # 1: print model summary, 0: not print model summary
 
-    model = "PhysNet"
-    model_list = ["DeepPhys", "DeepPhys_DA", "PhysNet", "PhysNet_LSTM", "PPNet", "GCN", "AxisNet", "RhythmNet"]
+    model = "TEST"
+    model_list = ["DeepPhys", "DeepPhys_DA", "PhysNet", "PhysNet_LSTM", "PPNet", "GCN", "AxisNet", "RhythmNet","TEST"]
 
     # preprocessing parameters
     # dataset
     dataset_name = "UBFC"
     # UBFC / PURE / V4V / VIPL_HR
     save_root_path = "/media/hdd1/dy/dataset/"
-    dataset_date = "2023-01-12"
+    dataset_date = "2023-01-20"
     data_root_path = "/media/hdd1/"
     model_root_path = "/media/hdd1/dy/model/"
     train_ratio = 0.8
@@ -36,14 +36,14 @@ class params():
     val_ratio = 0.1
     test_ratio = 0.1
 
-    batch_size = 32
+    batch_size = 128
     train_shuffle = 1
 
     test_shuffle = 1
 
     img_size = 128
 
-    loss_fn = "fft"
+    loss_fn = "BVPVelocityLoss"
     '''
     "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
                    "cross_entropy","ctc","bce_with_logits","gaussian_nll","hinge_embedding",
@@ -58,18 +58,20 @@ class params():
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam",
                     "PPNET : adam"
     '''
-    lr = 0.001
+    lr = 1e-3
+    warmup_iteration = 10
+    initial_lr = 1e-8
+    warmup_initial_lr = 1e-5
     '''
    "DeepPhys : lr = 1",
     "PhysNet : lr = 0.001",
     "PPNet : lr = 0.001",
     "GCN : lr = 0.003"
     '''
-    epoch = 500
+    epoch = 1000
 
     #wandb params
-    wandb_project_name = "torch_rPPG"
-    wandb_entity = "najubae777"
-
+    wandb_project_name = "torch_2023ICCV"
+    wandb_entity = "daeyeolkim"
 
 params = params()

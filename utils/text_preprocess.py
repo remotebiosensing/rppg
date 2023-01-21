@@ -20,7 +20,7 @@ def label_preprocess(model_name, path,**kwargs):
         return Deepphys_preprocess_Label(path, **kwargs)
     elif model_name == 'GCN':
         return GCN_preprocess_Label(path, **kwargs)
-    elif model_name == ['PhysNet','TEST']:
+    elif model_name in ['PhysNet','TEST']:
         return PhysNet_preprocess_Label(path, **kwargs)
     elif model_name == 'Axis':
         return Axis_preprocess_Label(path, **kwargs)
@@ -262,27 +262,14 @@ def PhysNet_preprocess_Label(path, **kwargs):
         f_read = f.read().split('\n')
         label = ' '.join(f_read[0].split()).split()
         label_hr = ' '.join(f_read[1].split()).split()
-
-        new_label = list(map(float, label))
-        new_hr = list(map(float, label_hr))
-        new_label = np.array(label).astype('float64')
+        label = list(map(float, label))
+        label = np.array(label).astype('float32')
+        label_hr = list(map(float, label_hr))
+        label_hr = np.array(label_hr).astype('int')
         f.close()
 
-    if (len(new_label) - 22) < 0:
-        print("negative" + path)
 
-    split_raw_label = np.zeros(((len(new_label)) // 32, 32))
-    split_hr_label = np.zeros(((len(new_label)) // 32))
-
-    index = 0
-    length = (len(new_label))//32
-    # print( str(len(new_label)) + "       "+ str((len(new_label) -22) //10))
-    for i in range(length):
-        split_raw_label[i] = new_label[index:index + 32]
-        # split_hr_label[i] = np.mean(new_hr[index:index + 32])
-        index = index + 32
-
-    return split_raw_label, split_hr_label
+    return label, label_hr
 def GCN_preprocess_Label(path, **kwargs):
     '''
     :param path: label file path

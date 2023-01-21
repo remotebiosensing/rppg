@@ -9,7 +9,7 @@ from nets.models.PPNet import PPNet
 from nets.models.PhysNet import PhysNet
 from nets.models.PhysNet import PhysNet_2DCNN_LSTM
 from nets.models.Seq_GCN import Seq_GCN
-from nets.models.TEST import TEST,TEST2
+from nets.models.TEST import TEST,TEST2,APNET
 from nets.models.RhythmNet import RhythmNet
 from nets.models.ETArPPGNet import ETArPPGNet
 from nets.models.sub_models.VitaMon import Vitamon
@@ -55,9 +55,11 @@ def get_model():
         model = ETArPPGNet()
     elif params.model == "Vitamon":
         model =  Vitamon()
+    elif params.model =="TEST":
+        model = APNET()
     else:
-        log_warning("use implemented model")
-        raise NotImplementedError("implement a custom model(%s) in /nets/models/" % model_name)
+        log_warning("pls implemented model")
+        raise NotImplementedError("implement a custom model(%s) in /nets/models/" % params.model)
 
     if params.__MODEL_SUMMARY__:
         summary(model)
@@ -65,7 +67,7 @@ def get_model():
     if params.__TIME__:
         end_time = time.time()
         log_info_time("model load time : ", end_time - start_time)
-    return model
+    return model.cuda()
 
 
 def is_model_support():

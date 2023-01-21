@@ -12,6 +12,7 @@ from dataset.PhysNetDataset import PhysNetDataset
 from dataset.RhythmNetDataset import RhythmNetDataset
 from dataset.ETArPPGNetDataset import ETArPPGNetDataset
 from dataset.VitamonDataset import VitamonDataset
+from dataset.TestDataset import TestDataset
 
 from params import params
 
@@ -42,7 +43,7 @@ def dataset_loader():
     cnt = 0
     flag = True
     name = params.model
-    if params.model == "GCN" or params.model == "GCN_TEST":
+    if params.model in ["GCN","GCN_TEST"]:
         name = "PhysNet"
 
     if params.model in ["DeepPhys", "MTTS"]:
@@ -53,10 +54,11 @@ def dataset_loader():
         video_data = []
         label_data = []
         bpm_data = []
+        keypoint_data = []
     elif params.model in ["TEST"]:
         video_data = []
         keypoint_data = []
-        target_data = []
+        label_data = []
     elif params.model in ["PPNet"]:
         ppg = []
         sbp = []
@@ -99,9 +101,9 @@ def dataset_loader():
                 motion_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
                 target_data.extend(file[key]['preprocessed_label'])
             elif params.model in ["TEST"]:
-                video_data.extend(file[key]['raw_video'])
-                keypoint_data.extend(file[key]['keypoint'])
-                target_data.extend(file[key]['preprocessed_label'])
+                video_data.extend(file[key]['raw_video'][:len(file[key]['raw_video'])//params.time_length*params.time_length])
+                keypoint_data.extend(file[key]['keypoint'][:len(file[key]['keypoint'])//params.time_length*params.time_length])
+                label_data.extend(file[key]['preprocessed_label'][:len(file[key]['preprocessed_label'])//params.time_length*params.time_length])
             elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
                 if len(file[key]['preprocessed_video']) == len(file[key]['preprocessed_label']):
                     video_data.extend(file[key]['preprocessed_video'])
@@ -129,11 +131,17 @@ def dataset_loader():
                 video_data.extend(file[key]['preprocessed_video'])
                 label_data.extend(file[key]['preprocessed_label'])
         file.close()
+        break
 
     if params.model in ["DeepPhys", "MTTS"]:
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
                                   target=np.asarray(target_data))
+    elif params.model in ["TEST"]:
+        dataset = TestDataset(video_data=np.asarray(video_data),
+                              keypoint_data=np.asarray(keypoint_data),
+                              label_data=np.asarray(label_data),
+                              target_length=params.time_length)
 
     elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
         if params.model in ["GCN"]:

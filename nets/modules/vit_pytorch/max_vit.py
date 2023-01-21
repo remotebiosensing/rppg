@@ -181,7 +181,8 @@ class Attention(nn.Module):
         self.rel_pos_bias = nn.Embedding((2 * window_size - 1) ** 2, self.heads)
 
         pos = torch.arange(window_size)
-        grid = torch.stack(torch.meshgrid(pos, pos, indexing = 'ij'))
+        # grid = torch.stack(torch.meshgrid(pos, pos, indexing = 'ij'))
+        grid = torch.stack(torch.meshgrid(pos,pos))
         grid = rearrange(grid, 'c i j -> (i j) c')
         rel_pos = rearrange(grid, 'i ... -> i 1 ...') - rearrange(grid, 'j ... -> 1 j ...')
         rel_pos += window_size - 1
