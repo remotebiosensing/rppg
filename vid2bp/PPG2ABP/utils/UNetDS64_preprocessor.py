@@ -147,7 +147,7 @@ def preprocessing(original_data_path, save_path, length, mode):
     # multiprocessing
     num_cpu = multiprocessing.cpu_count()
     loop = int(len(data_file['abp']) / num_cpu)
-    for i in range(num_cpu):
+    for i in tqdm(range(num_cpu)):
         if i == num_cpu - 1:
             p = multiprocessing.Process(target=preprocess_approximate_Dataset,
                                         args=(data_file['abp'][i * loop:],
@@ -194,7 +194,7 @@ def preprocess_approximate_Dataset(ABP, PLE, length, return_dict, max_abp, min_a
 
 
 if __name__ == '__main__':
-    original_data_path = "/home/najy/PycharmProjects/vid2bp_datasets/vid2bp_additional_preprocessed/"
+    original_data_path = "/home/najy/PycharmProjects/vid2bp_datasets/raw/"
     save_path = "/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/"
 
     for mode in ['train', 'val', 'test']:

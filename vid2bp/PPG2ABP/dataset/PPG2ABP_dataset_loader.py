@@ -7,11 +7,11 @@ from vid2bp.PPG2ABP.dataset.UNetDS64Dataset import PPG2ABPDataset
 from vid2bp.PPG2ABP.dataset.MultiResUNet1DDataset import MultiResUNet1DDataset
 
 
-def dataset_loader(dataset_name: str = 'mimiciii', channel: int = 1, batch_size: int = 8):
+def dataset_loader(dataset_name: str = 'mimiciii', channel: int = 1, batch_size: int = 8,
+                   dataset_root_path: str = "/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/"):
     train_shuffle: bool = True
     test_shuffle: bool = False
 
-    dataset_root_path: str = "/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/"
     train_file_path = dataset_root_path + "train.hdf5"
     valid_file_path = dataset_root_path + "val.hdf5"
     test_file_path = dataset_root_path + "test.hdf5"

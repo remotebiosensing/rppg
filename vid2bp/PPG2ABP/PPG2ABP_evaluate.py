@@ -7,18 +7,21 @@ from vid2bp.PPG2ABP.dataset.PPG2ABP_dataset_loader import dataset_loader
 from loss import NegPearsonLoss
 
 
-def main(plot_flag=False):
-    batch_size = 2
+def main(plot_flag=False,
+         app_model_weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_best.pth',
+         ref_model_weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/MultiResUNet1D_best.pth',
+         dataset_root_path="/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/"):
+    batch_size = 128
     length = 352
 
     # load weights
     app_model = UNetDS64(length=length).cuda()
-    app_model.load_state_dict(torch.load('/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_0.33400269970297813.pth'))
+    app_model.load_state_dict(torch.load(app_model_weight_path))
     ref_model = MultiResUNet1D().cuda()
-    ref_model.load_state_dict(torch.load('/home/najy/PycharmProjects/PPG2ABP_weights/MultiResUNet1D_0.017421271360944957.pth'))
+    ref_model.load_state_dict(torch.load(ref_model_weight_path))
 
     # load data
-    data_loaders = dataset_loader(channel=1, batch_size=batch_size)
+    data_loaders = dataset_loader(channel=1, batch_size=batch_size, dataset_root_path=dataset_root_path)
     criterion1 = torch.nn.L1Loss()
     criterion2 = torch.nn.MSELoss()
     criterion3 = NegPearsonLoss()
@@ -32,12 +35,13 @@ def main(plot_flag=False):
     pearson_loss_ref = 0
 
     max_abp, min_abp, max_ppg, min_ppg = data_loaders[0].dataset.min_max_data()
+    test_max_abp, test_min_abp, test_max_ppg, test_min_ppg = data_loaders[2].dataset.min_max_data()
 
-    for ppg, abp_out, abp_level1, abp_level2, abp_level3, abp_level4 in tqdm(data_loaders[2]):
+    for ppg, abp_out, _, _, _, _ in tqdm(data_loaders[2]):
         app_pred = app_model(ppg)[0]
         abp_signal_approximate = app_pred.squeeze() * (max_abp - min_abp) + min_abp
         abp_signal_refined = ref_model(app_pred).squeeze() * (max_abp - min_abp) + min_abp
-        abp_signal = abp_out.squeeze() * (max_abp - min_abp) + min_abp
+        abp_signal = abp_out.squeeze() * (test_max_abp - test_min_abp) + test_min_abp
 
         l1_loss_app += criterion1(abp_signal_approximate, abp_signal).__float__()
         mse_loss_app += criterion2(abp_signal_approximate, abp_signal).__float__()
@@ -87,5 +91,9 @@ def main(plot_flag=False):
     print('MSE Loss Ref: ', mse_loss_ref / len(data_loaders[2]))
     print('Pearson Loss Ref: ', pearson_loss_ref / len(data_loaders[2]))
 
+
 if __name__ == '__main__':
-    main(True)
+    main(plot_flag=False,
+         app_model_weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_best.pth',
+         ref_model_weight_path='/home/najy/PycharmProjects/PPG2ABP_weights/MultiResUNet1D_best.pth',
+         dataset_root_path="/home/najy/PycharmProjects/PPG2ABP_datasets/preprocessed/")

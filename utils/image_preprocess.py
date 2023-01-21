@@ -1,5 +1,5 @@
 import os
-
+import math
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -10,12 +10,14 @@ from sklearn import preprocessing
 from tqdm import tqdm
 import json
 from skimage.transform import PiecewiseAffineTransform, warp
+import OpenGL.GL as gl
+
 
 
 def video_preprocess(model_name, path,**kwargs):
     if model_name == 'Deepphys':
         return Deepphys_preprocess_Video(path, **kwargs)
-    elif model_name in 'PhysNet':
+    elif model_name in ['PhysNet','TEST']:
         return PhysNet_preprocess_Video(path, **kwargs)
     elif model_name == 'RTNet':
         return RTNet_preprocess_Video(path, **kwargs)
@@ -175,6 +177,7 @@ def PhysNet_preprocess_Video(path, **kwargs):
 
 
         raw_video = np.empty((frame_total, img_size, img_size, 3))
+        point_list = np.empty((frame_total, 12))
 
 
 
@@ -192,6 +195,16 @@ def PhysNet_preprocess_Video(path, **kwargs):
                 refine_landmarks=True,
                 max_num_faces=1,
                 min_detection_confidence=0.5)
+        elif face_detect_algorithm == 5:
+            face_mesh = mp.solutions.face_mesh.FaceMesh(
+                static_image_mode=True,
+                max_num_faces=1,
+                refine_landmarks=True,
+                min_detection_confidence=0.5)
+
+            mp_face_mesh = mp.solutions.face_mesh
+
+
 
 
         cap = cv2.VideoCapture(path)
@@ -219,7 +232,52 @@ def PhysNet_preprocess_Video(path, **kwargs):
                 elif face_detect_algorithm == 4:
                     results = face_mesh.process(frame)
                     crop_frame = faceUnwrapping(frame, results,(img_size, img_size),uv_map,flip_flag)
+                elif face_detect_algorithm == 5:
+                    results = face_mesh.process(frame)
 
+                    landmarks = results.multi_face_landmarks
+                    if landmarks is None:
+                        return False, None
+
+                    keypoints = get_face_mesh_keypoints(results, frame.shape)
+
+                    frame = crop_face_with_face_mesh(frame,keypoints)
+                    frame = get_forward_face(frame, keypoints)
+
+                    results = face_mesh.process(frame)
+                    keypoints = get_face_mesh_keypoints(results, frame.shape)
+
+                    if type(keypoints) != type(None):
+
+                        # (69x,151y) (299x,151y)
+                        #(69x,65y) (299x,295y)
+                        # draw rectangle
+                        forehead_x1 = int(keypoints[69,0])
+                        forehead_y1 = int(keypoints[10, 1])
+                        forehead_x2 = int(keypoints[299, 0])
+                        forehead_y2 = int(keypoints[296, 1])
+
+                        lcheek_x1 = int(keypoints[117,0])
+                        lcheek_y1 = int(keypoints[229,1])
+                        lcheek_x2 = int(keypoints[165,0])
+                        lcheek_y2 = int(keypoints[165,1])
+
+    #449 346 391
+                        rcheek_x1 = int(keypoints[391, 0])
+                        rcheek_y1 = int(keypoints[449, 1])
+                        rcheek_x2 = int(keypoints[346, 0])
+                        rcheek_y2 = int(keypoints[391, 1])
+
+                        point_list[j] =[forehead_x1,forehead_y1,forehead_x2,forehead_y2,
+                                        lcheek_x1,lcheek_y1,lcheek_x2,lcheek_y2,
+                                        rcheek_x1,rcheek_y1,rcheek_x2,rcheek_y2]
+                    else:
+                        point_list[j] = point_list[j-1]
+
+                    # cv2.rectangle(frame, (forehead_x1,forehead_y1),(forehead_x2,forehead_y2), (0, 255, 0), 1)
+                    # cv2.rectangle(frame, (lcheek_x1, lcheek_y1), (lcheek_x2, lcheek_y2), (0, 255, 0), 1)
+                    # cv2.rectangle(frame, (rcheek_x1, rcheek_y1), (rcheek_x2, rcheek_y2), (0, 255, 0), 1)
+                    crop_frame = frame
                 else:
                     crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
@@ -229,8 +287,8 @@ def PhysNet_preprocess_Video(path, **kwargs):
                 raw_video[j] = crop_frame
                 j += 1
                 pbar.update(1)
-                if j == valid_frame_num * 32:
-                    break
+                # if j == valid_frame_num * 32:
+                #     break
             cap.release()
 
 
@@ -244,16 +302,18 @@ def PhysNet_preprocess_Video(path, **kwargs):
 
     length = (frame_total)//32
 
-    for x in range(length):
-
-        split_raw_video[x] = raw_video[index:index + 32]
-        flip_arr[x] = flip_flag
-        frame_number[x] = np.arange(index, index + 32)
-        index = index + 32
+    # for x in range(length):
+    #
+    #     split_raw_video[x] = raw_video[index:index + 32]
+    #     flip_arr[x] = flip_flag
+    #     frame_number[x] = np.arange(index, index + 32)
+    #     index = index + 32
 
 
     return { "face_detect" : True,
              "frame_number" :frame_number,
+             "raw_video" : raw_video,
+             "keypoint" : point_list,
              "video_data" : split_raw_video,
              "flip_arr" : flip_arr}
 def RTNet_preprocess_Video(path, **kwargs):
@@ -605,6 +665,7 @@ class FaceMeshDetector:
         return img, faces
 def avg(a, b):
     return [(int)((x + y) / 2) for x, y in zip(a, b)]
+
 def crop_mediapipe(detector, frame):
     _, dot = detector.findFaceMesh(frame)
     if len(dot) > 0:
@@ -618,7 +679,14 @@ def crop_mediapipe(detector, frame):
             w_2 = (int)((x_max - x_min) / 2)
         else:
             w_2 = (int)((y_max - y_min) / 2)
-        f = frame[y_center - w_2 - 10:y_center + w_2 + 10, x_center - w_2 - 10:x_center + w_2 + 10]
+
+        x_min = max(x_center - w_2 - 10, 0)
+        y_min = max(y_center - w_2 - 10, 0)
+        x_max = min(x_center + w_2 + 10, frame.shape[1])
+        y_max = min(y_center + w_2 + 10, frame.shape[0])
+
+        f = frame[y_min:y_max, x_min:x_max]
+        # f = frame[y_center - w_2 - 10:y_center + w_2 + 10, x_center - w_2 - 10:x_center + w_2 + 10]
         _, dot = detector.findFaceMesh(f)
         return f, dot[0]
 def make_specific_mask(bin_mask, dot):
@@ -1352,3 +1420,39 @@ def faceUnwrapping(frame, results, target_shape, uv_map, flip_flag = 0):
 
 
     return texture
+
+
+def get_face_mesh_keypoints(results, shape):
+    H, W, C = shape
+    try:
+        face_landmarks = results.multi_face_landmarks[0]
+        keypoints = np.array(
+            [(point.x * W, point.y * H) for point in face_landmarks.landmark[0:468]])  # after 468 is iris or something else
+        return keypoints
+    except:
+        return None
+
+def crop_face_with_face_mesh(frame, keypoints):
+    face_x_min = min(keypoints[:, 0])
+    face_x_max = max(keypoints[:, 0])
+    face_y_min = min(keypoints[:, 1])
+    face_y_max = max(keypoints[:, 1])
+
+    frame = frame[int(face_y_min):int(face_y_max), int(face_x_min):int(face_x_max), :]
+    return frame
+
+def get_forward_face(frame, keypoints):
+    # cv2 rotate image
+    slope = (keypoints[152][1] - keypoints[10][1]) / (keypoints[152][0] - keypoints[10][0])
+    degree = math.atan(slope) * 180 / math.pi
+    rotate_degree = degree - 90
+
+    # 이미지의 크기를 잡고 이미지의 중심을 계산합니다.
+    (h, w) = frame.shape[:2]
+    (cX, cY) = (w // 2, h // 2)
+
+    # 이미지의 중심을 중심으로 이미지를 45도 회전합니다.
+    M = cv2.getRotationMatrix2D((cX, cY), rotate_degree, 1.0)
+    frame = cv2.warpAffine(frame, M, (w, h))
+    return frame
+
