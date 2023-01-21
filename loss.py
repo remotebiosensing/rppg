@@ -1,6 +1,5 @@
 import os
 
-# import config
 import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
@@ -103,7 +102,7 @@ def neg_Pearson_Loss(predictions, targets):
         sum_xy = torch.sum(predictions[i] * targets[i])  # xy
         sum_x2 = torch.sum(torch.pow(predictions[i], 2))  # x^2
         sum_y2 = torch.sum(torch.pow(targets[i], 2))  # y^2
-        N = predictions.shape[1]
+        N = predictions.shape[1] if len(predictions.shape) > 1 else 1
         pearson = (N * sum_xy - sum_x * sum_y) / (
             torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2))))
 
@@ -146,7 +145,7 @@ class RhythmNetLoss(nn.Module):
         self.lambd = weight
         self.gru_outputs_considered = None
         self.custom_loss = RhythmNet_autograd()
-        self.device = config.DEVICE
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def forward(self, resnet_outputs, gru_outputs, target):
         frame_rate = 25.0
@@ -208,7 +207,7 @@ class RhythmNet_autograd(torch.autograd.Function):
         with respect to the output, and we need to compute the gradient of the loss
         with respect to the input.
         """
-        output = torch.zeros(1).to(config.DEVICE)
+        output = torch.zeros(1).to('cuda')
 
         hr_t, = ctx.saved_tensors
         hr_outs = ctx.hr_outs
@@ -241,7 +240,7 @@ def Pearson_Loss(predictions, targets):
         sum_xy = torch.sum(predictions[i] * targets[i])  # xy
         sum_x2 = torch.sum(torch.pow(predictions[i], 2))  # x^2
         sum_y2 = torch.sum(torch.pow(targets[i], 2))  # y^2
-        N = predictions.shape[1]
+        N = predictions.shape[1] if len(predictions.shape) > 1 else 1
         pearson = (N * sum_xy - sum_x * sum_y) / (
             torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2))))
 

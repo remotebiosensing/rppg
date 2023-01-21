@@ -13,7 +13,7 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train
         for inputs, target in tepoch:
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
-            pred = model(inputs) * dataloaders.dataset.std + dataloaders.dataset.mean
+            pred = model(inputs)
 
             loss = criterion(pred, target)
 
@@ -44,7 +44,7 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
         with torch.no_grad():
             for inputs, target in tepoch:
                 tepoch.set_description(step + "%d" % epoch)
-                pred = model(inputs) * dataloaders.dataset.std + dataloaders.dataset.mean
+                pred = model(inputs)
                 loss = criterion(pred, target)
                 if ~torch.isfinite(loss):
                     continue

@@ -25,7 +25,7 @@ def main():
     app_model = UNetDS64.UNetDS64(352)
     if torch.cuda.is_available():
         app_model = app_model.cuda()
-    app_model.load_state_dict(torch.load('/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_0.33400269970297813.pth'))
+    app_model.load_state_dict(torch.load('/home/najy/PycharmProjects/PPG2ABP_weights/UNetDS64_0.31550129055976867.pth'))
     '''
     load dataset
     '''

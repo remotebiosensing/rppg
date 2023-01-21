@@ -252,8 +252,8 @@ def global_std_sbp_calculator(ABP, global_sbp):
 
 
 if __name__ == '__main__':
-    original_data_path = "/home/najy/PycharmProjects/vid2bp_datasets/raw/"
-    save_path = "/home/najy/PycharmProjects/vid2bp_datasets/vid2bp_additional_preprocessed/"
+    original_data_path = "/home/paperc/PycharmProjects/dataset/BPNet_mimiciii/0120/"
+    save_path = "/home/paperc/PycharmProjects/dataset/BPNet_mimiciii/additional0120/"
 
     for mode in ['train', 'val', 'test']:
         print('------ ' + mode + ' start ------')

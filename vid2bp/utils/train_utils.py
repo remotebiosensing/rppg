@@ -21,20 +21,31 @@ def get_model_parameter(model_name: str = 'BPNet'):
     return learning_rate, weight_decay, gamma, out_channels
 
 
-def get_model(model_name: str, device):
+def get_model(model_name: str, device, stage: int = 1):
     lr, wd, ga, oc = get_model_parameter(model_name)
     if model_name == 'BPNet':
-        from vid2bp.nets.modules.bvp2abp import bvp2abp
-        model = bvp2abp(in_channels=3,
-                        out_channels=oc,
-                        target_samp_rate=60,
-                        dilation_val=2).to(device)
-        model_loss = [loss.NegPearsonLoss().to(device)]
-        # model_loss = [loss.NegPearsonLoss().to(device), loss.ScaledVectorCosineSimilarity().to(device)]
-        # model_loss = [loss.ScaledVectorCosineSimilarity().to(device)]
-        # model_loss = [loss.SelfScaler().to(device)]
-        model_optim = optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
-        model_scheduler = optim.lr_scheduler.ExponentialLR(model_optim, gamma=ga)
+        if stage == 1:
+            from vid2bp.nets.modules.bvp2abp import bvp2abp
+            model = bvp2abp(in_channels=3,
+                            out_channels=oc,
+                            target_samp_rate=60,
+                            dilation_val=2).to(device)
+            # model_loss = [loss.NegPearsonLoss().to(device)]
+            model_loss = [loss.NegPearsonLoss().to(device), loss.DBPLoss().to(device), loss.SBPLoss().to(device),
+                          loss.ScaleLoss().to(device)]
+            # model_loss = [loss.MAPELoss().to(device)]
+            # model_loss = [loss.NegPearsonLoss().to(device), loss.ScaledVectorCosineSimilarity().to(device)]
+            # model_loss = [loss.ScaledVectorCosineSimilarity().to(device)]
+            # model_loss = [loss.SelfScaler().to(device)]
+            model_optim = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+            model_scheduler = optim.lr_scheduler.ExponentialLR(model_optim, gamma=ga)
+            # model_scheduler = optim.lr_scheduler.LambdaLR(optimizer=model_optim, lr_lambda=ga)
+        else:
+            from vid2bp.nets.modules.ver2.SignalAmplificationModule import SignalAmplifier
+            model = SignalAmplifier().to(device)
+            model_loss = [loss.DBPLoss().to(device), loss.SBPLoss().to(device), loss.ScaleLoss().to(device)]
+            model_optim = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+            model_scheduler = optim.lr_scheduler.ExponentialLR(model_optim, gamma=ga)
     elif model_name == 'Unet':
         from vid2bp.nets.modules.unet import Unet
         model = Unet()
@@ -57,7 +68,7 @@ def is_learning(cost_arr):
             for c in reversed(cost_arr):
                 if c > cost_mean:
                     cnt += 1
-                if cnt > 5:
+                if cnt > 10:
                     flag = False
                     break
     return flag
@@ -68,6 +79,7 @@ def calc_losses(avg_cost_list, loss_list, hypothesis, target, cnt):
     for idx, l in enumerate(loss_list):
         current_cost = l(hypothesis, target)
         total_cost += current_cost
+        avg_cost_list.append(get_avg_cost(avg_cost_list[idx], current_cost, cnt))
         avg_cost_list[idx] = get_avg_cost(avg_cost_list[idx], current_cost, cnt)
 
     # cost = sum(cost_list)
@@ -76,21 +88,27 @@ def calc_losses(avg_cost_list, loss_list, hypothesis, target, cnt):
 
 
 def get_avg_cost(avg_cost, current_cost, cnt):
-    return (avg_cost * (cnt - 1) + current_cost.__float__()) / cnt
+    return (avg_cost * (cnt - 1) + current_cost.item()) / cnt
 
 
 def model_save(train_cost_arr, val_cost_arr, model, save_point, model_name, dataset_name):
-    print('\ncurrent train cost :', round(train_cost_arr[-1], 4), '/ avg_cost :', round(train_cost_arr[-2], 4),
+    print('\ncurrent train cost :', round(train_cost_arr[-1], 4), '/ prior_cost :', round(train_cost_arr[-2], 4),
           ' >> trained :', round(train_cost_arr[-2] - train_cost_arr[-1], 4))
-    print('current val cost :', round(val_cost_arr[-1], 4), '/ avg_cost :', round(val_cost_arr[-2], 4),
+    print('current val cost :', round(val_cost_arr[-1], 4), '/ prior_cost :', round(val_cost_arr[-2], 4),
           ' >> trained :', round(val_cost_arr[-2] - val_cost_arr[-1], 4))
-    save_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + '{}_{}_{}.pt'.format(model_name,
-                                                                                                    dataset_name,
-                                                                                                    save_point[-1])
+    save_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + '{}_{}_{}.pth'.format(model_name,
+                                                                                                     dataset_name,
+                                                                                                     save_point[-1])
+    print('saving model :', save_path)
+    torch.save(model.state_dict(), save_path)
     try:
-        prior_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + '{}_{}_{}.pt'.format(model_name,
-                                                                                                         dataset_name,
-                                                                                                         save_point[-2])
+        prior_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + '{}_{}_{}.pth'.format(model_name,
+                                                                                                          dataset_name,
+                                                                                                          save_point[
+                                                                                                              -2])
         os.remove(prior_path)
+        print('removed prior model :', prior_path)
+        return save_path
     except:
-        torch.save(model, save_path)
+        print('failed to remove prior model')
+        return save_path

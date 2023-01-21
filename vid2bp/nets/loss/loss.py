@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import vid2bp.preprocessing.utils.signal_utils as su
 from scipy import signal
-
+from torchmetrics.functional import mean_absolute_percentage_error
 
 # TODO : '''jaccard similarity'''
 
@@ -61,7 +61,8 @@ def stft_similarity_loss(predictions, targets):
     # rst = rst / predictions.shape[0]
     return 1 - torch.mean(cos_sim1(abs(pred), abs(tar)))
 
-
+def scale_loss(dbp, sbp):
+    return 1 - (dbp.squeeze()<sbp.squeeze()).sum()/dbp.shape[0]
 def Systolic_Loss(predictions, targets):
     predictions = torch.squeeze(predictions)
     rst = 0
@@ -79,6 +80,15 @@ def Diastolic_Loss(predictions, targets):
     rst /= predictions.shape[0]
     return rst
 
+def mean_average_percentage_error_loss(predictions, targets):
+    rst = 0
+
+    for i in range(predictions.shape[0]):
+        rst += mean_absolute_percentage_error(predictions[i], targets[i])
+
+    rst /= predictions.shape[0]
+
+    return rst
 
 def rmse_Loss(predictions, targets):
     # predictions = torch.squeeze(predictions)
@@ -228,12 +238,12 @@ def Neg_Pearson_Loss(predictions, targets):
         sum_y2 = torch.sum(torch.pow(targets[i], 2))  # y^2
         N = predictions.shape[1]
         pearson = (N * sum_xy - sum_x * sum_y) / (
-            torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2)))) + eps
-        if torch.isnan(pearson):
-            print('pearson is nan')
-            print('N :', N, 'sum_xy :', sum_xy, 'sum_x :', sum_x, 'sum_y :', sum_y, 'sum_x2 :', sum_x2, 'sum_y2 :',
-                  sum_y2)
-            pearson = 0
+            torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2))))
+        # if torch.isnan(pearson):
+            # print('pearson is nan')
+            # print('N :', N, 'sum_xy :', sum_xy, 'sum_x :', sum_x, 'sum_y :', sum_y, 'sum_x2 :', sum_x2, 'sum_y2 :',
+            #       sum_y2)
+            # pearson = 0
         rst += 1 - pearson
     # n = predictions.shape[0]
     # sum_x = torch.sum(predictions, dim=1)
@@ -310,3 +320,17 @@ class SelfScaler(nn.Module):
 
     def forward(self, predictions, _):
         return Self_Scale_Loss(predictions, _)
+
+class MAPELoss(nn.Module):
+    def __init__(self):
+        super(MAPELoss, self).__init__()
+
+    def forward(self, predictions, targets):
+        return mean_average_percentage_error_loss(predictions, targets)
+
+class ScaleLoss(nn.Module):
+    def __init__(self):
+        super(ScaleLoss, self).__init__()
+
+    def forward(self, dbp, sbp):
+        return scale_loss(dbp, sbp)

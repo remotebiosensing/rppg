@@ -1,6 +1,6 @@
-# Implement Deep Learning based Rppg Model using pytorch
+# Implement Deep Learning based Rppg Model & PPG 2 ABP using pytorch
 
-### model list
+### model list (TODO : UPDATE)
 
 - #### Facial Image Based ppg measurement algorithm
 - [x] [DeepPhys : DeepPhys: Video-Based Physiological Measurement Using Convolutional Attention Networks](https://arxiv.org/abs/1805.07888)
@@ -14,58 +14,7 @@
 - #### PPG Based Blood Pressure estimation algorithm
 - [x] [PP-Net: A Deep Learning Framework for PPG based Blood Pressure and Heart Rate Estimation](https://ieeexplore.ieee.org/document/9082808)
 
-## file list
-
-- dataset&nbsp; :&nbsp; related to dataset
-    + dataset_loader.py&nbsp; :&nbsp; pytorch.utils.dataset stored dataset file load(.hpy)
-    + __NetworkName__Dataset.py&nbsp; :&nbsp; Customized dataset to fit each model.
-
-
-- nets&nbsp; :&nbsp; related to Network Architecture
-  <br/>(&nbsp;funcs&nbsp;<&nbsp;layers&nbsp;<&nbsp;blocks&nbsp;<&nbsp;modules&nbsp;<=&nbsp;sub_models&nbsp;<
-  =&nbsp;models)
-    + blocks
-    + funcs
-    + layers
-    + models
-        + sub_models
-    + modules
-- pyVHR : git clone at [phuselab/pyVHR](https://github.com/phuselab/pyVHR)
-- log.py&nbsp; :&nbsp; custom log functions
-- loss.py &nbsp;:&nbsp; available loss list & custom loss functions
-- optim.py &nbsp;:&nbsp; available optimizer list & custom optimizer functions
-- main.py
-- params.json &nbsp;:&nbsp;List of options for training
-
-### preprocessor list
-
-- \_\_TIME__ &nbsp;:&nbsp; check features running time
-    + preprocessing time
-    + model init time
-    + setting loss func time
-    + setting optimizer time
-    + training time per 1epoch
-    + inference time per 1 batch
-
-
-- \_\_PREPROCESSING__&nbsp; :&nbsp; perform preprocessing before training & generate preprocessed file(.hpy)
-
-- \_\_MODEL_SUMMARY__&nbsp; :&nbsp; print model architecture summary using torchsummary
-
-## Usages
-
-1. modify params.py
-
-~~~
-example
-    model = "DeepPhys"
-    dataset_name = "UBFC"
-    train_ratio = 0.8
-    val_ratio = 0.1
-    test_ratio = 0.1
-~~~ 
-
-2. run main.py
+## TODO
 
 ## Additional info
 

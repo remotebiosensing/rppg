@@ -15,10 +15,21 @@ import wfdb
 
 import vid2bp.preprocessing.utils.signal_utils as su
 import vid2bp.preprocessing.utils.math_module as mm
-import vid2bp.preprocessing.mimic3temp as m3t
+# import vid2bp.preprocessing.mimic3temp as m3t
 
 """unused"""
 
+def find_channel_idx(path):
+    """
+    param: path: path of a segment (e.g. /hdd/hdd0/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0/30/3001937_11)
+    return: idx: index of the ple, abp channel
+    """
+    record = wfdb.rdrecord(path)
+    channel_names = record.sig_name
+    ple_idx = [p for p in range(len(channel_names)) if channel_names[p] == 'PLETH'][0]
+    abp_idx = [a for a in range(len(channel_names)) if channel_names[a] == 'ABP'][0]
+
+    return ple_idx, abp_idx
 
 def not_flat_signal_detector(target_signal):
     return np.argwhere(np.diff(target_signal) != 0)
@@ -345,7 +356,7 @@ if __name__ == "__main__":
     total_piece = 0
     interpolated_pieces = 0
     for segment in tqdm(segment_list, desc='segment'):
-        ple_idx, abp_idx = m3t.find_channel_idx(segment)
+        ple_idx, abp_idx = find_channel_idx(segment)
         ple, abp = np.squeeze(np.split(wfdb.rdrecord(segment, channels=[ple_idx, abp_idx]).p_signal, 2, axis=1))
 
         """implement from here"""

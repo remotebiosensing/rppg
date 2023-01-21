@@ -29,7 +29,7 @@
       "first": [2, "P+V"],
       "second": [3, "P+V+A"]
     },
-    "out_channels": 16,
+    "out_channels": 32,
     "chunk_size": 750,
     "sampling_rate": {
       "base": 125,
