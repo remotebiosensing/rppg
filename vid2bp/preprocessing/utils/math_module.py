@@ -76,6 +76,8 @@ def channel_cat(input_sig, scale=True):
     if scale:
         min_max_scaler = MinMaxScaler(feature_range=(1, 3))
         input_sig = np.squeeze(min_max_scaler.fit_transform(np.reshape(input_sig, (750, 1))))
+    else:
+        input_sig = input_sig
     vel, acc = get_derivative(input_sig)
     input_sig = np.expand_dims(input_sig[15:735:2], axis=0)
     vel = np.expand_dims(vel[15:735:2], axis=0)
