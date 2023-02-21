@@ -204,9 +204,6 @@ def PhysNet_preprocess_Video(path, **kwargs):
 
             mp_face_mesh = mp.solutions.face_mesh
 
-
-
-
         cap = cv2.VideoCapture(path)
         j = 0
         with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:

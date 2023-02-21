@@ -12,6 +12,8 @@ class params():
     __PREPROCESSING__ = 0  # 1: preprocessing, 0: not preprocessing
     __MODEL_SUMMARY__ = 0  # 1: print model summary, 0: not print model summary
 
+    multi_model = True
+    number_of_model = 3
     model = "TEST"
     model_list = ["DeepPhys", "DeepPhys_DA", "PhysNet", "PhysNet_LSTM", "PPNet", "GCN", "AxisNet", "RhythmNet","TEST"]
 
@@ -27,7 +29,7 @@ class params():
     face_detect_algorithm = 5
     divide_flag = 1  # 1 : divide by number 0: divide by subject
     fixed_position = 1  # 1 : fixed position 0: not fixed position
-    time_length = 32  # The number of frames in dataset.__GetItem__
+    time_length = 64  # The number of frames in dataset.__GetItem__
     chunk_size = 4  # The number of subjects processed at one time
 
     # train paramaters
@@ -43,14 +45,14 @@ class params():
 
     img_size = 128
 
-    loss_fn = "BVPVelocityLoss"
+    loss_fn = "neg_pearson"
     '''
     "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
                    "cross_entropy","ctc","bce_with_logits","gaussian_nll","hinge_embedding",
                    "KLDiv","margin_ranking","multi_label_margin","multi_label_soft_margin",
                    "nll","nll2d","pairwise","poisson_nll","smooth_l1","soft_margin",
                    "triplet_margin","triplet_margin_distance",
-                   "PPNET : MSE"
+                   "PPNET : MSE", BVPVelocityLoss
     '''
     optimizer = "adam"
     '''
@@ -58,10 +60,10 @@ class params():
                     "ada_mw","a_sgd","lbfgs","n_adam","r_adam","rprop","sparse_adam",
                     "PPNET : adam"
     '''
-    lr = 1e-3
+    lr = 1e-4
     warmup_iteration = 10
     initial_lr = 1e-8
-    warmup_initial_lr = 1e-5
+    warmup_initial_lr = 1e-4
     '''
    "DeepPhys : lr = 1",
     "PhysNet : lr = 0.001",

@@ -14,8 +14,10 @@ from dataset.ETArPPGNetDataset import ETArPPGNetDataset
 from dataset.VitamonDataset import VitamonDataset
 from dataset.TestDataset import TestDataset
 
-from params import params
+from scipy import signal
 
+from params import params
+from matplotlib import pyplot as plt
 def split_data_loader(**kwargs):
     datasets, batch_size, train_shuffle, test_shuffle = kwargs["datasets"], kwargs["batch_size"], kwargs["train_shuffle"], kwargs["test_shuffle"]
     if datasets.__len__() == 3:
@@ -102,8 +104,16 @@ def dataset_loader():
                 target_data.extend(file[key]['preprocessed_label'])
             elif params.model in ["TEST"]:
                 video_data.extend(file[key]['raw_video'][:len(file[key]['raw_video'])//params.time_length*params.time_length])
+
+
                 keypoint_data.extend(file[key]['keypoint'][:len(file[key]['keypoint'])//params.time_length*params.time_length])
-                label_data.extend(file[key]['preprocessed_label'][:len(file[key]['preprocessed_label'])//params.time_length*params.time_length])
+                tmp_label = file[key]['preprocessed_label'][:len(file[key]['preprocessed_label'])//params.time_length*params.time_length]
+                tmp_label = np.around(normalize(tmp_label,0,1),2)
+                # test_1 = signal.resample(tmp_label,len(tmp_label* 4))
+                # test_2 = signal.resample_poly(tmp_label,len(tmp_label* 4))
+
+                # tmp_label = signal.resample()
+                label_data.extend(tmp_label)
             elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
                 if len(file[key]['preprocessed_video']) == len(file[key]['preprocessed_label']):
                     video_data.extend(file[key]['preprocessed_video'])
@@ -203,3 +213,14 @@ def h5_tree(val, pre=''):
                 h5_tree(val, pre+'│   ')
             else:
                 print(pre + '├── ' + key + ' (%d)' % len(val))
+
+
+def normalize(arr, t_min, t_max):
+    norm_arr = []
+    diff = t_max - t_min
+    diff_arr = max(arr) - min(arr)
+    for i in arr:
+        tmp = ((( i - min(arr)*diff)/diff_arr)) + t_min
+        norm_arr.append(tmp)
+
+    return norm_arr

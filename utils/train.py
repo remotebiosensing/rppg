@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from utils.funcs import plot_graph
 
 
-def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = True):
+def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = True,i : int = 0):
     # TODO : Implement multiple loss
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.train()
@@ -13,7 +13,7 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train
         for inputs, target in tepoch:
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
-            outputs = model(inputs)
+            outputs = model(inputs[i])
             loss = criterion(outputs, target)
 
             if ~torch.isfinite(loss):
@@ -25,11 +25,11 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train
 
             tepoch.set_postfix(loss=running_loss / tepoch.__len__())
         if wandb_flag:
-            wandb.log({step + "_loss": running_loss / tepoch.__len__()},
+            wandb.log({step + str(i)+ "_loss": running_loss / tepoch.__len__()},
                       step=epoch)
 
 
-def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag: bool = True, save_img: bool = True):
+def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag: bool = True, save_img: bool = True,i : int = 0):
     # TODO : Implement multiple loss
     # TODO : Implement save model function
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
@@ -42,7 +42,7 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
         with torch.no_grad():
             for inputs, target in tepoch:
                 tepoch.set_description(step + "%d" % epoch)
-                outputs = model(inputs)
+                outputs = model(inputs[i])
                 loss = criterion(outputs, target)
 
                 if ~torch.isfinite(loss):
@@ -54,7 +54,7 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
 
                 tepoch.set_postfix(loss=running_loss / tepoch.__len__())
             if wandb_flag:
-                wandb.log({step + "_loss": running_loss / tepoch.__len__()},
+                wandb.log({step +str(i)+ "_loss": running_loss / tepoch.__len__()},
                           step=epoch)
             if wandb_flag and save_img:
                 plt.clf()

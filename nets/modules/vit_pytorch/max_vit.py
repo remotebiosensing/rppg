@@ -323,29 +323,55 @@ class MaxViT(nn.Module):
 class MaxViT_Block(nn.Module):
     def __init__(self, stage_dim_in, layer_dim,kernel,dilation,padding, is_first, mbconv_expansion_rate,mbconv_shrinkage_rate,w,dim_head,dropout):
         super(MaxViT_Block, self).__init__()
-        self.block = nn.Sequential(
-            MBConv(
-                stage_dim_in,
-                layer_dim,
-                kernel,
-                dilation,
-                padding,
-                downsample=is_first,
-                expansion_rate=mbconv_expansion_rate,
-                shrinkage_rate=mbconv_shrinkage_rate
-            ),
-            Rearrange('b d (x w1) (y w2) -> b x y w1 w2 d', w1=w, w2=w),  # block-like attention
-            PreNormResidual(layer_dim, Attention(dim=layer_dim, dim_head=dim_head, dropout=dropout, window_size=w)),
-            PreNormResidual(layer_dim, FeedForward(dim=layer_dim, dropout=dropout)),
-            Rearrange('b x y w1 w2 d -> b d (x w1) (y w2)'),
+        # self.block = nn.Sequential(
+        # self.l1 = MBConv(
+        #         stage_dim_in,
+        #         layer_dim,
+        #         kernel,
+        #         dilation,
+        #         padding,
+        #         downsample=is_first,
+        #         expansion_rate=mbconv_expansion_rate,
+        #         shrinkage_rate=mbconv_shrinkage_rate
+        #     )
 
-            Rearrange('b d (w1 x) (w2 y) -> b x y w1 w2 d', w1=w, w2=w),  # grid-like attention
-            PreNormResidual(layer_dim, Attention(dim=layer_dim, dim_head=dim_head, dropout=dropout, window_size=w)),
-            PreNormResidual(layer_dim, FeedForward(dim=layer_dim, dropout=dropout)),
-            Rearrange('b x y w1 w2 d -> b d (w1 x) (w2 y)'),
+
+        # stride = 2 if 0 else 1
+
+        self.l0 = nn.Sequential(
+            nn.Conv2d(stage_dim_in, layer_dim, 1),
+            nn.BatchNorm2d(layer_dim),
+            nn.SiLU(),
+
         )
+        self.l1 = nn.Sequential(
+            nn.Conv2d(layer_dim, layer_dim, kernel_size=kernel, stride=1, padding='same', dilation=dilation,groups=layer_dim),
+            SqueezeExcitation(layer_dim, shrinkage_rate=mbconv_shrinkage_rate),
+            nn.Conv2d(layer_dim, layer_dim, 1),
+            nn.BatchNorm2d(layer_dim)
+        )
+        self.l2 = Rearrange('b d (x w1) (y w2) -> b x y w1 w2 d', w1=w, w2=w)  # block-like attention
+        self.l3 = PreNormResidual(layer_dim, Attention(dim=layer_dim, dim_head=dim_head, dropout=dropout, window_size=w))
+        self.l4 = PreNormResidual(layer_dim, FeedForward(dim=layer_dim, dropout=dropout))
+        self.l5 = Rearrange('b x y w1 w2 d -> b d (x w1) (y w2)')
+
+        self.l6 = Rearrange('b d (w1 x) (w2 y) -> b x y w1 w2 d', w1=w, w2=w)  # grid-like attention
+        self.l7 = PreNormResidual(layer_dim, Attention(dim=layer_dim, dim_head=dim_head, dropout=dropout, window_size=w))
+        self.l8 = PreNormResidual(layer_dim, FeedForward(dim=layer_dim, dropout=dropout))
+        self.l9 = Rearrange('b x y w1 w2 d -> b d (w1 x) (w2 y)')
+        # )
     def forward(self,x):
-        return self.block(x)
+        x = self.l0(x)
+        x = self.l1(x)
+        x = self.l2(x)
+        x = self.l3(x)
+        x = self.l4(x)
+        x = self.l5(x)
+        x = self.l6(x)
+        x = self.l7(x)
+        x = self.l8(x)
+        x = self.l9(x)
+        return x
 
 
 def INF(B, H, W):

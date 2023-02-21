@@ -8,7 +8,7 @@ from log import log_warning
 import torch.nn.functional as F
 import scipy
 import math
-
+from torchmetrics.functional.audio import scale_invariant_signal_noise_ratio as si_snr
 
 
 from params import params
@@ -81,6 +81,9 @@ def loss_fn():
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
+
+
+
 
 
 def neg_Pearson_Loss(predictions, targets):
@@ -280,9 +283,11 @@ class BVPVelocityLoss(nn.Module):
     def __init__(self):
         super(BVPVelocityLoss,self).__init__()
 
+
     def forward(self, predictions, targets):
         pearson = [neg_Pearson_Loss(prediction,targets) for prediction in predictions ]
+        # snr_loss = [si_snr(prediction,targets) for prediction in predictions ]
 
-        return pearson[0]#torch.mean(torch.tensor(pearson))
+        return torch.mean(torch.tensor(pearson))#torch.sum(torch.Tensor(pearson)) #+ torch.sum(torch.Tensor(snr_loss))#torch.mean(torch.tensor(pearson))
 
 

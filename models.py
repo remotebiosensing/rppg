@@ -9,7 +9,7 @@ from nets.models.PPNet import PPNet
 from nets.models.PhysNet import PhysNet
 from nets.models.PhysNet import PhysNet_2DCNN_LSTM
 from nets.models.Seq_GCN import Seq_GCN
-from nets.models.TEST import TEST,TEST2,APNET
+from nets.models.TEST import TEST,TEST2,APNET,APNET_Backbone
 from nets.models.RhythmNet import RhythmNet
 from nets.models.ETArPPGNet import ETArPPGNet
 from nets.models.sub_models.VitaMon import Vitamon
@@ -56,7 +56,12 @@ def get_model():
     elif params.model == "Vitamon":
         model =  Vitamon()
     elif params.model =="TEST":
-        model = APNET()
+        feature_size = 256
+        seq_len = params.time_length
+        num_heads = 8
+        num_layers = 6
+        vocab_size = 64
+        model = APNET_Backbone()
     else:
         log_warning("pls implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % params.model)
