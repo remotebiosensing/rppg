@@ -96,28 +96,39 @@ if params.wandb_flag:
         "epochs": params.epoch,
         "batch_size": params.batch_size
     }
-    '''
-    Model Training Step
-    '''
-    min_val_loss = [100.0, 100.0, 100.0]
-    min_test_loss = [100.0,100.0 ,100.0]
-    # dataloaders
 
-for epoch in range(params.epoch):
+if params.multi_model:
+    for epoch in range(params.epoch):
+        [train_fn(epoch, model[i], opt[i], criterion[i], data_loaders[0], "Train", params.wandb_flag, i) for i in
+         range(3)]
+        [sch[i](None) for i in range(3)]
+        if data_loaders.__len__() == 3:
+            val_loss = [
+                test_fn(epoch, model[i], criterion[i], data_loaders[1], "Val", params.wandb_flag, params.save_img_flag,
+                        i) for i in range(3)]
+        for i in range(3):
+            if min_val_loss[i] > val_loss[i]:
+                min_val_loss[i] = val_loss[i]
+                running_loss = test_fn(epoch, model[i], criterion[i], data_loaders[-1], "Test", params.wandb_flag,
+                                       params.save_img_flag, i)
 
-    [train_fn(epoch, model[i], opt[i], criterion[i], data_loaders[0], "Train", params.wandb_flag,i) for i in range(3)]
-    [sch[i](None) for i in range(3)]
-    if data_loaders.__len__() == 3:
-        val_loss = [test_fn(epoch, model[i], criterion[i], data_loaders[1], "Val", params.wandb_flag, params.save_img_flag,i) for i in range(3)]
-    for i in range(3):
-        if min_val_loss[i] > val_loss[i]:
-            min_val_loss[i] = val_loss[i]
-            running_loss = test_fn(epoch, model[i], criterion[i], data_loaders[-1], "Test", params.wandb_flag,params.save_img_flag,i)
-        # if min_test_loss > running_loss:
-        #     min_test_loss = running_loss
-        #     torch.save(model.state_dict(),
-        #                params.model_root_path + params.dataset_name + "_" + params.model + "_" + params.loss_fn)
-    # if epoch % 10 == 0:
+else:
+    for epoch in range(params.epoch):
+        train_fn(epoch, model, opt, criterion, data_loaders[0], "Train", params.wandb_flag)
+        sch(None)
+        if data_loaders.__len__() == 3:
+            val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", params.wandb_flag, params.save_img_flag)
+
+        if min_val_loss > val_loss:
+            min_val_loss = val_loss
+            running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", params.wandb_flag, params.save_img_flag)
+            # if min_test_loss > running_loss:
+            #     min_test_loss = running_loss
+            #     torch.save(model.state_dict(),
+            #                params.model_root_path + params.dataset_name + "_" + params.model + "_" + params.loss_fn)
+        # if epoch % 10 == 0:
+
+
 
 if params.wandb_flag:
     wandb.finish()
