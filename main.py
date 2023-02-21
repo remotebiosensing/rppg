@@ -17,7 +17,7 @@ from loss import loss_fn
 from models import is_model_support, get_model, summary, get_ver_model
 from optim import optimizer
 from utils.dataset_preprocess import preprocessing, dataset_split
-from utils.train import train_fn, test_fn
+from utils.train import train_fn, test_fn, train_multi_model_fn, test_multi_model_fn
 
 from params import params
 
@@ -57,7 +57,7 @@ lr_sch = {0: 10e-4, 300: 10e-5, 600: 10e-6, 900: 10e-7 }
 if params.multi_model :
     models = [time_checker("get_model", get_model) for i in range(params.number_of_model)]
     opts = [optimizer(models[i].parameters(), params.lr, params.optimizer) for i in range(params.number_of_model)]
-    criterions = [time_checker("loss_fn", loss_fn) for i in range(params.number_of_model)]
+    criterion = time_checker("loss_fn", loss_fn)
     schs = [
         create_lr_scheduler_with_warmup(lr_scheduler.LambdaLR(opts[i], lr_lambda=lambda epoch: lr_sch.get(epoch, 0.998)),
                                         warmup_start_value=params.warmup_initial_lr,
@@ -99,18 +99,15 @@ if params.wandb_flag:
 
 if params.multi_model:
     for epoch in range(params.epoch):
-        [train_fn(epoch, model[i], opt[i], criterion[i], data_loaders[0], "Train", params.wandb_flag, i) for i in
-         range(3)]
-        [sch[i](None) for i in range(3)]
+        train_multi_model_fn(epoch,models,opts,criterion,data_loaders[0],"Train",params.wandb_flag)
+        [sch(None) for sch in schs]
         if data_loaders.__len__() == 3:
-            val_loss = [
-                test_fn(epoch, model[i], criterion[i], data_loaders[1], "Val", params.wandb_flag, params.save_img_flag,
-                        i) for i in range(3)]
-        for i in range(3):
-            if min_val_loss[i] > val_loss[i]:
-                min_val_loss[i] = val_loss[i]
-                running_loss = test_fn(epoch, model[i], criterion[i], data_loaders[-1], "Test", params.wandb_flag,
-                                       params.save_img_flag, i)
+            val_loss = test_multi_model_fn(epoch,models,criterion,data_loaders[1],"Val",params.wandb_flag)
+
+        if [ m > v for m,v in zip(min_val_loss,val_loss)].count(True) > 0:
+            min_val_loss = val_loss
+            _ = test_multi_model_fn(epoch,models,criterion,data_loaders[-1],"Test",params.wandb_flag)
+
 
 else:
     for epoch in range(params.epoch):

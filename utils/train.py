@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from utils.funcs import plot_graph
 
 
-def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = True,i : int = 0):
+def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = True):
     # TODO : Implement multiple loss
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.train()
@@ -25,11 +25,11 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train
 
             tepoch.set_postfix(loss=running_loss / tepoch.__len__())
         if wandb_flag:
-            wandb.log({step + str(i)+ "_loss": running_loss / tepoch.__len__()},
+            wandb.log({step + "_loss": running_loss / tepoch.__len__()},
                       step=epoch)
 
 
-def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag: bool = True, save_img: bool = True,i : int = 0):
+def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag: bool = True, save_img: bool = True):
     # TODO : Implement multiple loss
     # TODO : Implement save model function
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
@@ -54,7 +54,7 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
 
                 tepoch.set_postfix(loss=running_loss / tepoch.__len__())
             if wandb_flag:
-                wandb.log({step +str(i)+ "_loss": running_loss / tepoch.__len__()},
+                wandb.log({step + "_loss": running_loss / tepoch.__len__()},
                           step=epoch)
             if wandb_flag and save_img:
                 plt.clf()
@@ -69,3 +69,52 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
                     ]
                 })
         return running_loss
+
+
+def train_multi_model_fn(epoch, models, optimizers, criterion, dataloaders, step, wandb_flag):
+    with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
+        [model.train() for model in models]
+        running_losses = [0.0 for i in range(len(models))]
+        for inputs, target in tepoch:
+            [optimizer.zero_grad() for optimizer in optimizers]
+            tepoch.set_description(step + "%d" % epoch)
+            outputs = [model(input) for input, model in zip(inputs, models)]
+            losses = [criterion(output, target) for output in outputs]
+
+            for loss, running_loss,optimizer in zip(losses,running_losses,optimizers):
+                if ~torch.isfinite(loss):
+                    continue
+                loss.requires_grad_(True)
+                loss.backward()
+                optimizer.step()
+            running_losses = [running_loss + loss.item() for running_loss,loss in zip(running_losses, losses)]
+
+            tepoch.set_postfix({ 'model' + str(i) : running_loss/tepoch.__len__() for running_loss,i in zip(running_losses,range(len(models)))})
+        if wandb_flag:
+            wandb.log({ step + 'model' + str(i) : running_loss/tepoch.__len__() for running_loss,i in zip(running_losses,range(len(models)))},step = epoch)
+
+def test_multi_model_fn(epoch, models, criterion, dataloaders, step: str = "Test", wandb_flag: bool = True):
+    # TODO : Implement multiple loss
+    # TODO : Implement save model function
+    with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
+        [model.eval() for model in models]
+        running_losses = [0.0 for i in range(len(models))]
+
+
+        with torch.no_grad():
+            for inputs, target in tepoch:
+                tepoch.set_description(step + "%d" % epoch)
+                outputs = [model(input) for input, model in zip(inputs, models)]
+                losses = [criterion(output, target) for output in outputs]
+
+                for loss, running_loss in zip(losses, running_losses):
+                    if ~torch.isfinite(loss):
+                        continue
+                running_losses = [running_loss + loss.item() for running_loss,loss in zip(running_losses, losses)]
+
+                tepoch.set_postfix({ 'model' + str(i) : running_loss/tepoch.__len__() for running_loss,i in zip(running_losses,range(len(models)))})
+            if wandb_flag:
+                wandb.log({ step + 'model' + str(i) : running_loss/tepoch.__len__() for running_loss,i in zip(running_losses,range(len(models)))},step = epoch)
+
+
+        return running_losses
