@@ -18,6 +18,7 @@ nn.Conv1d expects as 3-dimensional input in the shape of [batch_size, channels, 
 ''' 원래 값의 normalized attention을 return하는 모듈 '''
 ''' 왜 normalized attention을 구하냐면, 사람마다 ppg gain이 다르기 때문이다.'''
 
+
 class Trend_module_1D(nn.Module):
     def __init__(self, in_channels, out_channels, dilation_value=4):
         super(Trend_module_1D, self).__init__()
@@ -33,23 +34,27 @@ class Trend_module_1D(nn.Module):
         self.upsampler8 = nn.Upsample(scale_factor=8, mode='linear')
         self.enconv1 = nn.Sequential(  # [batch, in_channels, 360] -> [batch, out_channels, 360]
             # nn.Conv1d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            nn.Conv1d(in_channels, out_channels, kernel_size=3, stride=1, dilation=dilation_value, padding=dilation_value),
+            nn.Conv1d(in_channels, out_channels, kernel_size=3, stride=1, dilation=dilation_value,
+                      padding=dilation_value),
             nn.BatchNorm1d(out_channels)
         )
         self.enconv2 = nn.Sequential(  # [batch, out_channels, 360] -> [batch, out_channels, 360]
             # nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, dilation=dilation_value, padding=dilation_value),
+            nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, dilation=dilation_value,
+                      padding=dilation_value),
             nn.BatchNorm1d(out_channels),
             nn.AvgPool1d(2)
         )
         self.enconv3 = nn.Sequential(  # [batch, out_channel, 180] -> [batch, out_channel*2, 180]
             # nn.Conv1d(out_channels, out_channels * 2, kernel_size=3, stride=1, padding=1),
-            nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, dilation=dilation_value, padding=dilation_value),
+            nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, dilation=dilation_value,
+                      padding=dilation_value),
             nn.BatchNorm1d(out_channels),
             nn.AvgPool1d(2)
         )
         self.enconv4 = nn.Sequential(  # [batch, out_channels*2, 180] -> [batch, out_channels*2, 180]
-            nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, dilation=dilation_value, padding=dilation_value),
+            nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, dilation=dilation_value,
+                      padding=dilation_value),
             nn.BatchNorm1d(out_channels),
             nn.AvgPool1d(2)
         )
@@ -59,7 +64,6 @@ class Trend_module_1D(nn.Module):
             nn.Dropout1d(0.5)
         )
         self.relu = nn.ReLU()
-
 
     def forward(self, ple):  # [batch, 1, 360]
         # f1 = self.enconv1(self.freq(ple).unsqueeze(1))
@@ -81,7 +85,6 @@ class Trend_module_1D(nn.Module):
         # t4 = self.enconv4(self.dropout(self.elu(s3)))
         # s4 = t3 + self.upsampler2(t4)
         # return s1, s2, s3, s4
-
 
         # t1 = self.enconv1(ple)  # [batch, 16, 360]
         # f1 = (ple+t1) * t1
@@ -109,4 +112,5 @@ class Trend_module_1D(nn.Module):
         out = self.channel_attention(t_fuse3)
 
         return out
+
 

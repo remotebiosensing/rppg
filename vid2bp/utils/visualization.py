@@ -37,7 +37,7 @@ def emd(dataset):
         plt.show()
         pass
 
-emd(dataset)
+# emd(dataset)
 def get3dplot(dataset):
     train_dataset = dataset[0]
     plt.rcParams['grid.color'] = (0.5, 0.5, 0.5, 0.2)
@@ -397,13 +397,13 @@ def ple_clustering(dataset, test_n=100, cluster_num=5, check_point_n=10, plot_sh
             plt.show()
 
 
-ple_clustering(dataset,
-               test_n=5000,
-               cluster_num=10,
-               check_point_n=1,
-               plot_shape_flag=False,
-               plot_class_map_flag=True,
-               plot_3d_flag=True)
+# ple_clustering(dataset,
+#                test_n=5000,
+#                cluster_num=10,
+#                check_point_n=1,
+#                plot_shape_flag=False,
+#                plot_class_map_flag=True,
+#                plot_3d_flag=True)
 
 
 # kmeans = KMeans(n_clusters=5, random_state=0).fit(class_info_array)

@@ -7,7 +7,7 @@ import multiprocessing as mp
 # from multiprocessing import Process, shared_memory, Semaphore
 import numpy as np
 import matplotlib.pyplot as plt
-import vid2bp.preprocessing.utils.multi_processing as multi
+# import vid2bp.preprocessing.utils.multi_processing as multi
 # import vid2bp.preprocessing.utils.data_shuffler as ds
 import time
 import h5py
@@ -20,6 +20,18 @@ import heartpy.peakdetection as hp_peak
 from heartpy.datautils import rolling_mean
 from heartpy.filtering import filter_signal
 import vid2bp.preprocessing.signal_cleaner as sc
+# from scipy.ndimage import gaussian_filter1d
+import vid2bp.preprocessing.mimiciii_matched as match
+import vid2bp.preprocessing.normalize_preprocessing as add_preprocessing
+import pandas as pd
+import json
+
+
+with open('config/parameter.json') as f:
+    json_data = json.load(f)
+    # param = json_data.get("parameters")
+    channels = json_data.get("parameters").get("in_channels")
+    gender_info = json_data.get("parameters").get("gender")
 
 '''
 signal_utils.py 로 이동해야 할 함수
@@ -57,7 +69,8 @@ def down_sampling(original_signal, fs: int = 125, target_fs: int = 60):
 def signal_QC(ple_chunk, abp_chunk):
     if np.isnan(ple_chunk).any() or np.isnan(abp_chunk).any() or \
             (np.var(abp_chunk) < 1) or \
-            (not (np.sign(abp_chunk) > 0.0).all()):
+            (not (np.sign(abp_chunk) > 0.0).all()) or \
+            np.min(abp_chunk) < 60 or np.max(abp_chunk) > 240:
         return False
     else:
         # plt.plot(abp_chunk)
@@ -103,11 +116,12 @@ def list_shuffler(path_list):
     :param path_list: list of path to be shuffled
     :return: shuffled path_list
     """
-    shuffle_cnt = random.randint(len(path_list), len(path_list) * 2)
-    for c in tqdm(range(shuffle_cnt), desc='shuffling'):
+    shuffle_cnt = random.randint(len(path_list)*2, len(path_list) * 3)
+    for _ in tqdm(range(shuffle_cnt), desc='shuffling'):
         i = random.randint(0, len(path_list) - 1)
         j = random.randint(0, len(path_list) - 1)
         path_list[i], path_list[j] = path_list[j], path_list[i]
+    random.shuffle(path_list)
     return path_list
 
 
@@ -127,7 +141,7 @@ def get_segments_per_person(read_path: str):
     return all_file_paths
 
 
-def get_total_segment_path(read_path: str):
+def get_total_segment_path(read_path: str, gender: int):
     """
     * if single patient have too many records,
         randomly select 5(or any number you like) records to prevent over-fitting to single patient.
@@ -136,14 +150,26 @@ def get_total_segment_path(read_path: str):
     """
     total_patient_path = []
     train_shuffled_path, val_shuffled_path, test_shuffled_path = [], [], []
-
     # get all patient's path
     for root, dirs, files in os.walk(read_path):
         if len(files) > 0:
             total_patient_path.append(root)
     total_patient_path = [p for p in total_patient_path if '_' in p.split('/')[-1]]
+    pid = [int(t.split('/')[-1].split('_')[0][-5:]) for t in total_patient_path]
+    # for p in pid:
+    #     pp[str(p)]
+    pid_list = [[int(t.split('/')[-1].split('_')[0][-5:]), t] for t in total_patient_path]
+    patient_info, patient_df = match.get_patients_info(gender, pid, pid_list)
+
+    # total_patient_info = match.get_patients_gender()
+    # p_keys = total_patient_info.keys()
+    # total_patient_path = [t for t in total_patient_path if t.split('/')[-1].split('_')[0][-5:] in p_keys]
+    # for t in total_patient_path:
+    #     if t.split('/')[-2].split('_')[-5:] in p_keys:
+    #         print('test')
     print('shuffling all patient path...')
     total_patient_path = list_shuffler(total_patient_path)
+
 
     # split train, val, test
     train_patient_num = int(len(total_patient_path) * 0.8)
@@ -156,8 +182,8 @@ def get_total_segment_path(read_path: str):
     print('get_train_segment_path...')
     for tr in tqdm(train_path, desc='Train_segment'):
         train_segments = get_segments_per_person(tr)
-        if len(train_segments) > 5:
-            reduced_train_segments = random.sample(train_segments, 5)
+        if len(train_segments) > 15:
+            reduced_train_segments = random.sample(train_segments, 15)
             train_shuffled_path.extend(reduced_train_segments)
         else:
             train_shuffled_path.extend(train_segments)
@@ -165,8 +191,8 @@ def get_total_segment_path(read_path: str):
     print('get_validation_segment_path...')
     for v in tqdm(val_path, desc='Val_segment'):
         val_segments = get_segments_per_person(v)
-        if len(val_segments) > 5:
-            reduced_val_segments = random.sample(val_segments, 5)
+        if len(val_segments) > 15:
+            reduced_val_segments = random.sample(val_segments, 15)
             val_shuffled_path.extend(reduced_val_segments)
         else:
             val_shuffled_path.extend(val_segments)
@@ -174,26 +200,11 @@ def get_total_segment_path(read_path: str):
     print('get_test_segment_path...')
     for te in tqdm(test_path, desc='Test_segment'):
         test_segments = get_segments_per_person(te)
-        if len(test_segments) > 10:
-            reduced_test_segments = random.sample(test_segments, 10)
+        if len(test_segments) > 15:
+            reduced_test_segments = random.sample(test_segments, 15)
             test_shuffled_path.extend(reduced_test_segments)
         else:
             test_shuffled_path.extend(test_segments)
-    # for p in all_patient_paths:
-    #     segments_per_person = get_segments_per_person(p)
-    #     if len(segments_per_person) > 5:
-    #         # 한 사람의 segment가 10개가 넘으면, 랜덤하게 10개를 뽑아서 가져옴
-    #         reduced_segments_per_person = random.sample(list_shuffler(segments_per_person), 5)
-    #         # random.shuffle(segments_per_person)
-    #         # segments_per_person = segments_per_person[:10]
-    #         all_shuffled_data_path.extend(reduced_segments_per_person)
-    #     else:
-    #         all_shuffled_data_path.extend(segments_per_person)
-    # # 사람 순서대로 가져온 segments_per_person을 랜덤하게 다시 셔플
-    # print('total number of patients: ', all_patient_num)
-    # print('total number of segments: ', len(all_shuffled_data_path))
-    # return list_shuffler(all_shuffled_data_path)
-    # return all_shuffled_data_path
     print('total number of patients: ', len(total_patient_path))
     print('total number of train patients: ', len(train_path))
     print('total number of val patients: ', len(val_path))
@@ -201,7 +212,7 @@ def get_total_segment_path(read_path: str):
     print('total number of train segments: ', len(train_shuffled_path))
     print('total number of val segments: ', len(val_shuffled_path))
     print('total number of test segments: ', len(test_shuffled_path))
-    return list_shuffler(train_shuffled_path), list_shuffler(val_shuffled_path), list_shuffler(test_shuffled_path)
+    return list_shuffler(train_shuffled_path), list_shuffler(val_shuffled_path), list_shuffler(test_shuffled_path), patient_info, patient_df
 
 
 def find_channel_idx(path):
@@ -277,11 +288,11 @@ def signal_shifter(target_signal, gap):
 
 
 def correlation_checker(target_signal, reference_signal):
-    return np.abs(np.corrcoef(target_signal, reference_signal)[0, 1])
+    return np.corrcoef(target_signal, reference_signal)[0, 1]
 
 
 def signal_matcher(raw_abp, raw_ple, abp_signal, ple_signal, abp_peaks, ple_peaks, abp_bottoms, ple_bottoms,
-                   threshold=0.8):
+                   threshold=0.9):
     best_corr = 0
     best_abp = []
     best_ple = []
@@ -382,14 +393,15 @@ def bottom_detector(target_signal, rol_sec, fs=125):
     return peak_heartpy['peaklist']
 
 
-def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: list, size_total: list, chunk_size: int,
-                    sampling_rate: int, eliminated_total: list):
+def read_total_data(id: int, segment_list: list, total_patient_info, patient_info_total: list,
+                    ple_total: list, abp_total: list, size_total: list, ohe_total: list, chunk_size: int,
+                    sampling_rate: int, eliminated_total: list, threshold: float, ple_scale: bool):
     """
 
-    * if single record is shorter than 6 seconds, skip it to consider only long enough to have respiratory cycles
+    * if a single record is shorter than 6 seconds, skip it to consider only long enough to have respiratory cycles
        else, slice it into 6 seconds segments
 
-    ** if single record is too long,
+    ** if a single record is too long,
         5 consecutive chunks are selected to prevent over-fitting to single record.
         -> it is to include as many patients as possible in datasets
 
@@ -406,6 +418,8 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
     for segment in tqdm(segment_list, desc='process-' + str(id), leave=False):
         chunk_per_segment = 0
         segment = segment.strip('.hea')
+        # patient_id = segment.split('/')[-2].split('_')[0]
+        patient_id = segment.split('/')[-2].split('_')[0][-5:]
         ple_idx, abp_idx = find_channel_idx(segment)
         ple, abp = np.squeeze(np.split(wfdb.rdrecord(segment, channels=[ple_idx, abp_idx]).p_signal, 2, axis=1))
 
@@ -491,7 +505,7 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
 
         # calculate correlation
         # if correlation is less than threshold, remove the signal
-        threshold = 0.8
+        # threshold = 0.9
 
         for raw_abp, raw_ple, target_abp, target_ple, target_peak_abp, target_peak_ple, target_bottom_abp, target_bottom_ple \
                 in zip(normal_abp, normal_ple, denoised_abp, denoised_ple, peak_abp, peak_ple, bottom_abp, bottom_ple):
@@ -517,22 +531,60 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
                                                                                                            threshold)
             if match_flag and len(matched_abp_peaks) > 0 and len(matched_abp_bottoms) > 0 \
                     and abs(len(matched_abp_peaks) - len(matched_abp_bottoms)) < 2:
-                ple_total.append(mm.channel_cat(matched_raw_ple))
-                abp_total.append(matched_raw_abp[15:735:2])
+                # plt.plot((matched_raw_abp-np.min(matched_raw_abp))/(np.max(matched_raw_abp)-np.min(matched_raw_abp)), label='raw_abp', c='r')
+                # plt.plot((matched_raw_ple-np.min(matched_raw_ple))/(np.max(matched_raw_ple)-np.min(matched_raw_ple)), label='raw_ple', c='b')
+                # plt.title('Before downsampling correlation : {:.3f}'.format(matched_corr))
+                # plt.legend()
+                # plt.show()
+                # sampled_abp = matched_raw_abp[15:735:2]
+                # sampled_ple = mm.channel_cat(matched_raw_ple)
+                sampled_corr = correlation_checker(matched_raw_abp[15:735:2], matched_raw_ple[15:735:2])
+
+                # TODO : edit here
+                if sampled_corr < threshold:
+                    # eliminated_total[3] : total number of signals with correlation less than threshold
+                    eliminated_total[3] += 1
+                    continue
+
+                # TODO : raw_ple,abp length need to be modified considering overlap
+                if signal_QC:
+                    # total : 0 / male : 1 / female : 2
+                    # gender, expire_flag = total_patient_info[patient_id]
+                    try:
+                        p_info = total_patient_info[patient_id][:-1]
+                        ohe = total_patient_info[patient_id][-1]
+                        # p_info.append(round(matched_corr, 3))
+                        patient_info_total.append(np.array(p_info))
+                        ohe_total.append(np.array(ohe))
+                        ple_total.append(mm.channel_cat(raw_ple[:750], scale=ple_scale))
+                        abp_total.append(raw_abp[15:735:2])
+                        dbp_mean = np.mean(matched_raw_abp[matched_abp_bottoms])
+                        sbp_mean = np.mean(matched_raw_abp[matched_abp_peaks])
+                        # sbp_array = np.array([matched_raw_abp[matched_abp_peaks], matched_abp_peaks]).squeeze()
+                        size_total.append(np.array([dbp_mean, sbp_mean]))
+                        chunk_per_segment += 1
+                    except:
+                        pass
+                    # id, hadm, gender, eth, diag = format(p_info[0], '05'), p_info[1], p_info[2], p_info[3], p_info[4]
+
+                    # patient_set.add(patient_id)
+                else:
+                    continue
+
+                # plt.plot((sampled_abp-np.min(sampled_abp))/(np.max(sampled_abp)-np.min(sampled_abp)), label='sampled_abp', c='r')
+                # plt.plot((sampled_ple-np.min(sampled_ple))/(np.max(sampled_ple)-np.min(sampled_ple)), label='sampled_ple', c='b')
+                # plt.title('After downsampling correlation : {:.3f}'.format(sampled_corr))
+                # plt.legend()
+                # plt.show()
                 # ple_total.append(np.array(matched_raw_ple))
                 # abp_total.append(np.array(matched_raw_abp))
-                dbp_mean = np.mean(matched_raw_abp[matched_abp_bottoms])
-                sbp_mean = np.mean(matched_raw_abp[matched_abp_peaks])
-                # sbp_array = np.array([matched_raw_abp[matched_abp_peaks], matched_abp_peaks]).squeeze()
-                size_total.append(np.array([dbp_mean, sbp_mean]))
-                chunk_per_segment += 1
             else:
                 # eliminated_total[3] : total number of signals with low correlation
                 eliminated_total[3] += 1
                 continue
-            if chunk_per_segment == 10:
+            if chunk_per_segment == 15:
                 # eliminated_total[4] : total number of signals with excess number of signals
-                eliminated_total[4] += len(sliced_abp) - 10
+                eliminated_total[4] += len(sliced_abp) - 15
                 break
 
         # # check segment length if it is longer than 6 seconds
@@ -560,7 +612,7 @@ def read_total_data(id: int, segment_list: list, ple_total: list, abp_total: lis
         #         break
 
 
-def multi_processing(model_name, dataset: str, total_segments):
+def multi_processing(model_name, dset_path: str, dataset: str, total_segments, g_str, total_patient_info, threshold, ple_scale):
     '''
     param:
         model_name: name of model to train (e.g. 'BPNet', 'UNet', 'LSTM'...)
@@ -569,8 +621,6 @@ def multi_processing(model_name, dataset: str, total_segments):
         None
     '''
 
-    x = dt.datetime.now()
-    dset_path = '/hdd/hdd1/dataset/bpnet/preprocessed_' + str(x.year) + str(x.month) + str(x.day) + '/'
     if not os.path.exists(dset_path):
         os.mkdir(dset_path)
 
@@ -582,7 +632,8 @@ def multi_processing(model_name, dataset: str, total_segments):
     # process_num = get_process_num(len(total_segments))
     # if process_num % 2 != 0:
     #     process_num += 1
-    process_num = 144
+    # process_num = 1
+    process_num = 48
     print(f'number of processes: {process_num}')
     # processes = []
 
@@ -608,45 +659,44 @@ def multi_processing(model_name, dataset: str, total_segments):
 
     '''
     sorted_by_fsize = sorted(total_segments, key=lambda s: os.stat(s.replace('.hea', '.dat')).st_size)
-    # weight = [0.7, 0.1, 0.005, ]
-    # light_segments = total_segments[int(len(total_segments)*0.4):int(len(total_segments)*0.70)]
-    # heavy_segments = total_segments[int(len(total_segments)*0.70):]
-    # segments_per_process = np.array_split(light_segments, process_num)
-    # segments_per_process = np.array_split(heavy_segments, process_num)
-    light0 = sorted_by_fsize[:int(len(sorted_by_fsize) * 0.25)]
+
+    # light0 = sorted_by_fsize[:int(len(sorted_by_fsize) * 0.25)]  # not used having no valid data
     light1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.25):int(len(sorted_by_fsize) * 0.4)]
     light2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.4):int(len(sorted_by_fsize) * 0.55)]
     light3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.55):int(len(sorted_by_fsize) * 0.7)]  # htop best
     heavy1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.85)]
     heavy2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)]
-    # heavy3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.95):]
-    # split_by_size = [light3]
-    split_by_size = [light0, light1, light2, light3, heavy1, heavy2]
+    # heavy3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.95):] # eliminated due to long time consumption
+    # split_by_size = [heavy1] # for real data inspection
+    # split_by_size = [light2] # for debugging
+    # split_by_size = [light2, light3] # for fast test
+    split_by_size = [light1, light2, light3, heavy1, heavy2]  # for total data
     print('reading_total_data...')
-    # ple_tot, abp_tot, size_tot = [], [], []
-    # ple_l1, abp_l1, size_l1 = [], [], []
-    # ple_l2, abp_l2, size_l2 = [], [], []
-    # ple_h1, abp_h1, size_h1 = [], [], []
-    # ple_h2, abp_h2, size_h2 = [], [], []
-    # ple_h3, abp_h3, size_h3 = [], [], []
+    info_tot = np.zeros((1, 5))
     ple_tot = np.zeros((1, 3, 360))
     abp_tot = np.zeros((1, 360))
     size_tot = np.zeros((1, 2))
+    ohe_tot = np.zeros((1, 7))
     eliminated_tot = np.zeros((7))
+    '''get patient info'''
+
     for s in split_by_size:
         segments_per_process = np.array_split(s, process_num)
         print(f'number of segments per process: {len(segments_per_process[0])}')
         with mp.Manager() as manager:
             start_time = time.time()
+
+            info_total = manager.list()
             ple_total = manager.list()
             abp_total = manager.list()
             size_total = manager.list()
+            ohe_total = manager.list()
             eliminated_total = manager.list()
             eliminated_total.extend([0, 0, 0, 0, 0, 0, 0])
             workers = [mp.Process(target=read_total_data,
-                                  args=(i, segments_per_process[i],
-                                        ple_total, abp_total, size_total,
-                                        sig_len, samp_rate, eliminated_total)) for i in range(process_num)]
+                                  args=(i, segments_per_process[i], total_patient_info,
+                                        info_total, ple_total, abp_total, size_total, ohe_total,
+                                        sig_len, samp_rate, eliminated_total, threshold, ple_scale)) for i in range(process_num)]
             for worker in workers:
                 worker.start()
             for worker in workers:
@@ -657,9 +707,11 @@ def multi_processing(model_name, dataset: str, total_segments):
             # abp_total = np.array(abp_total)
             # size_total = np.array(size_total)
             try:
+                info_tot = np.concatenate((info_tot, np.array(info_total, dtype=float)), axis=0)
                 ple_tot = np.concatenate((ple_tot, np.array(ple_total)), axis=0)
                 abp_tot = np.concatenate((abp_tot, np.array(abp_total)), axis=0)
                 size_tot = np.concatenate((size_tot, np.array(size_total)), axis=0)
+                ohe_tot = np.concatenate((ohe_tot, np.array(ohe_total)), axis=0)
                 eliminated_tot = np.array(eliminated_total)
                 manager.shutdown()
 
@@ -667,16 +719,7 @@ def multi_processing(model_name, dataset: str, total_segments):
                 print('no data added')
                 manager.shutdown()
                 continue
-            # ple_temp = np.array(ple_total, dtype=object)
-            # ple_tot.append(np.array(ple_total, dtype=object))
-            # abp_tot.append(np.array(abp_total, dtype=object))
-            # size_tot.append(np.array(size_total, dtype=object))
 
-            # dset = h5py.File(dset_path + str(dataset) + '.hdf5', 'w')
-            # dset['ple'] = ple_total
-            # dset['abp'] = abp_total
-            # dset['size'] = size_total
-            # dset.close()
     eliminated_percent = np.zeros(7)
     for i in range(7):
         eliminated_percent[i] = eliminated_tot[i] / eliminated_tot[6] * 100
@@ -698,26 +741,73 @@ def multi_processing(model_name, dataset: str, total_segments):
     print(np.shape(size_tot))
 
     eliminated_tot = np.hstack((eliminated_tot, eliminated_percent))
-    # print(np.shape(ple_total[0]))
-    # print(ple_tot[1][:100])
-    # print(abp_tot[1][:100])
-    # print(size_tot[1])
-    dset = h5py.File(dset_path + str(dataset) + '.hdf5', 'w')
-    # dset['ple'] = np.squeeze(np.array(ple_tot))
+    dset= h5py.File(dset_path + str(dataset)+'_'+g_str+'_'+str(threshold)+'.hdf5','w')
+
+    # if gender == 0:
+    #     dset = h5py.File(dset_path + str(dataset) + '_total_' + str(threshold) + '.hdf5', 'w')
+    # elif gender == 1:
+    #     dset = h5py.File(dset_path + str(dataset) + '_male_' + str(threshold) + '.hdf5', 'w')
+    # else:
+    #     dset = h5py.File(dset_path + str(dataset) + '_female_' + str(threshold) + '.hdf5', 'w')
+
+    # ascii_list = [n.encode("ascii", "ignore") for n in info_tot[1:]]
+    # data = np.array([['I', 'am', 'a', 'sentence'], ['another', 'sentence']], dtype=object)
+    # string_dt = h5py.special_dtype(vlen=str)
+    # info_dat = np.array(info_tot[1:], dtype=object)
+    # string_dt = h5py.special_dtype(vlen=str)
+    # dset.create_dataset('info', data=info_dat, dtype=string_dt)
+    # dset.create_dataset('info2', data=np.array(info_dat, dtype='S'))
+    # ----- to decode byte to string ------
+    # >> str(dset['info'][0][0],'utf-8')
+    # ----- to convert ndarray to string type -----
+    # dset['info'][0].astype(str)
+
+    # dset['info'] = np.array(info_tot[1:], dtype='str')
+    dset['info'] = info_tot[1:]
     dset['ple'] = ple_tot[1:]
     dset['abp'] = abp_tot[1:]
     dset['size'] = size_tot[1:]
+    dset['ohe'] = ohe_tot[1:]
     dset['eliminated'] = eliminated_tot
     dset.close()
 
 
-def dataset_split(model_name: str, data_path: str):
+def dataset_split(model_name: str, data_path: str, g_str: str, threshold: float, ple_scale: bool):
+    '''
+    gender
+    0 : total
+    1 : male
+    2 : female
+    '''
+    g_info = gender_info[g_str]
+    x = dt.datetime.now()
+    date = str(x.year) + str(x.month) + str(x.day)
+    if ple_scale:
+        dset_path = '/hdd/hdd1/dataset/bpnet/preprocessed_' + date + '_normalized/'
+        ssd_path = '/home/paperc/PycharmProjects/dataset/BPNet_mimiciii/additional'+date+'_normalized/'
+    else:
+        dset_path = '/hdd/hdd1/dataset/bpnet/preprocessed_' + date + '/'
+        ssd_path = '/home/paperc/PycharmProjects/dataset/BPNet_mimiciii/additional'+date+'/'
     print('dataset splitting...')
-    train_segments, val_segments, test_segments = get_total_segment_path(data_path)
-    multi_processing(model_name, 'train', train_segments)
-    multi_processing(model_name, 'val', val_segments)
-    multi_processing(model_name, 'test', test_segments)
-    pass
+    train_segments, val_segments, test_segments, total_patient_info, patient_df = get_total_segment_path(data_path, gender=g_info[0])
+    if not os.path.isdir(dset_path):
+        os.mkdir(dset_path)
+    patient_df.to_csv(dset_path+'patient_data.csv')
+
+    multi_processing(model_name, dset_path, 'train', train_segments, g_info[-1], total_patient_info, threshold, ple_scale)
+    multi_processing(model_name, dset_path, 'val', val_segments, g_info[-1], total_patient_info, threshold, ple_scale)
+    multi_processing(model_name, dset_path, 'test', test_segments, g_info[-1], total_patient_info, threshold, ple_scale)
+    add_preprocessing.add_preprocess(dset_path, ssd_path, g_info[-1])
+    patient_df.to_csv(ssd_path+'patient_data.csv')
 
 
-dataset_split('BPNet', '/hdd/hdd1/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0')
+
+
+# dataset_split('BPNet', '/hdd/hdd1/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0')
+gen = ["Total"]
+# gen = [0, 1, 2]
+# gender_list = ["Total", "Male", "Female"]
+scale = [True, False]
+for s in scale:
+    for g in gen:
+        dataset_split('BPNet', '/hdd/hdd1/dataset/mimiciiisubset/physionet.org/files/mimic3wdb-matched/1.0', g_str=g, threshold=0.9, ple_scale=s)

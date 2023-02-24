@@ -36,7 +36,7 @@ def main2(stage1_best_model_path, stage1_model, stage2_model,
             stage2_val_cost_arr.append(validation(stage1_model, stage2_model, dataset[1], stage2_loss, epoch))
             if epoch % 1 == 0:
                 ''' test model for each n epochs'''
-                test_cost, plot_img = test(stage1_model, stage2_model, dataset[2], stage2_loss, epoch, plot_target=False)
+                test_cost, plot_img = test(stage1_model, stage2_model, dataset[2], stage2_loss, epoch, plot_scaled=False)
                 stage2_test_cost_arr.append(test_cost)
                 img_flag = True
             if epoch != 0:

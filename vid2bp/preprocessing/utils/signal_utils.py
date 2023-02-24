@@ -57,6 +57,7 @@ def channel_spliter(multi_sig):
         print("not supported dimension for sig_spliter()")
 
 def ds_detection(ABP):
+    raw_ABP = ABP
     ABP = filter_signal(np.squeeze(ABP), cutoff=3, sample_rate=60., order=2, filtertype='lowpass')
     rolling_sec = 0.75
     SBP = SBP_detection(ABP, rolling_sec)
@@ -65,7 +66,7 @@ def ds_detection(ABP):
     if len(SBP) == 0 or len(DBP) == 0:
         return 0, 0, 0, 0, 0
         # return False, None, None, None
-    mean_sbp, mean_dbp = np.mean(ABP[SBP]), np.mean(ABP[DBP])
+    mean_sbp, mean_dbp = np.mean(raw_ABP[SBP]), np.mean(raw_ABP[DBP])
     mean_map = (2 * mean_dbp + mean_sbp) / 3
     return mean_sbp, mean_dbp, mean_map, SBP, DBP
 
@@ -304,7 +305,7 @@ class BPInfoExtractor:
         self.input_sig = input_sig
         self.sbp = self.get_systolic()
         self.dbp = self.get_diastolic()
-        self.map = self.get_mean_arterial_pressure()
+        # self.map = self.get_mean_arterial_pressure()
 
     def get_systolic(self):
         x = np.squeeze(self.input_sig)

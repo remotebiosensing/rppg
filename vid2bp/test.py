@@ -2,7 +2,7 @@ import torch
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 import wandb
-# import vid2bp.preprocessing.utils.signal_utils as su
+import vid2bp.preprocessing.utils.signal_utils as su
 import vid2bp.postprocessing.post_signal_utils as psu
 import numpy as np
 from matplotlib import gridspec
@@ -12,104 +12,150 @@ from sklearn.preprocessing import MinMaxScaler
 from vid2bp.nets.loss.loss import SelfScaler, MAPELoss, NegPearsonLoss
 
 
-def test(model, dataset, loss_list, epoch, scaler=True, plot_target=False):
+def test(model, dataset, loss_list, epoch, scaler=True, plot_scaled=False, patient_information=None):
     model.eval()
     # scale_loss = SelfScaler().to('cuda:0')
     # mape_loss = MAPELoss().to('cuda:0')
     # neg_loss = NegPearsonLoss().to('cuda:0')
     #
     plot_flag = True
-    avg_cost_list = []
-    dy_avg_cost_list = []
-    ddy_avg_cost_list = []
-    for _ in range(len(loss_list)):
-        avg_cost_list.append(0)
-        dy_avg_cost_list.append(0)
-        ddy_avg_cost_list.append(0)
+    cost_sum = 0
+    scale_cost_sum = 0
+    amp_cost_sum = 0
+    total_cost_sum = 0
+
+    # avg_cost_list = []
+    # dy_avg_cost_list = []
+    # ddy_avg_cost_list = []
+    # for _ in range(len(loss_list)):
+    #     avg_cost_list.append(0)
+    #     dy_avg_cost_list.append(0)
+    #     ddy_avg_cost_list.append(0)
 
     with tqdm(dataset, desc='Test-{}'.format(str(epoch)), total=len(dataset), leave=True) as test_epoch:
         with torch.no_grad():
-            for idx, (X_test, Y_test, dy, ddy, d, s) in enumerate(test_epoch):
+            for idx, (X_test, Y_test, d, s, m, info, ohe) in enumerate(test_epoch):
                 # hypothesis, dy_hypothesis, ddy_hypothesis, scaled_ple = model(X_test, dx, ddx, scaler=scaler)
-                hypothesis, dbp, sbp = model(X_test)
+                hypothesis, dbp, sbp, mbp = model(X_test, ohe)
                 # dy_hypothesis = torch.diff(hypothesis, dim=1)[:, 89:269]
                 # ddy_hypothesis = torch.diff(torch.diff(hypothesis, dim=-1), dim=-1)[:, 88:268]
                 # avg_cost_list, cost = tu.calc_losses(avg_cost_list, loss_list, hypothesis, Y_test, idx + 1)
                 # dy_avg_cost_list, dy_cost = tu.calc_losses(dy_avg_cost_list, loss_list, dy_hypothesis, dy, idx + 1)
                 # ddy_avg_cost_list, ddy_cost = tu.calc_losses(ddy_avg_cost_list, loss_list, ddy_hypothesis, ddy, idx + 1)
-                cost = loss_list[0](hypothesis, Y_test)
                 # dy_cost = loss_list[0](dy_hypothesis, dy)
                 # ddy_cost = loss_list[0](ddy_hypothesis, ddy)
-                dbp_cost = loss_list[1](dbp, d)
-                sbp_cost = loss_list[2](sbp, s)
-                scale_cost = loss_list[3](dbp, sbp)
+                cost = loss_list[0](hypothesis, Y_test)
+                # dbp_cost = loss_list[1](dbp, d)
+                # sbp_cost = loss_list[2](sbp, s)
+                # scale_cost = loss_list[3](dbp, sbp)
+                amp_cost = loss_list[-1](dbp, sbp, mbp, d, s, m)
+                # total_cost = cost + dbp_cost + sbp_cost + scale_cost
+                total_cost = cost + amp_cost# + scale_cost
+
+                cost_sum += cost.item()
+                avg_cost = cost_sum / (idx + 1)
+                # dbp_cost_sum += dbp_cost.item()
+                # dbp_avg_cost = dbp_cost_sum / (idx + 1)
+                # sbp_cost_sum += sbp_cost.item()
+                # sbp_avg_cost = sbp_cost_sum / (idx + 1)
+                # scale_cost_sum += scale_cost.item()
+                # scale_avg_cost = scale_cost_sum / (idx + 1)
+                amp_cost_sum += amp_cost.item()
+                amp_avg_cost = amp_cost_sum / (idx + 1)
+                total_cost_sum += total_cost.item()
+                total_avg_cost = total_cost_sum / (idx + 1)
 
                 # dy_mape_cost = neg_loss(dhypothesis, dy)
                 # ddy_mape_cost = neg_loss(ddhypothesis, ddy)
                 # ple_cost = scale_loss(scaled_ple, X_test)
                 # total_cost = cost + dy_cost + ddy_cost + dbp_cost + sbp_cost + scale_cost
-                total_cost = cost + dbp_cost + sbp_cost + scale_cost
 
                 # total_cost = torch.sum(torch.tensor(avg_cost_list)) + ple_cost \
                 #              + torch.sum(torch.tensor(dy_mape_cost)) + torch.sum(torch.tensor(ddy_mape_cost))
                 postfix_dict = {}
                 # for i in range(len(loss_list)):
                 #     postfix_dict[(str(loss_list[i]))[:-2]] = (round(avg_cost_list[i], 3))
-                postfix_dict['y'] = round(cost.item(), 3)
+
+                postfix_dict['y'] = round(avg_cost, 3)
                 # postfix_dict['dy'] = round(dy_cost.item(), 3)
                 # postfix_dict['ddy'] = round(ddy_cost.item(), 3)
-                postfix_dict['dbp'] = round(dbp_cost.item(), 3)
-                postfix_dict['sbp'] = round(sbp_cost.item(), 3)
-                postfix_dict['dovers'] = round(scale_cost.item(), 3)
+                # postfix_dict['dbp'] = round(dbp_avg_cost, 3)
+                # postfix_dict['sbp'] = round(sbp_avg_cost, 3)
+                postfix_dict['amp'] = round(amp_avg_cost, 3)
+                # postfix_dict['dovers'] = round(scale_avg_cost, 3)
+                postfix_dict['total'] = round(total_avg_cost, 3)
 
                 # postfix_dict['vbp'] = round(dy_mape_cost.__float__(), 3)
                 # postfix_dict['abp'] = round(ddy_mape_cost.__float__(), 3)
                 # postfix_dict['scale_variance'] = round(ple_cost.__float__(), 3)
-                test_epoch.set_postfix(losses=postfix_dict, tot=total_cost.__float__())
+                test_epoch.set_postfix(losses=postfix_dict)
 
                 if plot_flag:
                     plot = plot_prediction(X_test[0][0], Y_test[0], [d[0], s[0]],
-                                           hypothesis[0], dbp[0], sbp[0], epoch, plot_target)
+                                           hypothesis[0], dbp[0], sbp[0], epoch, plot_scaled, info[0],
+                                           patient_information, 1 - postfix_dict['y'])
                     plot_flag = False
 
-        return total_cost.__float__(), plot
+        return total_avg_cost, plot
 
 
-def plot_prediction(ple, abp, dsm, hypothesis, d, s, epoch, plot_target):
+def plot_prediction(ple, abp, dsm, hypothesis, d, s, epoch, scaled, p_info, patient_information, corr):
     t = np.arange(0, 6, 1 / 60)
     h = np.squeeze(hypothesis.cpu().detach())
-    y = abp.detach().cpu().numpy()
     x = ple.detach().cpu().numpy()
-    # min_max_scaler = MinMaxScaler()
-    mean_sbp, mean_dbp, mean_map, sbp_idx, dbp_idx = ds_detection(h)
-    target_sbp, target_dbp, target_map, target_sbp_idx, target_dbp_idx = ds_detection(y)
+    y = abp.detach().cpu().numpy()
+    info = p_info.detach().cpu().numpy()
+    min_max_scaler = MinMaxScaler()
+    info_list = np.squeeze(patient_information[patient_information['HADM_ID'] == int(info[1])].to_numpy())
+    subject_id, gender, ethnicity, diag, diag_group = info_list[1], info_list[3], info_list[4], info_list[5], info_list[
+        6]
+    # mean_sbp, mean_dbp, mean_map, sbp_idx, dbp_idx = ds_detection(h)
+    # target_sbp, target_dbp, target_map, target_sbp_idx, target_dbp_idx = ds_detection(y)
+    # h_abp_info = su.BPInfoExtractor(h)
+    # h_sbp, h_dbp = h_abp_info.sbp, h_abp_info.dbp
+    # y_abp_info = su.BPInfoExtractor(y)
+    # y_sbp, y_dbp = y_abp_info.sbp, y_abp_info.dbp
     # time = np.arange(0, 6, 0.01)
     '''fft version'''
     # fig = plt.figure(figsize=(15, 10))
     plt.figure(figsize=(15, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[2, 1])
     ax0 = plt.subplot(gs[0])
-    if plot_target:
+    if scaled:
         ax0.plot(t, y, label='Target ABP')
-        ax0.plot(t[target_sbp_idx], y[target_sbp_idx], 'r^', label='Target SBP')
-        ax0.plot(t[target_dbp_idx], y[target_dbp_idx], 'bv', label='Target DBP')
+        # ax0.plot(t[y_sbp[-1][-1]], y[y_sbp[-1][-1]], 'r^', label='Target SBP')
+        # ax0.plot(t[y_dbp[-1]], y[y_dbp[-1]], 'bv', label='Target DBP')
         ax0.plot(t, h, label='Predicted ABP')
-        ax0.plot(t[sbp_idx], h[sbp_idx], 'r^', label='Prediction SBP')
-        ax0.plot(t[dbp_idx], h[dbp_idx], 'gv', label='Prediction DBP')
+        # ax0.plot(t[h_sbp[-1][-1]], h[h_sbp[-1][-1]], 'r^', label='Prediction SBP')
+        # ax0.plot(t[h_dbp[-1]], h[h_dbp[-1]], 'gv', label='Prediction DBP')
     else:
         ax0.plot(t, y, label='Target ABP')
-        ax0.plot(t[target_sbp_idx], y[target_sbp_idx], 'r^', label='Target SBP')
-        ax0.plot(t[target_dbp_idx], y[target_dbp_idx], 'bv', label='Target DBP')
+        # ax0.plot(t[y_sbp[-1][-1]], y[y_sbp[-1][-1]], 'r^', label='Target SBP')
+        # ax0.plot(t[y_dbp[-1]], y[y_dbp[-1]], 'bv', label='Target DBP')
         # ax0.plot(t, min_max_scaler.fit_transform(np.reshape(y, (360, 1))), label='Target ABP')
         ax0.plot(t, h, label='Predicted ABP')
-        ax0.plot(t[sbp_idx], h[sbp_idx], 'r^', label='Prediction SBP')
-        ax0.plot(t[dbp_idx], h[dbp_idx], 'gv', label='Prediction DBP')
+        # ax0.plot(t[y_sbp[-1][-1]], h[y_sbp[-1][-1]], 'r^', label='Prediction SBP')
+        # ax0.plot(t[y_dbp[-1]], h[y_dbp[-1]], 'gv', label='Prediction DBP')
         # ax0.plot(t, min_max_scaler.fit_transform(np.reshape(h, (360, 1))), label='Predicted ABP')
-    ax0.set_title("Epoch :" + str(epoch + 1) +
-                  "\nTarget ( s:" + str(np.round(dsm[1].detach().cpu().numpy(), 2)) +
-                  " / d:" + str(np.round(dsm[0].detach().cpu().numpy(), 2)) + ")" +
-                  "  Prediction ( s:" + str(np.round(s.detach().cpu().numpy(), 2)) +
-                  " / d:" + str(np.round(d.detach().cpu().numpy(), 2)) + ")")
+    title = "Patient Info : [ID : P00{} / Gender : {} / Ethnicity : {}] Corr : {}".format(str(subject_id),
+                                                                                          str(gender),
+                                                                                          str(ethnicity),
+                                                                                          str(np.round(corr, 2))) + \
+            "\nDiagnosis Group(Diagnosis) : {}({})".format(str(diag_group), str(diag)) + \
+            "\nTarget (SBP: {}mmHg / DBP : {}mmHg) ".format(str(np.round(dsm[1].detach().cpu().numpy(), 2)),
+                                                            str(np.round(dsm[0].detach().cpu().numpy(), 2))) + \
+            "Prediction (SBP: {}mmHg / DBP : {}mmHg)".format(str(np.round(s.detach().cpu().numpy()[0], 2)),
+                                                             str(np.round(d.detach().cpu().numpy()[0], 2)))
+    # ax0.set_title(
+    #     "Patient Info : " + '[ID :p00' + str(subject_id) + ' / Gender : ' + str(gender) + ' / Ethnicity : ' + str(
+    #         ethnicity) + ' / corr : ' + str(1 - corr) +
+    #     ']\nDiagnosis Group(Diagnosis) :' + str(diag_group) + '(' + str(diag) + ')' +
+    #     "\nTarget ( Systolic:" + str(np.round(dsm[1].detach().cpu().numpy(), 2)) +
+    #     "mmHg / Diastolic:" + str(np.round(dsm[0].detach().cpu().numpy(), 2)) + "mmHg)" +
+    #     "  Prediction ( Systolic:" + str(np.round(s.detach().cpu().numpy()[0], 2)) +
+    #     "mmHg / Diastolic:" + str(np.round(d.detach().cpu().numpy()[0], 2)) + "mmHg)")
+    ax0.set_title(title)
+
     # ax0.set_xlabel('Time (s)')
     ax0.set_ylabel('Arterial Blood Pressure (mmHg)')
     ax0.legend(loc='upper right')

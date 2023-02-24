@@ -4,18 +4,14 @@ from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
-import heartpy as hp
+# import heartpy as hp
 import heartpy.peakdetection as hp_peak
 from heartpy.datautils import rolling_mean
 from heartpy.filtering import filter_signal
 
-from scipy import signal
+# from scipy import signal
 
 import wfdb
-
-import vid2bp.preprocessing.utils.signal_utils as su
-import vid2bp.preprocessing.utils.math_module as mm
-# import vid2bp.preprocessing.mimic3temp as m3t
 
 """unused"""
 

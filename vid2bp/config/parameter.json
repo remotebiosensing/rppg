@@ -25,11 +25,20 @@
       "uci_unet": ["uci-database/", "Unet_uci/"]
     },
     "in_channels": {
-      "zeroth": [1, "P"],
-      "first": [2, "P+V"],
-      "second": [3, "P+V+A"]
+      "P": [1, "P", [0]],
+      "V": [1, "V", [1]],
+      "A": [1, "A", [2]],
+      "PV": [2, "P+V", [0,1]],
+      "PA": [2, "P+A", [0,2]],
+      "VA": [2, "V+A", [1,2]],
+      "PVA": [3, "P+V+A", [0,1,2]]
     },
-    "out_channels": 32,
+    "gender": {
+      "Total": [0, "Total"],
+      "Male": [1, "Male"],
+      "Female": [2, "Female"]
+    },
+    "out_channels": 128,
     "chunk_size": 750,
     "sampling_rate": {
       "base": 125,
@@ -52,7 +61,7 @@
     "BPNet": {
       "learning_rate": 0.001,
       "weight_decay": 0.0005,
-      "gamma": 0.99
+      "gamma": 0.95
     },
     "Unet": {
       "learning_rate": 0.001,

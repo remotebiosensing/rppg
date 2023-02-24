@@ -61,19 +61,22 @@ def read_record_per_patient(segments: list):
             directory_remove_command = 'rm -rf ' + segments[0][:-17]
             os.system(directory_remove_command)
         except:
+            directory_rename_command = 'mv ' + segments[0][:-17] + ' ' + segments[0][:-17] + '_' + str(cnt)
+            os.system(directory_rename_command)
             pass
     else:
         directory_rename_command = 'mv ' + segments[0][:-17] + ' ' + segments[0][:-17] + '_' + str(cnt)
         os.system(directory_rename_command)
 
 
-def get_patients_list(save_path: str, is_neonates: bool = True):
-    # save_path = '/hdd/hdd0/dataset/bpnet/neonates/'
-    bpnet_db_path = '/hdd/hdd1/dataset/bpnet/'
-    mimiciii_internal_path = 'physionet.org/files/mimic3wdb/1.0/'
-    if not os.path.isdir(save_path):
-        os.mkdir(save_path)
-    read_path = bpnet_db_path + mimiciii_internal_path + 'RECORDS-neonates' if is_neonates else bpnet_db_path + mimiciii_internal_path + 'RECORDS-adults'
+def get_patients_list(record_path: str, is_subset: bool = True, is_neonates: bool = True):
+    """
+    save_path = '/hdd/hdd0/dataset/bpnet/neonates/'
+    """
+    if is_subset:
+        read_path = record_path + 'RECORDS'
+    else:
+        read_path = record_path + 'RECORDS-neonates' if is_neonates else record_path + 'RECORDS-adults'
 
     with open(read_path, 'r') as f:
         records = f.readlines()
@@ -81,15 +84,19 @@ def get_patients_list(save_path: str, is_neonates: bool = True):
     return [record.strip('\n') for record in records]
 
 
-def download_patients(save_path: str, patients: list):
+def download_patients(is_subset: bool, save_path: str, patients: list):
     '''
     param:
         save_path: path to save the data (e.g. /hdd/hdd0/dataset/neonates/)
         patients: list of patients to check
     '''
     # save_path = '/hdd/hdd0/dataset/bpnet/neonates/'
-    download_root_url = 'https://physionet.org/files/mimic3wdb/1.0/'
-    mimiciii_internal_path = 'physionet.org/files/mimic3wdb/1.0/'
+    if is_subset:
+        download_root_url = 'https://physionet.org/files/mimic3wdb-matched/1.0/'
+        mimiciii_internal_path = 'physionet.org/files/mimic3wdb-matched/1.0/'
+    else:
+        download_root_url = 'https://physionet.org/files/mimic3wdb/1.0/'
+        mimiciii_internal_path = 'physionet.org/files/mimic3wdb/1.0/'
 
     pbar = tqdm(patients, total=len(patients), position=0, ncols=70, ascii=' =',
                 leave=True)
@@ -124,7 +131,7 @@ def split_patients(patients: list, num_of_split: int):
     return patients_split
 
 
-def multi_wget(is_neonates: bool):
+def multi_wget(is_subset: bool, is_neonates: bool):
     '''
     param
         is_neonates: True if were to download neonates data, else False
@@ -132,12 +139,21 @@ def multi_wget(is_neonates: bool):
         None
     '''
     # save_path = '/hdd/hdd0/dataset/bpnet/neonates/'
-    db_path = '/hdd/hdd1/dataset/bpnet/'
-    save_path = db_path + 'neonates/' if is_neonates else db_path + 'adults/'
+    if is_subset:
+        save_path = '/hdd/hdd1/dataset/mimiciiisubset/'
+        # save_path = save_path
+    else:
+        save_path = '/hdd/hdd1/dataset/bpnet/'
+        if is_neonates:
+            save_path = save_path + 'neonates/'
+        else:
+            save_path = save_path + 'adults/'
+    read_path = save_path + 'records/'
+
     if not os.path.isdir(save_path):
         os.mkdir(save_path)
 
-    patients = get_patients_list(save_path=save_path, is_neonates=is_neonates)
+    patients = get_patients_list(record_path=read_path, is_subset=is_subset, is_neonates=is_neonates)
     random.shuffle(patients)
 
     total_len = len(patients)
@@ -148,7 +164,7 @@ def multi_wget(is_neonates: bool):
 
     for i in range(processor_num):
         chunk = patients[i * process_per_processor: (i + 1) * process_per_processor]
-        proc = mp.Process(target=download_patients, args=(save_path, chunk))
+        proc = mp.Process(target=download_patients, args=(is_subset, save_path, chunk))
         process.append(proc)
         proc.start()
     for proc in process:
@@ -156,11 +172,14 @@ def multi_wget(is_neonates: bool):
 
     if res != 0:
         chunk = patients[-res:]
-        download_patients(save_path, chunk)
+        download_patients(is_subset, save_path, chunk)
 
 
-# multi_wget()
-multi_wget(is_neonates=False)  # ,split_index=sys.argv[1])
+'''
+subset: 1.0 data takes 2.5 days to download
+neonates : takes about 2 days to download
+'''
 
-
-
+# multi_wget(is_subset=True, is_neonates=False)  # ,split_index=sys.argv[1])
+multi_wget(is_subset=False, is_neonates=True)  # ,split_index=sys.argv[1])
+# multi_wget(is_subset=False, is_neonates=False)  # ,split_index=sys.argv[1])

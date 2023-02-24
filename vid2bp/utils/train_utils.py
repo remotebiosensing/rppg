@@ -21,18 +21,17 @@ def get_model_parameter(model_name: str = 'BPNet'):
     return learning_rate, weight_decay, gamma, out_channels
 
 
-def get_model(model_name: str, device, stage: int = 1):
+def get_model(model_name: str, channel: int, device, stage: int = 1):
     lr, wd, ga, oc = get_model_parameter(model_name)
     if model_name == 'BPNet':
         if stage == 1:
             from vid2bp.nets.modules.bvp2abp import bvp2abp
-            model = bvp2abp(in_channels=3,
+            model = bvp2abp(in_channels=channel,
                             out_channels=oc,
                             target_samp_rate=60,
                             dilation_val=2).to(device)
             # model_loss = [loss.NegPearsonLoss().to(device)]
-            model_loss = [loss.NegPearsonLoss().to(device), loss.DBPLoss().to(device), loss.SBPLoss().to(device),
-                          loss.ScaleLoss().to(device)]
+            model_loss = [loss.NegPearsonLoss().to(device), loss.AmpLoss().to(device)]
             # model_loss = [loss.MAPELoss().to(device)]
             # model_loss = [loss.NegPearsonLoss().to(device), loss.ScaledVectorCosineSimilarity().to(device)]
             # model_loss = [loss.ScaledVectorCosineSimilarity().to(device)]
@@ -61,17 +60,25 @@ def get_model(model_name: str, device, stage: int = 1):
 def is_learning(cost_arr):
     # print('cost :', cost_arr)
     flag = True
-    if len(cost_arr) > 1:
-        cost_mean = np.mean(cost_arr)
-        cnt = 0
-        if len(cost_arr) > 5:
-            for c in reversed(cost_arr):
-                if c > cost_mean:
-                    cnt += 1
-                if cnt > 10:
-                    flag = False
-                    break
+    cnt = 0
+    if len(cost_arr) > 5:
+        last_five_cost_mean = np.mean(cost_arr[-5:])
+        print('last five cost :', cost_arr[-5:])
+        print('last five cost mean :', last_five_cost_mean)
+        for c in reversed(cost_arr[-5:]):
+            if c > last_five_cost_mean:
+                cnt += 1
+                print(c)
+            if cnt > 3:
+                print(cnt)
+                flag = False
+                break
+
     return flag
+
+
+def get_avg_cost(avg_cost, current_cost, cnt):
+    return (avg_cost * (cnt - 1) + current_cost.item()) / cnt
 
 
 def calc_losses(avg_cost_list, loss_list, hypothesis, target, cnt):
@@ -87,25 +94,23 @@ def calc_losses(avg_cost_list, loss_list, hypothesis, target, cnt):
     return avg_cost_list, total_cost
 
 
-def get_avg_cost(avg_cost, current_cost, cnt):
-    return (avg_cost * (cnt - 1) + current_cost.item()) / cnt
+# def get_avg_cost(avg_cost, current_cost, cnt):
+#     return (avg_cost * (cnt - 1) + current_cost.item()) / cnt
 
 
-def model_save(train_cost_arr, val_cost_arr, model, save_point, model_name, dataset_name):
+def model_save(train_cost_arr, val_cost_arr, model, save_point, model_name, dataset_name, channel, gender):
     print('\ncurrent train cost :', round(train_cost_arr[-1], 4), '/ prior_cost :', round(train_cost_arr[-2], 4),
           ' >> trained :', round(train_cost_arr[-2] - train_cost_arr[-1], 4))
     print('current val cost :', round(val_cost_arr[-1], 4), '/ prior_cost :', round(val_cost_arr[-2], 4),
           ' >> trained :', round(val_cost_arr[-2] - val_cost_arr[-1], 4))
-    save_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + '{}_{}_{}.pth'.format(model_name,
-                                                                                                     dataset_name,
-                                                                                                     save_point[-1])
+    save_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + \
+                '{}_{}_{}_{}_{}.pth'.format(model_name, dataset_name, save_point[-1], channel, gender)
     print('saving model :', save_path)
     torch.save(model.state_dict(), save_path)
     try:
-        prior_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + '{}_{}_{}.pth'.format(model_name,
-                                                                                                          dataset_name,
-                                                                                                          save_point[
-                                                                                                              -2])
+        prior_path = "/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/" + \
+                     '{}_{}_{}_{}_{}.pth'.format(model_name, dataset_name, save_point[-2], channel, gender)
+        # print(prior_path)
         os.remove(prior_path)
         print('removed prior model :', prior_path)
         return save_path

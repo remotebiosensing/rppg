@@ -8,15 +8,15 @@ import heartpy.peakdetection as hp_peak
 from heartpy.datautils import rolling_mean
 from heartpy.filtering import filter_signal
 
-import vid2bp.preprocessing.signal_cleaner as cleaner
-
+import signal_cleaner as cleaner
+import os
 
 def arrange_by_index(data, index):
     arranged_data = []
     for target_data in data:
         arranged_target_data = []
-        for i in range(len(index)):
-            arranged_target_data.append(target_data[index[i]])
+        for idx in index:
+            arranged_target_data.append(target_data[idx])
         arranged_data.append(arranged_target_data)
     return arranged_data
 
@@ -38,6 +38,7 @@ def preprocessing(original_data_path, save_path, mode):
     original_data_size = len(data_file['abp'])
     # multiprocessing
     num_cpu = multiprocessing.cpu_count()
+    # num_cpu = 1
     loop = int(len(data_file['abp']) / num_cpu)
     process_std = []
     for i in tqdm(range(num_cpu), desc='Calculating local std'):
@@ -83,6 +84,7 @@ def preprocessing(original_data_path, save_path, mode):
     data_file.create_dataset('ple', data=np.array(ple_total))
     data_file.create_dataset('abp', data=np.array(abp_total))
     data_file.create_dataset('size', data=np.array(size_total))
+    data_file.create_dataset('info', data=np.array(info_total))
 
     data_file.close()
     print('Eliminated by SBP vs DBP: ', eliminate_total[0],'(',eliminate_total[0]/sum(eliminate_total)*100,'%)')
@@ -98,7 +100,7 @@ def preprocessing(original_data_path, save_path, mode):
     print('Ratio of eliminated data: ', np.sum(eliminate_total) / original_data_size * 100, '%')
 
 
-def additional_filter(ABP, PLE, SIZE, global_std_sbp, abp_total, ple_total, size_total, eliminate_total):
+def additional_filter(ABP, PLE, SIZE, info, global_std_sbp, abp_total, ple_total, size_total, eliminate_total):
     # select normal range ABP
     normal_index = []
     for idx, target_abp in enumerate(ABP):
@@ -225,6 +227,25 @@ def additional_filter(ABP, PLE, SIZE, global_std_sbp, abp_total, ple_total, size
     # arrange target signals by peak_std_index
     ABP, PLE, SIZE = arrange_by_index([ABP, PLE, SIZE], peak_std_index)
 
+    correlation = [np.corrcoef(target_abp, target_ple)[0, 1] for target_abp, target_ple in zip(ABP, PLE)]
+    print('average correlation before filtering: ', np.mean(correlation))
+
+    correlation_index = np.where(np.array(correlation) >= 0.9)[0]
+    ABP, PLE, SIZE, correlation = arrange_by_index([ABP, PLE, SIZE, correlation], correlation_index)
+
+    # print average correlation
+    print('average correlation after filtering: ', np.mean(correlation))
+
+
+    # for target_abp, target_ple in zip(ABP, PLE):
+    #     target_ple = target_ple[0]
+    #     tmp_corr = np.corrcoef(target_abp, target_ple)[0, 1]
+    #     plt.plot((target_abp-np.min(target_abp))/(np.max(target_abp)-np.min(target_abp)), 'r', label='ABP')
+    #     plt.plot((target_ple-np.min(target_ple))/(np.max(target_ple)-np.min(target_ple)), 'b', label='PLE')
+    #     plt.title('Correlation: {:.3f}'.format(tmp_corr))
+    #     plt.legend()
+    #     plt.show()
+
     abp_total.extend(ABP)
     ple_total.extend(PLE)
     size_total.extend(SIZE)
@@ -252,8 +273,11 @@ def global_std_sbp_calculator(ABP, global_sbp):
 
 
 if __name__ == '__main__':
-    original_data_path = "/home/paperc/PycharmProjects/dataset/BPNet_mimiciii/0120/"
-    save_path = "/home/paperc/PycharmProjects/dataset/BPNet_mimiciii/additional0120/"
+    original_data_path = "/home/paperc/PycharmProjects/dataset/BPNet_mimiciii/0121/"
+    # original_data_path = '/hdd/hdd1/dataset/bpnet/preprocessed_2023121/'
+    save_path = "/home/paperc/PycharmProjects/dataset/BPNet_mimiciii/additional0122/"
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
 
     for mode in ['train', 'val', 'test']:
         print('------ ' + mode + ' start ------')
