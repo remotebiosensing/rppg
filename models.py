@@ -61,7 +61,8 @@ def get_model():
         num_heads = 8
         num_layers = 6
         vocab_size = 64
-        model = APNET_Backbone()
+        # model = APNET_Backbone()
+        model = APNET()
     else:
         log_warning("pls implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % params.model)

@@ -6,13 +6,13 @@ class params():
     log_flag = True
     wandb_flag = True
     random_seed = 0
-    save_img_flag = False
+    save_img_flag = True
 
     __TIME__ = 0  # 1: print time, 0: not print time
     __PREPROCESSING__ = 0  # 1: preprocessing, 0: not preprocessing
     __MODEL_SUMMARY__ = 0  # 1: print model summary, 0: not print model summary
 
-    multi_model = True
+    multi_model = False
     number_of_model = 3
     model = "TEST"
     model_list = ["DeepPhys", "DeepPhys_DA", "PhysNet", "PhysNet_LSTM", "PPNet", "GCN", "AxisNet", "RhythmNet","TEST"]
@@ -38,21 +38,21 @@ class params():
     val_ratio = 0.1
     test_ratio = 0.1
 
-    batch_size = 128
+    batch_size = 32
     train_shuffle = 1
 
     test_shuffle = 1
 
     img_size = 128
 
-    loss_fn = "neg_pearson"
+    loss_fn = "Total_BVPVelocityLoss"
     '''
     "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
                    "cross_entropy","ctc","bce_with_logits","gaussian_nll","hinge_embedding",
                    "KLDiv","margin_ranking","multi_label_margin","multi_label_soft_margin",
                    "nll","nll2d","pairwise","poisson_nll","smooth_l1","soft_margin",
                    "triplet_margin","triplet_margin_distance",
-                   "PPNET : MSE", BVPVelocityLoss
+                   "PPNET : MSE", BVPVelocityLoss, Total_BVPVelocityLoss
     '''
     optimizer = "adam"
     '''

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from nets.modules.vit_pytorch.max_vit import MaxViT, MaxVit_GAN_layer, MaxViT_layer, CrissCrossAttention, FeedForward, \
     MBConv
 from einops import rearrange
@@ -18,13 +19,16 @@ class APNET(nn.Module):
         self.f_m = APNET_Backbone()
         self.l_m = APNET_Backbone()
         self.r_m = APNET_Backbone()
+        self.t = Transformer()
 
     def forward(self, x):
         f_out = self.f_m(x[0])
         l_out = self.l_m(x[1])
         r_out = self.r_m(x[2])
-        out = torch.stack([f_out,l_out,r_out],dim=0)
-        return out
+        out = torch.stack([f_out,l_out,r_out],dim=1)
+        out = self.t(out)
+        return [f_out,l_out,r_out,out]
+
 
 
 class APNET_Backbone(nn.Module):
@@ -53,6 +57,8 @@ class APNET_Backbone(nn.Module):
         self.out_conv1d = nn.Conv1d(in_channels=32, out_channels=1, kernel_size=1)
 
         self.sigmoid = nn.Sigmoid()
+
+        self.init_weights()
 
     @torch.no_grad()
     def init_weights(self):
@@ -93,12 +99,92 @@ class APNET_Backbone(nn.Module):
 
         return out
 
+class Transformer(nn.Module):
+    def __init__(self, d_model=128, nhead=8, num_layers=6, dim_feedforward=512, dropout=0.1):
+        super(Transformer, self).__init__()
+        self.model_type = 'Transformer'
+        self.src_mask = None
+        self.pos_encoder = PositionalEncoding(d_model, dropout)
+        encoder_layers = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, num_layers)
+        self.encoder = nn.Linear(3, d_model)
+        self.decoder = nn.Linear(d_model, 1)
+        self.init_weights()
+    @torch.no_grad()
+    def init_weights(self):
+        def _init(m):
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)  # _trunc_normal(m.weight, std=0.02)  # from .initialization import _trunc_normal
+                if hasattr(m, 'bias') and m.bias is not None:
+                    nn.init.normal_(m.bias, std=1e-6)  # nn.init.constant(m.bias, 0)
+        self.apply(_init)
+
+
+    def forward(self, src):
+        src = src.permute(0, 2, 1)
+        src = self.encoder(src)
+        src = src.permute(1, 0, 2)
+        src = self.pos_encoder(src)
+        output = self.transformer_encoder(src, self.src_mask)
+        output = self.decoder(output)
+        output = output.permute(1, 0, 2)
+        return output.squeeze(2)
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
+
+#
+# class TransformerModel(nn.Module):
+#     def __init__(self, input_size, output_size, d_model=128, nhead=4, num_layers=4, dim_feedforward=512):
+#         super(TransformerModel, self).__init__()
+#         self.model_type = 'Transformer'
+#         self.pos_encoder = PositionalEncoding(d_model)
+#         encoder_layers = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward)
+#         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=num_layers)
+#         self.encoder = nn.Linear(input_size, d_model)
+#         self.decoder = nn.Linear(d_model, output_size)
+#         self.init_weights()
+#
+#     @torch.no_grad()
+#     def init_weights(self):
+#         def _init(m):
+#             if isinstance(m, nn.Linear):
+#                 nn.init.xavier_uniform_(m.weight)  # _trunc_normal(m.weight, std=0.02)  # from .initialization import _trunc_normal
+#                 if hasattr(m, 'bias') and m.bias is not None:
+#                     nn.init.normal_(m.bias, std=1e-6)  # nn.init.constant(m.bias, 0)
+#         self.apply(_init)
+#
+#     def forward(self, src):
+#         src = src.permute(2, 0, 1) # permute to (seq_len, batch_size, input_size)
+#         src = self.encoder(src) * math.sqrt(self.d_model)
+#         src = self.pos_encoder(src)
+#         output = self.transformer_encoder(src)
+#         output = self.decoder(output)
+#         output = output.permute(1, 0, 2) # permute back to (batch_size, seq_len, output_size)
+#         return output
+
 class SpatialAttention(nn.Module):
     def __init__(self, kernel=3):
         super(SpatialAttention, self).__init__()
 
         self.conv1 = nn.Conv2d(2, 1, kernel_size=kernel, padding=kernel // 2, bias=False)
         self.sigmoid = nn.Sigmoid()
+
 
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
@@ -107,218 +193,218 @@ class SpatialAttention(nn.Module):
         x = self.conv1(x)
 
         return self.sigmoid(x)
-class VideoTransformer(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_heads, num_layers, output_dim):
-        super(VideoTransformer, self).__init__()
-
-        self.hidden_dim = hidden_dim
-
-        # Input embedding layer
-        self.embedding = nn.Linear(input_dim, hidden_dim)
-
-        # Transformer layers
-        self.transformer_layers = nn.ModuleList([
-            nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=num_heads)
-            for _ in range(num_layers)
-        ])
-
-        # Output layers
-        self.avg_pool = nn.AdaptiveAvgPool1d(1)
-        self.fc = nn.Linear(hidden_dim, output_dim)
-
-    def forward(self, x):
-        # [B, 32, L, W, H]
-        b, c, l, _, _ = x.shape
-        x = torch.reshape(x, (b, l, -1))
-        # x has shape (batch_size, num_frames, input_dim)
-        # Embed the input
-        x = self.embedding(x)
-
-        # Transpose x to shape (num_frames, batch_size, hidden_dim)
-        x = x.transpose(0, 1)
-
-        # Apply the Transformer layers
-        for layer in self.transformer_layers:
-            x = layer(x)
-
-        # Average pool over the frames
-        x = x.transpose(0, 1)  # Transpose back to shape (batch_size, num_frames, hidden_dim)
-        x = self.avg_pool(x.transpose(1, 2)).squeeze(-1)  # Shape: (batch_size, hidden_dim)
-
-        # Map to the output space
-        x = self.fc(x)  # Shape: (batch_size, output_dim)
-
-        return x
-class VideoTransformer(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_heads, num_layers, output_dim):
-        super(VideoTransformer, self).__init__()
-
-        self.hidden_dim = hidden_dim
-
-        # Input embedding layer
-        self.embedding = nn.Linear(input_dim, hidden_dim)
-        self.pos_enc = PositionalEncoding(hidden_dim)
-        # Transformer layers
-        self.transformer_layers = nn.ModuleList([
-            nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=num_heads)
-            for _ in range(num_layers)
-        ])
-
-        # Output layers
-        self.avg_pool = nn.AdaptiveAvgPool1d(1)
-        self.fc = nn.Linear(hidden_dim, output_dim)
-
-    def forward(self, x):
-        # x has shape (batch_size, num_frames, input_dim)
-        b, _, l, _, _ = x.shape
-        x = torch.permute(x, (0, 2, 1, 3, 4))
-        x = torch.reshape(x, (b, l, -1))
-        # Embed the input
-        x = self.embedding(x)
-        x = self.pos_enc(x)
-
-        # Transpose x to shape (num_frames, batch_size, hidden_dim)
-        x = x.transpose(0, 1)
-
-        # Apply the Transformer layers
-        for layer in self.transformer_layers:
-            x = layer(x)
-
-        # Average pool over the frames
-        x = x.transpose(0, 1)  # Transpose back to shape (batch_size, num_frames, hidden_dim)
-        x = self.avg_pool(x.transpose(1, 2)).squeeze(-1)  # Shape: (batch_size, hidden_dim)
-
-        # Map to the output space
-        x = self.fc(x)  # Shape: (batch_size, output_dim)
-
-        return x
-class VideoRNN(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers, output_dim):
-        super(VideoRNN, self).__init__()
-
-        self.rnn = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, output_dim)
-
-    def forward(self, x):
-        # x has shape (batch_size, num_frames, input_dim)
-        b, feature = x.shape
-        x = torch.reshape(x, (b, -1, feature))
-        # Apply the RNN
-        _, (h_n, _) = self.rnn(x)
-
-        # Use the last hidden state as input to the final FC layer
-        x = h_n[-1]
-        x = self.fc(x)
-
-        return x
-class VideoRNNAttention(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout=0.0):
-        super(VideoRNNAttention, self).__init__()
-
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-
-        self.rnn = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout)
-
-        self.attention = nn.Linear(hidden_size, hidden_size)
-        self.out = nn.Linear(hidden_size, num_classes)
-
-    def forward(self, x):
-        b, feature = x.shape
-        x = torch.reshape(x, (b, -1, feature))
-
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-
-        out, (hn, cn) = self.rnn(x, (h0, c0))
-
-        # Compute attention scores
-        attn_scores = self.attention(out)
-
-        # Apply softmax to get attention weights
-        attn_weights = torch.softmax(attn_scores, dim=1)
-
-        # Apply attention weights to hidden states
-        attn_out = torch.sum(attn_weights * out, dim=1)
-
-        # Pass attention output through linear layer to get final prediction
-        out = self.out(attn_out)
-
-        return out
-class VideoTransformer2(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers, num_heads):
-        super(VideoTransformer2, self).__init__()
-
-        # Embedding layer
-        self.embedding = nn.Linear(input_dim, hidden_dim)
-
-        # Positional encoding
-        self.pos_enc = PositionalEncoding(hidden_dim)
-
-        # Transformer layers
-        self.layers = nn.ModuleList()
-        for i in range(num_layers):
-            self.layers.append(TransformerLayer(hidden_dim, num_heads))
-
-        # Output layer
-        self.output = nn.Linear(hidden_dim, 1)
-
-    def forward(self, x):
-        # x has shape (batch, length, input_dim)
-        x = self.embedding(x)
-        x = self.pos_enc(x)
-
-        for layer in self.layers:
-            x = layer(x)
-
-        # x = x.mean(dim=1)  # Global average pooling
-
-        x = self.output(x)
-        return x
-class PositionalEncoding(nn.Module):
-    def __init__(self, hidden_dim, max_length=1000):
-        super(PositionalEncoding, self).__init__()
-        self.hidden_dim = hidden_dim
-
-        # Compute positional encodings for the max_length
-        position = torch.arange(0, max_length).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, hidden_dim, 2) * (-math.log(10000.0) / hidden_dim))
-        pe = torch.zeros(max_length, hidden_dim)
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-
-        # Register the positional encodings as a buffer
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        # Add the positional encodings to the input
-        x = x + self.pe[:, :x.size(1)]
-        return x
-class TransformerLayer(nn.Module):
-    def __init__(self, hidden_dim, num_heads):
-        super(TransformerLayer, self).__init__()
-        self.attention = nn.MultiheadAttention(hidden_dim, num_heads)
-        self.norm1 = nn.LayerNorm(hidden_dim)
-        self.feedforward = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim * 4),
-            nn.ReLU(),
-            nn.Linear(hidden_dim * 4, hidden_dim)
-        )
-        self.norm2 = nn.LayerNorm(hidden_dim)
-
-    def forward(self, x):
-        # Self-attention
-        attn_output, _ = self.attention(x, x, x)
-        x = x + attn_output
-        x = self.norm1(x)
-
-        # Feedforward
-        ff_output = self.feedforward(x)
-        x = x + ff_output
-        x = self.norm2(x)
-
-        return x
+# class VideoTransformer(nn.Module):
+#     def __init__(self, input_dim, hidden_dim, num_heads, num_layers, output_dim):
+#         super(VideoTransformer, self).__init__()
+#
+#         self.hidden_dim = hidden_dim
+#
+#         # Input embedding layer
+#         self.embedding = nn.Linear(input_dim, hidden_dim)
+#
+#         # Transformer layers
+#         self.transformer_layers = nn.ModuleList([
+#             nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=num_heads)
+#             for _ in range(num_layers)
+#         ])
+#
+#         # Output layers
+#         self.avg_pool = nn.AdaptiveAvgPool1d(1)
+#         self.fc = nn.Linear(hidden_dim, output_dim)
+#
+#     def forward(self, x):
+#         # [B, 32, L, W, H]
+#         b, c, l, _, _ = x.shape
+#         x = torch.reshape(x, (b, l, -1))
+#         # x has shape (batch_size, num_frames, input_dim)
+#         # Embed the input
+#         x = self.embedding(x)
+#
+#         # Transpose x to shape (num_frames, batch_size, hidden_dim)
+#         x = x.transpose(0, 1)
+#
+#         # Apply the Transformer layers
+#         for layer in self.transformer_layers:
+#             x = layer(x)
+#
+#         # Average pool over the frames
+#         x = x.transpose(0, 1)  # Transpose back to shape (batch_size, num_frames, hidden_dim)
+#         x = self.avg_pool(x.transpose(1, 2)).squeeze(-1)  # Shape: (batch_size, hidden_dim)
+#
+#         # Map to the output space
+#         x = self.fc(x)  # Shape: (batch_size, output_dim)
+#
+#         return x
+# class VideoTransformer(nn.Module):
+#     def __init__(self, input_dim, hidden_dim, num_heads, num_layers, output_dim):
+#         super(VideoTransformer, self).__init__()
+#
+#         self.hidden_dim = hidden_dim
+#
+#         # Input embedding layer
+#         self.embedding = nn.Linear(input_dim, hidden_dim)
+#         self.pos_enc = PositionalEncoding(hidden_dim)
+#         # Transformer layers
+#         self.transformer_layers = nn.ModuleList([
+#             nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=num_heads)
+#             for _ in range(num_layers)
+#         ])
+#
+#         # Output layers
+#         self.avg_pool = nn.AdaptiveAvgPool1d(1)
+#         self.fc = nn.Linear(hidden_dim, output_dim)
+#
+#     def forward(self, x):
+#         # x has shape (batch_size, num_frames, input_dim)
+#         b, _, l, _, _ = x.shape
+#         x = torch.permute(x, (0, 2, 1, 3, 4))
+#         x = torch.reshape(x, (b, l, -1))
+#         # Embed the input
+#         x = self.embedding(x)
+#         x = self.pos_enc(x)
+#
+#         # Transpose x to shape (num_frames, batch_size, hidden_dim)
+#         x = x.transpose(0, 1)
+#
+#         # Apply the Transformer layers
+#         for layer in self.transformer_layers:
+#             x = layer(x)
+#
+#         # Average pool over the frames
+#         x = x.transpose(0, 1)  # Transpose back to shape (batch_size, num_frames, hidden_dim)
+#         x = self.avg_pool(x.transpose(1, 2)).squeeze(-1)  # Shape: (batch_size, hidden_dim)
+#
+#         # Map to the output space
+#         x = self.fc(x)  # Shape: (batch_size, output_dim)
+#
+#         return x
+# class VideoRNN(nn.Module):
+#     def __init__(self, input_dim, hidden_dim, num_layers, output_dim):
+#         super(VideoRNN, self).__init__()
+#
+#         self.rnn = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+#         self.fc = nn.Linear(hidden_dim, output_dim)
+#
+#     def forward(self, x):
+#         # x has shape (batch_size, num_frames, input_dim)
+#         b, feature = x.shape
+#         x = torch.reshape(x, (b, -1, feature))
+#         # Apply the RNN
+#         _, (h_n, _) = self.rnn(x)
+#
+#         # Use the last hidden state as input to the final FC layer
+#         x = h_n[-1]
+#         x = self.fc(x)
+#
+#         return x
+# class VideoRNNAttention(nn.Module):
+#     def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout=0.0):
+#         super(VideoRNNAttention, self).__init__()
+#
+#         self.hidden_size = hidden_size
+#         self.num_layers = num_layers
+#
+#         self.rnn = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout)
+#
+#         self.attention = nn.Linear(hidden_size, hidden_size)
+#         self.out = nn.Linear(hidden_size, num_classes)
+#
+#     def forward(self, x):
+#         b, feature = x.shape
+#         x = torch.reshape(x, (b, -1, feature))
+#
+#         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+#         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+#
+#         out, (hn, cn) = self.rnn(x, (h0, c0))
+#
+#         # Compute attention scores
+#         attn_scores = self.attention(out)
+#
+#         # Apply softmax to get attention weights
+#         attn_weights = torch.softmax(attn_scores, dim=1)
+#
+#         # Apply attention weights to hidden states
+#         attn_out = torch.sum(attn_weights * out, dim=1)
+#
+#         # Pass attention output through linear layer to get final prediction
+#         out = self.out(attn_out)
+#
+#         return out
+# class VideoTransformer2(nn.Module):
+#     def __init__(self, input_dim, hidden_dim, num_layers, num_heads):
+#         super(VideoTransformer2, self).__init__()
+#
+#         # Embedding layer
+#         self.embedding = nn.Linear(input_dim, hidden_dim)
+#
+#         # Positional encoding
+#         self.pos_enc = PositionalEncoding(hidden_dim)
+#
+#         # Transformer layers
+#         self.layers = nn.ModuleList()
+#         for i in range(num_layers):
+#             self.layers.append(TransformerLayer(hidden_dim, num_heads))
+#
+#         # Output layer
+#         self.output = nn.Linear(hidden_dim, 1)
+#
+#     def forward(self, x):
+#         # x has shape (batch, length, input_dim)
+#         x = self.embedding(x)
+#         x = self.pos_enc(x)
+#
+#         for layer in self.layers:
+#             x = layer(x)
+#
+#         # x = x.mean(dim=1)  # Global average pooling
+#
+#         x = self.output(x)
+#         return x
+# class PositionalEncoding(nn.Module):
+#     def __init__(self, hidden_dim, max_length=1000):
+#         super(PositionalEncoding, self).__init__()
+#         self.hidden_dim = hidden_dim
+#
+#         # Compute positional encodings for the max_length
+#         position = torch.arange(0, max_length).unsqueeze(1)
+#         div_term = torch.exp(torch.arange(0, hidden_dim, 2) * (-math.log(10000.0) / hidden_dim))
+#         pe = torch.zeros(max_length, hidden_dim)
+#         pe[:, 0::2] = torch.sin(position * div_term)
+#         pe[:, 1::2] = torch.cos(position * div_term)
+#         pe = pe.unsqueeze(0)
+#
+#         # Register the positional encodings as a buffer
+#         self.register_buffer('pe', pe)
+#
+#     def forward(self, x):
+#         # Add the positional encodings to the input
+#         x = x + self.pe[:, :x.size(1)]
+#         return x
+# class TransformerLayer(nn.Module):
+#     def __init__(self, hidden_dim, num_heads):
+#         super(TransformerLayer, self).__init__()
+#         self.attention = nn.MultiheadAttention(hidden_dim, num_heads)
+#         self.norm1 = nn.LayerNorm(hidden_dim)
+#         self.feedforward = nn.Sequential(
+#             nn.Linear(hidden_dim, hidden_dim * 4),
+#             nn.ReLU(),
+#             nn.Linear(hidden_dim * 4, hidden_dim)
+#         )
+#         self.norm2 = nn.LayerNorm(hidden_dim)
+#
+#     def forward(self, x):
+#         # Self-attention
+#         attn_output, _ = self.attention(x, x, x)
+#         x = x + attn_output
+#         x = self.norm1(x)
+#
+#         # Feedforward
+#         ff_output = self.feedforward(x)
+#         x = x + ff_output
+#         x = self.norm2(x)
+#
+#         return x
 class MHA(nn.Module):
     def __init__(self, input_size, num_heads, hidden_size):
         super(MHA, self).__init__()

@@ -10,8 +10,10 @@ import scipy
 import math
 from torchmetrics.functional.audio import scale_invariant_signal_noise_ratio as si_snr
 
-
+import torch.utils.checkpoint as cp
 from params import params
+
+
 def loss_fn():
     """
     :param loss_fn: implement loss function for training
@@ -78,12 +80,11 @@ def loss_fn():
         return PearsonLoss()
     elif params.loss_fn == "BVPVelocityLoss":
         return BVPVelocityLoss()
+    elif params.loss_fn == "Total_BVPVelocityLoss":
+        return Total_BVPVelocityLoss()
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
-
-
-
 
 
 def neg_Pearson_Loss(predictions, targets):
@@ -135,8 +136,8 @@ class fftLoss(nn.Module):
     def forward(self, predictions, targets):
         neg = neg_Pearson_Loss(predictions, targets)
         loss_func = nn.L1Loss()
-        predictions = torch.fft.fft(predictions, dim=1,norm="forward")
-        targets = torch.fft.fft(targets, dim=1,norm="forward")
+        predictions = torch.fft.fft(predictions, dim=1, norm="forward")
+        targets = torch.fft.fft(targets, dim=1, norm="forward")
         loss = loss_func(predictions, targets)
         return loss + neg
 
@@ -228,7 +229,6 @@ class RhythmNet_autograd(torch.autograd.Function):
         return output, None, None
 
 
-
 def Pearson_Loss(predictions, targets):
     rst = 0
     targets = targets[:, :]
@@ -252,9 +252,17 @@ def Pearson_Loss(predictions, targets):
     rst = rst / predictions.shape[0]
     return rst
 
+
 def stft(input_signal):
-    stft_sig = torch.stft(input_signal, n_fft=1024, hop_length=512, win_length=1024, window=torch.hamming_window(1024), center=True, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
+    stft_sig = torch.stft(input_signal, n_fft=1024, hop_length=512, win_length=1024, window=torch.hamming_window(1024),
+                          center=True, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
     return stft_sig
+
+def phase_diff_loss(pred, gt):
+    pred_phase = torch.angle(pred)
+    gt_phase = torch.angle(gt)
+    loss = torch.abs(torch.sum(torch.exp(1j * (pred_phase - gt_phase)))) / pred.size(0)
+    return loss
 
 
 
@@ -279,15 +287,164 @@ class PearsonLoss(nn.Module):
     def forward(self, predictions, targets):
         return Pearson_Loss(predictions, targets)
 
+def power_spectrum_loss(input_signal, target_signal):
+    # Compute the power spectrum of the input and target signals
+    input_fft = torch.fft.rfft(input_signal, dim=1)
+    target_fft = torch.fft.rfft(target_signal, dim=1)
+
+    input_power = torch.abs(input_fft) ** 2
+    target_power = torch.abs(target_fft) ** 2
+
+    loss = torch.mean(torch.abs(input_power - target_power))
+    loss_norm = loss / torch.mean(target_power)
+    return loss_norm
+def phase_correlation_loss(input, target):
+    # Define the forward pass for computing the phase correlation matrix
+    def forward(x):
+        # Compute the STFTs of the input and target signals
+        input_stft = torch.stft(x, n_fft=input.shape[1], window=torch.hann_window(input.shape[1], device=input.device),
+                                center=False)
+        target_stft = torch.stft(target, n_fft=target.shape[1],
+                                 window=torch.hann_window(target.shape[1], device=target.device), center=False)
+
+        # Compute the complex conjugate of the target STFT
+        target_conj = torch.conj(target_stft)
+
+        # Compute the phase correlation matrix
+        corr_matrix = input_stft * target_conj
+        corr_matrix /= torch.abs(corr_matrix)
+        corr_matrix = torch.fft.irfft(corr_matrix, dim=1)
+
+        return corr_matrix
+
+    # Compute the phase correlation matrix using memory checkpointing
+    corr_matrix = cp.checkpoint(forward, input)
+
+    # Compute the index of the maximum correlation value for each batch element
+    max_corr_idx = torch.argmax(corr_matrix, dim=1)
+
+    # Compute the phase correlation coefficient loss for the batch
+    loss = 1.0 - torch.mean(torch.cos(torch.tensor(2.0 * np.pi * max_corr_idx / input.shape[1], device=input.device)))
+
+    return loss
+
+def mutual_information_loss(x,y,bins=10):
+    batch_size, seq_len = x.shape
+
+    # Compute the histogram range for each batch
+    xmin, _ = x.min(dim=1)
+    xmax, _ = x.max(dim=1)
+    ymin, _ = y.min(dim=1)
+    ymax, _ = y.max(dim=1)
+    range_x = xmax - xmin
+    range_y = ymax - ymin
+
+    # Compute the bin width for each batch
+    bin_width_x = range_x / bins
+    bin_width_y = range_y / bins
+
+    # Compute the bin indices for each data point
+    inds_x = ((x - xmin.unsqueeze(1)) / bin_width_x.unsqueeze(1)).long().clamp(min=0, max=bins - 1)
+    inds_y = ((y - ymin.unsqueeze(1)) / bin_width_y.unsqueeze(1)).long().clamp(min=0, max=bins - 1)
+
+    # Compute the joint histogram
+    hist_xy = torch.zeros((batch_size, bins, bins), dtype=torch.float32, device=x.device)
+    for b in range(batch_size):
+        for i in range(seq_len):
+            hist_xy[b, inds_x[b, i], inds_y[b, i]] += 1
+
+    # Compute the histograms
+    hist_x = hist_xy.sum(dim=2)
+    hist_y = hist_xy.sum(dim=1)
+
+    # Compute the probabilities
+    p_x = hist_x / (batch_size * seq_len)
+    p_y = hist_y / (batch_size * seq_len)
+    p_xy = hist_xy / (batch_size * seq_len)
+
+    # Compute the mutual information
+    eps = 1e-8
+    mi = p_xy * torch.log((p_xy + eps) / (p_x.unsqueeze(2) * p_y.unsqueeze(1) + eps))
+    mi = mi.sum(dim=(1, 2))
+
+    # Compute the entropy
+    h_x = -(p_x * torch.log(p_x + eps)).sum(dim=1)
+    h_y = -(p_y * torch.log(p_y + eps)).sum(dim=1)
+
+    # Compute the normalized mutual information
+    nmi = mi / ((h_x + h_y) / 2)
+
+    # Return the negated NMI as a loss
+    return 1-nmi.mean()
+
+
 class BVPVelocityLoss(nn.Module):
     def __init__(self):
-        super(BVPVelocityLoss,self).__init__()
+        super(BVPVelocityLoss, self).__init__()
+        self.trip = nn.TripletMarginLoss()
+        # a / pos / neg
+
+    def forward(self, predictions, targets, i, epoch):
+        # [f,l,r,t]
+        # (f >-< t,f <->r) (f >-< t, f<->l)
+        # (l >-< t, l <->f) (l >-<r, l <-> f)
+        # (r >-< t, r <->f) (r >-<r, r <-> f)
+
+        r_loss = 0
+        m_loss = 0
+        p_loss = 0
+
+        # pearson = [neg_Pearson_Loss(prediction,targets) for prediction in predictions ]
+
+        loss = neg_Pearson_Loss(predictions[i], targets)
+
+        # p_loss = mutual_information_loss(predictions[i], targets)
+
+        if epoch >= 400:
+            loss += phase_correlation_loss(predictions[i],targets)
+            loss += power_spectrum_loss(predictions[i], targets)
+        shrink_factor = 4
 
 
-    def forward(self, predictions, targets):
-        pearson = [neg_Pearson_Loss(prediction,targets) for prediction in predictions ]
-        # snr_loss = [si_snr(prediction,targets) for prediction in predictions ]
-
-        return torch.mean(torch.tensor(pearson))#torch.sum(torch.Tensor(pearson)) #+ torch.sum(torch.Tensor(snr_loss))#torch.mean(torch.tensor(pearson))
+        if epoch >= 700:
+            loss += mutual_information_loss(predictions[i], targets)
 
 
+        # p_loss = phase_correlation_loss(predictions[i], targets)
+            # if i == 0:
+            #     loss += (self.trip(predictions[0], targets, predictions[1].detach()) + self.trip(predictions[0], targets, predictions[2].detach()))/shrink_factor
+            # elif i == 1:
+            #     loss += (self.trip(predictions[1], targets, predictions[0].detach()) + self.trip(predictions[1], predictions[2].detach(), predictions[0].detach()))/shrink_factor
+            # else:
+            #     loss += (self.trip(predictions[2], targets, predictions[0].detach()) + self.trip(predictions[2], predictions[1].detach(), predictions[0].detach()))/shrink_factor
+
+
+
+        return loss
+
+class Total_BVPVelocityLoss(nn.Module):
+    def __init__(self):
+        super(Total_BVPVelocityLoss, self).__init__()
+        # a / pos / neg
+
+    def forward(self, predictions, targets, epoch):
+
+
+
+        loss = sum([neg_Pearson_Loss(pre,targets) for pre in predictions])
+
+        # f_np_loss = neg_Pearson_Loss(predictions[0], targets)
+        # l_np_loss = neg_Pearson_Loss(predictions[1], targets)
+        # r_np_loss = neg_Pearson_Loss(predictions[2], targets)
+        # t_np_loss = neg_Pearson_Loss(predictions[3], targets)
+
+        # if epoch >= 400:
+        loss += sum([phase_correlation_loss(pre,targets) for pre in predictions])
+            # loss += phase_correlation_loss(predictions[i],targets)
+            # loss += power_spectrum_loss(predictions[i], targets)
+
+
+        loss += sum([mutual_information_loss(pre,targets) for pre in predictions])
+            # loss += mutual_information_loss(predictions[i], targets)
+
+        return loss

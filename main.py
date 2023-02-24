@@ -101,12 +101,13 @@ if params.multi_model:
     for epoch in range(params.epoch):
         train_multi_model_fn(epoch,models,opts,criterion,data_loaders[0],"Train",params.wandb_flag)
         [sch(None) for sch in schs]
-        if data_loaders.__len__() == 3:
-            val_loss = test_multi_model_fn(epoch,models,criterion,data_loaders[1],"Val",params.wandb_flag)
+        if epoch >= 200:
+            if data_loaders.__len__() == 3 :
+                val_loss = test_multi_model_fn(epoch,models,criterion,data_loaders[1],"Val",params.wandb_flag)
 
-        if [ m > v for m,v in zip(min_val_loss,val_loss)].count(True) > 0:
-            min_val_loss = val_loss
-            _ = test_multi_model_fn(epoch,models,criterion,data_loaders[-1],"Test",params.wandb_flag)
+            if [ m > v for m,v in zip(min_val_loss,val_loss)].count(True) > 0:
+                min_val_loss = val_loss
+                _ = test_multi_model_fn(epoch,models,criterion,data_loaders[-1],"Test",params.wandb_flag)
 
 
 else:
@@ -115,8 +116,12 @@ else:
         sch(None)
         if data_loaders.__len__() == 3:
             val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", params.wandb_flag, params.save_img_flag)
+        if epoch == 400 or epoch == 700:
+            min_val_loss = 100.0
+            min_test_loss = 100.0
 
-        if min_val_loss > val_loss:
+
+        if min_val_loss > val_loss :
             min_val_loss = val_loss
             running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", params.wandb_flag, params.save_img_flag)
             # if min_test_loss > running_loss:
