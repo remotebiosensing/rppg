@@ -17,7 +17,7 @@ from loss import loss_fn
 from models import is_model_support, get_model, summary, get_ver_model
 from optim import optimizer
 from utils.dataset_preprocess import preprocessing, dataset_split
-from utils.train import train_fn, test_fn, train_multi_model_fn, test_multi_model_fn
+from utils.train import train_fn, test_fn, train_multi_model_fn, test_multi_model_fn,find_lr
 
 from params import params
 
@@ -111,6 +111,9 @@ if params.multi_model:
 
 
 else:
+
+    find_lr(model, opt, criterion, data_loaders[0], params.wandb_flag)
+
     for epoch in range(params.epoch):
         train_fn(epoch, model, opt, criterion, data_loaders[0], "Train", params.wandb_flag)
         sch(None)

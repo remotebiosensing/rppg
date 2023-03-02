@@ -19,10 +19,11 @@ class params():
 
     # preprocessing parameters
     # dataset
-    dataset_name = "UBFC"
-    # UBFC / PURE / V4V / VIPL_HR
+    dataset_name = "PURE"
+    # UBFC  / PURE  /  V4V  / VIPL_HR
+    # 30fps /       /       / 25fps
     save_root_path = "/media/hdd1/dy/dataset/"
-    dataset_date = "2023-01-20"
+    dataset_date = "2023-02-28"
     data_root_path = "/media/hdd1/"
     model_root_path = "/media/hdd1/dy/model/"
     train_ratio = 0.8
@@ -41,7 +42,7 @@ class params():
     batch_size = 32
     train_shuffle = 1
 
-    test_shuffle = 1
+    test_shuffle = 0
 
     img_size = 128
 
@@ -70,7 +71,7 @@ class params():
     "PPNet : lr = 0.001",
     "GCN : lr = 0.003"
     '''
-    epoch = 1000
+    epoch = 2000
 
     #wandb params
     wandb_project_name = "torch_2023ICCV"

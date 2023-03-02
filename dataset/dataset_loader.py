@@ -61,6 +61,7 @@ def dataset_loader():
         video_data = []
         keypoint_data = []
         label_data = []
+        hr_data = []
     elif params.model in ["PPNet"]:
         ppg = []
         sbp = []
@@ -104,15 +105,11 @@ def dataset_loader():
                 target_data.extend(file[key]['preprocessed_label'])
             elif params.model in ["TEST"]:
                 video_data.extend(file[key]['raw_video'][:len(file[key]['raw_video'])//params.time_length*params.time_length])
-
-
                 keypoint_data.extend(file[key]['keypoint'][:len(file[key]['keypoint'])//params.time_length*params.time_length])
                 tmp_label = file[key]['preprocessed_label'][:len(file[key]['preprocessed_label'])//params.time_length*params.time_length]
                 tmp_label = np.around(normalize(tmp_label,0,1),2)
-                # test_1 = signal.resample(tmp_label,len(tmp_label* 4))
-                # test_2 = signal.resample_poly(tmp_label,len(tmp_label* 4))
+                hr_data.extend(file[key]['preprocessed_hr'][:len(file[key]['preprocessed_hr'])//params.time_length*params.time_length])
 
-                # tmp_label = signal.resample()
                 label_data.extend(tmp_label)
             elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
                 if len(file[key]['preprocessed_video']) == len(file[key]['preprocessed_label']):
@@ -142,7 +139,6 @@ def dataset_loader():
                 label_data.extend(file[key]['preprocessed_label'])
         file.close()
         break
-
     if params.model in ["DeepPhys", "MTTS"]:
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
@@ -151,6 +147,7 @@ def dataset_loader():
         dataset = TestDataset(video_data=np.asarray(video_data),
                               keypoint_data=np.asarray(keypoint_data),
                               label_data=np.asarray(label_data),
+                              hr_data=np.asarray(hr_data),
                               target_length=params.time_length)
 
     elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:

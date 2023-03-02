@@ -5,6 +5,26 @@ import matplotlib.pyplot as plt
 from utils.funcs import plot_graph
 from params import params
 
+import numpy as np
+from scipy.signal import butter, filtfilt
+from scipy.signal import welch
+from ignite.handlers import FastaiLRFinder
+
+
+def bpfilter64(signal, fs):
+    minfq = 0.8 * 2/fs
+    maxfq = 3 * 2/fs
+    fir1_len = round(len(signal) / 10)
+    b, a = butter(fir1_len, [minfq, maxfq], btype='bandpass')
+    signal_f = filtfilt(b, a, signal)
+    return signal_f
+
+def find_lr( model, optimizer, criterion, dataloaders):
+    lr_finder = FastaiLRFinder()
+    lr_finder.attach(optimizer, model, criterion)
+    lr_finder.range_test(dataloaders[0], val_loader=dataloaders[1], end_lr=100, num_iter=100)
+    lr_finder.plot()
+    lr_finder.reset()
 
 def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = True):
     # TODO : Implement multiple loss
@@ -59,13 +79,41 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
                     l = outputs[1][0].cpu().numpy()
                     r = outputs[2][0].cpu().numpy()
                     tt = outputs[3][0].cpu().numpy()
-                    t = target[0].cpu().numpy()
+                    t = target[0][0].cpu().numpy()
                     f_array.extend(( f - f.min())/(f.max()-f.min()))
                     l_array.extend(( l - l.min())/(l.max()-l.min()))
                     c_array.extend(( r - r.min())/(r.max()-r.min()))
                     t_array.extend(( t - t.min())/(t.max()-t.min()))
                     tt_array.extend((tt - tt.min()) / (tt.max() - tt.min()))
                     save_flag = False
+
+                    if step == "Test":
+                        t_f = bpfilter64(t, 30)
+                        t_f = (t_f - np.mean(t_f)) / np.std(t_f)
+
+                        signal_length = len(t_f)
+
+                        f, Pg = welch(t_f[:signal_length], fs=30, nperseg=2 ** 13)
+                        Frange = np.where((f > 0.7) & (f < 4))[0]
+                        idxG = np.argmax(Pg[Frange])
+                        HR2_1 = f[Frange][idxG] * 60
+                        print(HR2_1,target[1][0])
+
+                        # f, Pg = welch(t_f[:signal_length // 3], fs=30, nperseg=2 ** 13)
+                        # Frange = np.where((f > 0.7) & (f < 4))[0]
+                        # idxG = np.argmax(Pg[Frange])
+                        # HR2_1 = f[Frange][idxG] * 60
+                        # f, Pg = welch(t_f[signal_length // 3:2 * signal_length // 3], fs=30,
+                        #               nperseg=2 ** 13)
+                        # Frange = np.where((f > 0.7) & (f < 4))[0]
+                        # idxG = np.argmax(Pg[Frange])
+                        # HR2_2 = f[Frange][idxG] * 60
+                        # f, Pg = welch(t_f[2 * signal_length // 3:], fs=30, nperseg=2 ** 13)
+                        # Frange = np.where((f > 0.7) & (f < 4))[0]
+                        # idxG = np.argmax(Pg[Frange])
+                        # HR2_3 = f[Frange][idxG] * 60
+                        # HR2 = (HR2_1 + HR2_2 + HR2_3) / 3
+
 
                 tepoch.set_postfix(loss=running_loss / tepoch.__len__())
             if wandb_flag:

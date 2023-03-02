@@ -179,7 +179,8 @@ def preprocess_Dataset(model_name, path, vid_name, ground_truth_name, return_dic
         return_dict[path.replace('/', '')] = {
             'keypoint': rst_dict["keypoint"],
             'raw_video': rst_dict["raw_video"],
-            'preprocessed_label': preprocessed_label }
+            'preprocessed_label': preprocessed_label[0],
+            'preprocessed_hr' : preprocessed_label[1]}
         # 'preprocessed_hr': preprocessed_hr}
     elif model_name in ["PPNet"]:
         return_dict[path.replace('/', '')] = {'ppg': ppg, 'sbp': sbp, 'dbp': dbp, 'hr': hr}
@@ -260,7 +261,8 @@ def chunk_preprocessing(model_name, data_list, dataset_root_path, vid_name, grou
             dset = dataset_path.create_group(data_path)
             dset['keypoint'] = return_dict[data_path]['keypoint']
             dset['raw_video'] = return_dict[data_path]['raw_video']
-            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label'][0]
+            dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label']
+            dset['preprocessed_hr'] = return_dict[data_path]['preprocessed_hr']
     elif model_name in ["PPNet"]:
         for index, data_path in enumerate(return_dict.keys()):
             dset = dataset_path.create_group(data_path)
