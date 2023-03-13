@@ -62,9 +62,9 @@ detector    = media-pipe # use media-pipe, it's proposed ROI option
 
 ## Contacts
 
-Dae Yeol Kim, spicyyeol@gmail.com  
-Kwangkee Lee, kwangkeelee@gmail.com  
-Jin Soo Kim, wlstn25092303@gmail.com  
+- Dae Yeol Kim, spicyyeol@gmail.com  
+- Kwangkee Lee, kwangkeelee@gmail.com  
+- Jin Soo Kim, wlstn25092303@gmail.com  
 
 ## Funding
 
