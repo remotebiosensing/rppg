@@ -68,7 +68,7 @@ detector    = media-pipe # use media-pipe, it's proposed ROI option
 
 ## Funding
 
-This work was supported by the ICT R&D program of
+This work was partly supported by the ICT R&D program of
 MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
 ## reference
