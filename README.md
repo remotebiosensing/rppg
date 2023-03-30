@@ -1,4 +1,4 @@
-# Implement Deep Learning based Rppg Model & PPG 2 ABP using pytorch
+# Implement Deep Learning based Rppg(remote photoplethsmography) Model & cNIBP(continuous non-invasive blood pressure) using pytorch
 
 ### model list (TODO : UPDATE)
 
