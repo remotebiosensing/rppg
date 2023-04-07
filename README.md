@@ -1,4 +1,4 @@
-# Implement Deep Learning based Rppg Model & PPG 2 ABP using pytorch
+# Implement Deep Learning based Rppg(remote photoplethsmography) Model & cNIBP(continuous non-invasive blood pressure) using pytorch
 
 ### model list (TODO : UPDATE)
 
@@ -62,21 +62,13 @@ detector    = media-pipe # use media-pipe, it's proposed ROI option
 
 ## Contacts
 
-Dae Yeol Kim, spicyyeol@gmail.com
-
-Jin Soo Kim, wlstn25092303@tvstorm.com
-
-Kwangkee Lee, kwangkeelee@gmail.com
-
-min a Lee, mina1505@kw.ac.kr
-
-Jun Yeong Na, najubae@kw.ac.kr
-
-JongEui Chae, forownsake@gmail.com
+- Dae Yeol Kim, spicyyeol@gmail.com  
+- Kwangkee Lee, kwangkeelee@gmail.com  
+- Jin Soo Kim, wlstn25092303@gmail.com  
 
 ## Funding
 
-This work was supported by the ICT R&D program of
+This work was partly supported by the ICT R&D program of
 MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
 ## reference
