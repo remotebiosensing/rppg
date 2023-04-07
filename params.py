@@ -19,11 +19,10 @@ class params():
 
     # preprocessing parameters
     # dataset
-    dataset_name = "PURE"
-    # UBFC  / PURE  /  V4V  / VIPL_HR
-    # 30fps /       /       / 25fps
+    dataset_name = "UBFC"
+    # UBFC / PURE / V4V / VIPL_HR
     save_root_path = "/media/hdd1/dy/dataset/"
-    dataset_date = "2023-02-28"
+    dataset_date = "2023-02-27"
     data_root_path = "/media/hdd1/"
     model_root_path = "/media/hdd1/dy/model/"
     train_ratio = 0.8
@@ -42,18 +41,18 @@ class params():
     batch_size = 32
     train_shuffle = 1
 
-    test_shuffle = 0
+    test_shuffle = 1
 
     img_size = 128
 
-    loss_fn = "Total_BVPVelocityLoss"
+    loss_fn = "BVPVelocityLoss"
     '''
     "mse","L1","neg_pearson","multi_margin","bce","huber","cosine_embedding",
                    "cross_entropy","ctc","bce_with_logits","gaussian_nll","hinge_embedding",
                    "KLDiv","margin_ranking","multi_label_margin","multi_label_soft_margin",
                    "nll","nll2d","pairwise","poisson_nll","smooth_l1","soft_margin",
                    "triplet_margin","triplet_margin_distance",
-                   "PPNET : MSE", BVPVelocityLoss, Total_BVPVelocityLoss
+                   "PPNET : MSE", BVPVelocityLoss
     '''
     optimizer = "adam"
     '''
@@ -71,7 +70,7 @@ class params():
     "PPNet : lr = 0.001",
     "GCN : lr = 0.003"
     '''
-    epoch = 2000
+    epoch = 1000
 
     #wandb params
     wandb_project_name = "torch_2023ICCV"

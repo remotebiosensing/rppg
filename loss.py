@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import scipy
 import math
 from torchmetrics.functional.audio import scale_invariant_signal_noise_ratio as si_snr
-from torch.autograd import Variable
+
 import torch.utils.checkpoint as cp
 from params import params
 
@@ -80,8 +80,6 @@ def loss_fn():
         return PearsonLoss()
     elif params.loss_fn == "BVPVelocityLoss":
         return BVPVelocityLoss()
-    elif params.loss_fn == "Total_BVPVelocityLoss":
-        return Total_BVPVelocityLoss()
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
@@ -287,17 +285,7 @@ class PearsonLoss(nn.Module):
     def forward(self, predictions, targets):
         return Pearson_Loss(predictions, targets)
 
-def power_spectrum_loss(input_signal, target_signal):
-    # Compute the power spectrum of the input and target signals
-    input_fft = torch.fft.rfft(input_signal, dim=1)
-    target_fft = torch.fft.rfft(target_signal, dim=1)
 
-    input_power = torch.abs(input_fft) ** 2
-    target_power = torch.abs(target_fft) ** 2
-
-    loss = torch.mean(torch.abs(input_power - target_power))
-    loss_norm = loss / torch.mean(target_power)
-    return loss_norm
 def phase_correlation_loss(input, target):
     # Define the forward pass for computing the phase correlation matrix
     def forward(x):
@@ -328,125 +316,34 @@ def phase_correlation_loss(input, target):
 
     return loss
 
-def mutual_information_loss(x,y,bins=10):
-    batch_size, seq_len = x.shape
-
-    # Compute the histogram range for each batch
-    xmin, _ = x.min(dim=1)
-    xmax, _ = x.max(dim=1)
-    ymin, _ = y.min(dim=1)
-    ymax, _ = y.max(dim=1)
-    range_x = xmax - xmin
-    range_y = ymax - ymin
-
-    # Compute the bin width for each batch
-    bin_width_x = range_x / bins
-    bin_width_y = range_y / bins
-
-    # Compute the bin indices for each data point
-    inds_x = ((x - xmin.unsqueeze(1)) / bin_width_x.unsqueeze(1)).long().clamp(min=0, max=bins - 1)
-    inds_y = ((y - ymin.unsqueeze(1)) / bin_width_y.unsqueeze(1)).long().clamp(min=0, max=bins - 1)
-
+def mutual_information_loss(signal1, signal2, num_bins=32):
     # Compute the joint histogram
-    hist_xy = torch.zeros((batch_size, bins, bins), dtype=torch.float32, device=x.device)
-    for b in range(batch_size):
-        for i in range(seq_len):
-            hist_xy[b, inds_x[b, i], inds_y[b, i]] += 1
+    hist2d = torch.histc(torch.stack([signal1, signal2], dim=1), bins=num_bins)
 
-    # Compute the histograms
-    hist_x = hist_xy.sum(dim=2)
-    hist_y = hist_xy.sum(dim=1)
+    # Compute the marginal histograms
+    hist1 = torch.histc(signal1, bins=num_bins)
+    hist2 = torch.histc(signal2, bins=num_bins)
 
-    # Compute the probabilities
-    p_x = hist_x / (batch_size * seq_len)
-    p_y = hist_y / (batch_size * seq_len)
-    p_xy = hist_xy / (batch_size * seq_len)
+    eps = 1e-8
+    hist2d = hist2d + eps
+    hist1 = hist1 + eps
+    hist2 = hist2 + eps
+
+    # Compute the probabilities and entropies
+    p12 = hist2d / torch.sum(hist2d)
+    p1 = hist1 / torch.sum(hist1)
+    p2 = hist2 / torch.sum(hist2)
+    H1 = -torch.sum(p1 * torch.log2(p1))
+    H2 = -torch.sum(p2 * torch.log2(p2))
 
     # Compute the mutual information
-    eps = 1e-8
-    mi = p_xy * torch.log((p_xy + eps) / (p_x.unsqueeze(2) * p_y.unsqueeze(1) + eps))
-    mi = mi.sum(dim=(1, 2))
+    MI = torch.sum(p12 * torch.log2(p12 / (torch.outer(p1, p2))))
 
-    # Compute the entropy
-    h_x = -(p_x * torch.log(p_x + eps)).sum(dim=1)
-    h_y = -(p_y * torch.log(p_y + eps)).sum(dim=1)
+    # Normalize the mutual information
+    NMI = MI / (0.5 * (H1 + H2))
 
-    # Compute the normalized mutual information
-    nmi = mi / ((h_x + h_y) / 2)
-
-    # Return the negated NMI as a loss
-    return 1-nmi.mean()
-
-def normal_sampling(mean, label_k, std=2):
-    return math.exp(-(label_k-mean)**2/(2*std**2))/(math.sqrt(2*math.pi)*std)
-
-def kl_loss(inputs, labels):
-    criterion = nn.KLDivLoss(reduce=False)
-    outputs = torch.log(inputs)
-    loss = criterion(outputs, labels)
-    #loss = loss.sum()/loss.shape[0]
-    loss = loss.sum()
-    return loss
-
-def compute_complex_absolute_given_k(output, k, N):
-    two_pi_n_over_N = Variable(2 * math.pi * torch.arange(0, N, dtype=torch.float), requires_grad=True) / N
-    hanning = Variable(torch.from_numpy(np.hanning(N)).type(torch.FloatTensor), requires_grad=True).view(1, -1)
-
-    k = k.type(torch.FloatTensor).cuda()
-    two_pi_n_over_N = two_pi_n_over_N.cuda()
-    hanning = hanning.cuda()
-
-    output = output.view(1, -1) * hanning
-    output = output.view(1, 1, -1).type(torch.cuda.FloatTensor)
-    k = k.view(1, -1, 1)
-    two_pi_n_over_N = two_pi_n_over_N.view(1, 1, -1)
-    complex_absolute = torch.sum(output * torch.sin(k * two_pi_n_over_N), dim=-1) ** 2 \
-                       + torch.sum(output * torch.cos(k * two_pi_n_over_N), dim=-1) ** 2
-
-    return complex_absolute
-
-
-
-def cross_entropy_power_spectrum_DLDL_softmax2(inputs, target, Fs, std=1.0):
-    target_distribution = [normal_sampling(int(target), i, std) for i in range(140)]
-    target_distribution = [i if i > 1e-15 else 1e-15 for i in target_distribution]
-    target_distribution = torch.Tensor(target_distribution).cuda()
-
-    # pdb.set_trace()
-
-    # rank = torch.Tensor([i for i in range(140)]).cuda()
-
-    inputs = inputs.view(1, -1)
-    target = target.view(1, -1)
-
-    bpm_range = torch.arange(40, 180, dtype=torch.float).cuda()
-
-    complex_absolute = complex_absolute_fn(inputs, Fs, bpm_range)
-
-    fre_distribution = F.softmax(complex_absolute.view(-1))
-    loss_distribution_kl = kl_loss(fre_distribution, target_distribution)
-
-    # HR_pre = torch.sum(fre_distribution*rank)
-
-    whole_max_val, whole_max_idx = complex_absolute.view(-1).max(0)
-    whole_max_idx = whole_max_idx.type(torch.float)
-
-    return loss_distribution_kl, F.cross_entropy(complex_absolute, target.view((1)).type(torch.long)), torch.abs(
-        target[0] - whole_max_idx)
-
-def complex_absolute_fn(output, Fs, bpm_range=None):
-    output = output.view(1, -1)
-
-    N = output.size()[1]
-
-    unit_per_hz = Fs / N
-    feasible_bpm = bpm_range / 60.0
-    k = feasible_bpm / unit_per_hz
-
-    # only calculate feasible PSD range [0.7,4]Hz
-    complex_absolute = compute_complex_absolute_given_k(output, k, N)
-
-    return (1.0 / complex_absolute.sum()) * complex_absolute  # Analogous Softmax operator
+    # Return the negative mutual information as the loss
+    return NMI / signal1.shape[0]
 
 class BVPVelocityLoss(nn.Module):
     def __init__(self):
@@ -454,78 +351,19 @@ class BVPVelocityLoss(nn.Module):
         self.trip = nn.TripletMarginLoss()
         # a / pos / neg
 
-    def forward(self, predictions, targets, i, epoch):
+    def forward(self, predictions, targets):
         # [f,l,r,t]
         # (f >-< t,f <->r) (f >-< t, f<->l)
         # (l >-< t, l <->f) (l >-<r, l <-> f)
         # (r >-< t, r <->f) (r >-<r, r <-> f)
 
-        r_loss = 0
-        m_loss = 0
-        p_loss = 0
-
-        # pearson = [neg_Pearson_Loss(prediction,targets) for prediction in predictions ]
-
-        loss = neg_Pearson_Loss(predictions[i], targets)
-
-        # p_loss = mutual_information_loss(predictions[i], targets)
-
-        if epoch >= 400:
-            loss += phase_correlation_loss(predictions[i],targets)
-            loss += power_spectrum_loss(predictions[i], targets)
-        shrink_factor = 4
+        pearson = neg_Pearson_Loss(predictions, targets)
+        NMI = mutual_information_loss(predictions, targets)
+        phase = phase_correlation_loss(predictions, targets)
 
 
-        if epoch >= 700:
-            loss += mutual_information_loss(predictions[i], targets)
 
-
-        # p_loss = phase_correlation_loss(predictions[i], targets)
-            # if i == 0:
-            #     loss += (self.trip(predictions[0], targets, predictions[1].detach()) + self.trip(predictions[0], targets, predictions[2].detach()))/shrink_factor
-            # elif i == 1:
-            #     loss += (self.trip(predictions[1], targets, predictions[0].detach()) + self.trip(predictions[1], predictions[2].detach(), predictions[0].detach()))/shrink_factor
-            # else:
-            #     loss += (self.trip(predictions[2], targets, predictions[0].detach()) + self.trip(predictions[2], predictions[1].detach(), predictions[0].detach()))/shrink_factor
-
-
+        loss = pearson #+ NMI + phase
 
         return loss
 
-class Total_BVPVelocityLoss(nn.Module):
-    def __init__(self):
-        super(Total_BVPVelocityLoss, self).__init__()
-        # a / pos / neg
-
-    def forward(self, predictions, targets, epoch):
-
-
-
-        loss = sum([neg_Pearson_Loss(pre,targets[0]) for pre in predictions])
-
-        # f_np_loss = neg_Pearson_Loss(predictions[0], targets)
-        # l_np_loss = neg_Pearson_Loss(predictions[1], targets)
-        # r_np_loss = neg_Pearson_Loss(predictions[2], targets)
-        # t_np_loss = neg_Pearson_Loss(predictions[3], targets)
-
-        # if epoch >= 400:
-        loss += sum([phase_correlation_loss(pre,targets[0]) for pre in predictions])
-            # loss += phase_correlation_loss(predictions[i],targets)
-            # loss += power_spectrum_loss(predictions[i], targets)
-        # l_loss = 0
-        # c_loss = 0
-        # a_loss = 0
-        # for pred in predictions:
-        #     for i in range(len(pred)):
-        #         l,c,a = cross_entropy_power_spectrum_DLDL_softmax2(pred[i],targets[1][i],30)
-        #         l_loss += l
-        #         c_loss += c
-        #         a_loss += a
-        # l_loss /= len(predictions[0])*len(predictions)
-        # c_loss /= len(predictions[0])*len(predictions)
-        # a_loss /= len(predictions[0])*len(predictions)
-
-            # loss += mutual_information_loss(predictions[i], targets)
-        loss += sum([mutual_information_loss(pre,targets[0]) for pre in predictions])
-
-        return loss #+ l_loss# + c_loss + a_loss

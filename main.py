@@ -17,7 +17,8 @@ from loss import loss_fn
 from models import is_model_support, get_model, summary, get_ver_model
 from optim import optimizer
 from utils.dataset_preprocess import preprocessing, dataset_split
-from utils.train import train_fn, test_fn, train_multi_model_fn, test_multi_model_fn,find_lr
+from utils.train import train_fn, test_fn, train_multi_model_fn, test_multi_model_fn, find_lr
+from matplotlib import pyplot as plt
 
 from params import params
 
@@ -53,7 +54,7 @@ else:
 '''
 Setting Learning Model //Optimizer // Criterior // LR Scheduler
 '''
-lr_sch = {0: 10e-4, 300: 10e-5, 600: 10e-6, 900: 10e-7 }
+lr_sch = {0: 10e-5, 300: 10e-5, 600: 10e-6, 900: 10e-7 }
 if params.multi_model :
     models = [time_checker("get_model", get_model) for i in range(params.number_of_model)]
     opts = [optimizer(models[i].parameters(), params.lr, params.optimizer) for i in range(params.number_of_model)]
@@ -111,18 +112,18 @@ if params.multi_model:
 
 
 else:
-
-    find_lr(model, opt, criterion, data_loaders[0], params.wandb_flag)
+    # log_lrs, losses = find_lr(model, data_loaders[0], opt, criterion)
+    # plt.plot(log_lrs, losses)
+    # plt.xlabel('log10 Learning Rate')
+    # plt.ylabel('Loss')
+    # plt.show()
+    wandb.watch(model, log="all", log_freq=10)
 
     for epoch in range(params.epoch):
         train_fn(epoch, model, opt, criterion, data_loaders[0], "Train", params.wandb_flag)
         sch(None)
         if data_loaders.__len__() == 3:
             val_loss = test_fn(epoch, model, criterion, data_loaders[1], "Val", params.wandb_flag, params.save_img_flag)
-        if epoch == 400 or epoch == 700:
-            min_val_loss = 100.0
-            min_test_loss = 100.0
-
 
         if min_val_loss > val_loss :
             min_val_loss = val_loss
