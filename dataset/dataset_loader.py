@@ -90,6 +90,11 @@ def dataset_loader():
     idx = 0
     while True:
         file_name = root_file_path + str(idx) + ".hdf5"
+        if os.path.isfile(file_name):
+            continue
+        else:
+            file_name = params.save_root_path + "TEST" + "_" + params.dataset_name + "_" + params.dataset_date + "_" + str(idx) + ".hdf5"
+        print(file_name)
         if not os.path.isfile(file_name):
             print("Stop at ", idx)
             break
@@ -112,9 +117,12 @@ def dataset_loader():
 
                 label_data.extend(tmp_label)
             elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
-                if len(file[key]['preprocessed_video']) == len(file[key]['preprocessed_label']):
-                    video_data.extend(file[key]['preprocessed_video'])
-                    label_data.extend(file[key]['preprocessed_label'])
+                video_data.extend(
+                    file[key]['raw_video'][:len(file[key]['raw_video']) // params.time_length * params.time_length])
+                tmp_label = file[key]['preprocessed_label'][
+                            :len(file[key]['preprocessed_label']) // params.time_length * params.time_length]
+                tmp_label = np.around(normalize(tmp_label, 0, 1), 2)
+                label_data.extend(tmp_label)
             elif params.model in ["PPNet"]:
                 ppg.extend(file[key]['ppg'])
                 sbp.extend(file[key]['sbp'])
@@ -138,7 +146,9 @@ def dataset_loader():
                 video_data.extend(file[key]['preprocessed_video'])
                 label_data.extend(file[key]['preprocessed_label'])
         file.close()
-        break
+        if idx == 3:
+            break
+
     if params.model in ["DeepPhys", "MTTS"]:
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                   motion_data=np.asarray(motion_data),
@@ -147,7 +157,7 @@ def dataset_loader():
         dataset = TestDataset(video_data=np.asarray(video_data),
                               keypoint_data=np.asarray(keypoint_data),
                               label_data=np.asarray(label_data),
-                              hr_data=np.asarray(hr_data),
+                              # hr_data=np.asarray(hr_data),
                               target_length=params.time_length)
 
     elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
@@ -161,7 +171,9 @@ def dataset_loader():
                                      label_data=np.asarray(label_data))
         else:
             dataset = PhysNetDataset(video_data=np.asarray(video_data),
-                                     label_data=np.asarray(label_data))
+                                     label_data=np.asarray(label_data),
+                                     target_length=params.time_length
+                                     )
     elif params.model in ["PPNet"]:
         dataset = PPNetDataset(ppg=np.asarray(ppg),
                                sbp=np.asarray(sbp),

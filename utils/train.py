@@ -35,7 +35,7 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
             outputs = model(inputs)
-            loss = criterion(outputs, target,epoch)
+            loss = criterion(outputs, target)
 
             if ~torch.isfinite(loss):
                 continue
@@ -68,51 +68,54 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
             for inputs, target in tepoch:
                 tepoch.set_description(step + "%d" % epoch)
                 outputs = model(inputs)
-                loss = criterion(outputs, target, epoch)
+                loss = criterion(outputs, target)
 
                 if ~torch.isfinite(loss):
                     continue
                 running_loss += loss.item()
 
                 if save_img and save_flag:
-                    f = outputs[0][0].cpu().numpy()
-                    l = outputs[1][0].cpu().numpy()
-                    r = outputs[2][0].cpu().numpy()
-                    tt = outputs[3][0].cpu().numpy()
-                    t = target[0][0].cpu().numpy()
-                    f_array.extend(( f - f.min())/(f.max()-f.min()))
-                    l_array.extend(( l - l.min())/(l.max()-l.min()))
-                    c_array.extend(( r - r.min())/(r.max()-r.min()))
-                    t_array.extend(( t - t.min())/(t.max()-t.min()))
-                    tt_array.extend((tt - tt.min()) / (tt.max() - tt.min()))
-                    save_flag = False
+                    if params.model == "TEST":
+                        f = outputs[0][0].cpu().numpy()
+                        l = outputs[1][0].cpu().numpy()
+                        r = outputs[2][0].cpu().numpy()
+                        tt = outputs[3][0].cpu().numpy()
+                        t = target[0][0].cpu().numpy()
+                        f_array.extend(( f - f.min())/(f.max()-f.min()))
+                        l_array.extend(( l - l.min())/(l.max()-l.min()))
+                        c_array.extend(( r - r.min())/(r.max()-r.min()))
+                        t_array.extend(( t - t.min())/(t.max()-t.min()))
+                        tt_array.extend((tt - tt.min()) / (tt.max() - tt.min()))
+                        save_flag = False
 
-                    if step == "Test":
-                        t_f = bpfilter64(t, 30)
-                        t_f = (t_f - np.mean(t_f)) / np.std(t_f)
+                        if step == "Test":
+                            t_f = bpfilter64(t, 30)
+                            t_f = (t_f - np.mean(t_f)) / np.std(t_f)
 
-                        signal_length = len(t_f)
+                            signal_length = len(t_f)
 
-                        f, Pg = welch(t_f[:signal_length], fs=30, nperseg=2 ** 13)
-                        Frange = np.where((f > 0.7) & (f < 4))[0]
-                        idxG = np.argmax(Pg[Frange])
-                        HR2_1 = f[Frange][idxG] * 60
-                        print(HR2_1,target[1][0])
+                            f, Pg = welch(t_f[:signal_length], fs=30, nperseg=2 ** 13)
+                            Frange = np.where((f > 0.7) & (f < 4))[0]
+                            idxG = np.argmax(Pg[Frange])
+                            HR2_1 = f[Frange][idxG] * 60
+                            print(HR2_1,target[1][0])
+                    else:
+                        f = outputs[0].cpu().numpy()
+                        t = target[0].cpu().numpy()
+                        f_array.extend(( f - f.min())/(f.max()-f.min()))
+                        t_array.extend((t - t.min()) / (t.max() - t.min()))
 
-                        # f, Pg = welch(t_f[:signal_length // 3], fs=30, nperseg=2 ** 13)
-                        # Frange = np.where((f > 0.7) & (f < 4))[0]
-                        # idxG = np.argmax(Pg[Frange])
-                        # HR2_1 = f[Frange][idxG] * 60
-                        # f, Pg = welch(t_f[signal_length // 3:2 * signal_length // 3], fs=30,
-                        #               nperseg=2 ** 13)
-                        # Frange = np.where((f > 0.7) & (f < 4))[0]
-                        # idxG = np.argmax(Pg[Frange])
-                        # HR2_2 = f[Frange][idxG] * 60
-                        # f, Pg = welch(t_f[2 * signal_length // 3:], fs=30, nperseg=2 ** 13)
-                        # Frange = np.where((f > 0.7) & (f < 4))[0]
-                        # idxG = np.argmax(Pg[Frange])
-                        # HR2_3 = f[Frange][idxG] * 60
-                        # HR2 = (HR2_1 + HR2_2 + HR2_3) / 3
+                        if step == "Test":
+                            t_f = bpfilter64(t, 30)
+                            t_f = (t_f - np.mean(t_f)) / np.std(t_f)
+
+                            signal_length = len(t_f)
+
+                            f, Pg = welch(t_f[:signal_length], fs=30, nperseg=2 ** 13)
+                            Frange = np.where((f > 0.7) & (f < 4))[0]
+                            idxG = np.argmax(Pg[Frange])
+                            HR2_1 = f[Frange][idxG] * 60
+                            print(HR2_1, target[1][0])
 
 
                 tepoch.set_postfix(loss=running_loss / tepoch.__len__())
@@ -122,11 +125,13 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
             if  save_img and epoch%100 == 0:
                 plt.clf()
                 plt.rcParams["figure.figsize"] = (16, 5)
-                plt.plot(range(params.time_length), t_array, label='target')
-                plt.plot(range(params.time_length),tt_array,label='total')
-                plt.plot(range(params.time_length),f_array,label='forehead')
-                plt.plot(range(params.time_length),l_array,label='left')
-                plt.plot(range(params.time_length),c_array,label='right')
+
+                plt.plot(range(params.time_length * tepoch.__len__()), t_array, label='target')
+                plt.plot(range(params.time_length* tepoch.__len__()),f_array,label='forehead')
+                if params.model == "TEST":
+                    plt.plot(range(params.time_length),tt_array,label='total')
+                    plt.plot(range(params.time_length),l_array,label='left')
+                    plt.plot(range(params.time_length),c_array,label='right')
                 plt.legend(fontsize='x-large')
                 # plt.savefig("graph2.png")
                 plt.show()
