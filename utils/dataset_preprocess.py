@@ -93,11 +93,11 @@ def preprocessing():
         for person in person_list:
             v_list = [v for v in os.listdir(person_data_path + "/" + person) if v.__contains__(v)]
             for v in v_list:
-                source_list = [source for source in os.listdir(person_data_path + "/" + person + "/" + v) if
-                               not source.__contains__("4") and not source.__contains__("2")]
+                source_list = [source for source in os.listdir(person_data_path + "/" + person + "/" + v)]
                 for source in source_list:
                     tmp = data_dir + "/" + person + "/" + v + "/" + source
-                    data_list.append(tmp)
+                    if len(os.listdir(dataset_root_path+tmp)) == 5 and source == 'source1':
+                        data_list.append(tmp)
 
         vid_name = "/video.avi"
         ground_truth_name = "/wave.csv"
@@ -205,7 +205,7 @@ def chunk_preprocessing(model_name, data_list, dataset_root_path, vid_name, grou
     time_length = kwargs['time_length']
     img_size = kwargs['img_size']
     ssl_flag = kwargs['ssl_flag']
-    time = kwargs['time']
+    time = params.dataset_date#kwargs['time']
     idx = kwargs['idx']
 
     save_root_path = "/media/hdd1/dy/dataset/"
