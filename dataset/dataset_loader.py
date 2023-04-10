@@ -13,7 +13,7 @@ from dataset.RhythmNetDataset import RhythmNetDataset
 from dataset.ETArPPGNetDataset import ETArPPGNetDataset
 from dataset.VitamonDataset import VitamonDataset
 from dataset.TestDataset import TestDataset
-
+from utils.funcs import detrend
 from scipy import signal
 
 from params import params
@@ -61,7 +61,6 @@ def dataset_loader():
         video_data = []
         keypoint_data = []
         label_data = []
-        hr_data = []
     elif params.model in ["PPNet"]:
         ppg = []
         sbp = []
@@ -90,11 +89,9 @@ def dataset_loader():
     idx = 0
     while True:
         file_name = root_file_path + str(idx) + ".hdf5"
-        if os.path.isfile(file_name):
-            continue
-        else:
-            file_name = params.save_root_path + "TEST" + "_" + params.dataset_name + "_" + params.dataset_date + "_" + str(idx) + ".hdf5"
-        print(file_name)
+        if idx >= 100:
+            print("Stop at ", idx)
+            break
         if not os.path.isfile(file_name):
             print("Stop at ", idx)
             break
@@ -109,20 +106,30 @@ def dataset_loader():
                 motion_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
                 target_data.extend(file[key]['preprocessed_label'])
             elif params.model in ["TEST"]:
-                video_data.extend(file[key]['raw_video'][:len(file[key]['raw_video'])//params.time_length*params.time_length])
-                keypoint_data.extend(file[key]['keypoint'][:len(file[key]['keypoint'])//params.time_length*params.time_length])
-                tmp_label = file[key]['preprocessed_label'][:len(file[key]['preprocessed_label'])//params.time_length*params.time_length]
-                tmp_label = np.around(normalize(tmp_label,0,1),2)
-                hr_data.extend(file[key]['preprocessed_hr'][:len(file[key]['preprocessed_hr'])//params.time_length*params.time_length])
+                start = 0
+                end = params.time_length
+                label =detrend(file[key]['preprocessed_label'],100)
 
-                label_data.extend(tmp_label)
+                while end <= len(file[key]['raw_video']):
+                    video_chunk = file[key]['raw_video'][start:end]
+                    # min_val = np.min(video_chunk, axis=(0, 1, 2), keepdims=True)
+                    # max_val = np.max(video_chunk, axis=(0, 1, 2), keepdims=True)
+                    # video_chunk = (video_chunk - min_val) / (max_val - min_val)
+                    video_data.append(video_chunk)
+                    keypoint_data.append(file[key]['keypoint'][start:end])
+                    tmp_label = label[start:end]
+
+                    tmp_label = np.around(normalize(tmp_label,0,1),2)
+                    label_data.append(tmp_label)
+                    # video_chunks.append(video_chunk)
+                    start += params.time_length - params.interval
+                    end += params.time_length - params.interval
+
+
             elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
-                video_data.extend(
-                    file[key]['raw_video'][:len(file[key]['raw_video']) // params.time_length * params.time_length])
-                tmp_label = file[key]['preprocessed_label'][
-                            :len(file[key]['preprocessed_label']) // params.time_length * params.time_length]
-                tmp_label = np.around(normalize(tmp_label, 0, 1), 2)
-                label_data.extend(tmp_label)
+                if len(file[key]['preprocessed_video']) == len(file[key]['preprocessed_label']):
+                    video_data.extend(file[key]['preprocessed_video'])
+                    label_data.extend(file[key]['preprocessed_label'])
             elif params.model in ["PPNet"]:
                 ppg.extend(file[key]['ppg'])
                 sbp.extend(file[key]['sbp'])
@@ -146,8 +153,9 @@ def dataset_loader():
                 video_data.extend(file[key]['preprocessed_video'])
                 label_data.extend(file[key]['preprocessed_label'])
         file.close()
-        if idx == 3:
-            break
+        # break
+
+
 
     if params.model in ["DeepPhys", "MTTS"]:
         dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
@@ -157,7 +165,6 @@ def dataset_loader():
         dataset = TestDataset(video_data=np.asarray(video_data),
                               keypoint_data=np.asarray(keypoint_data),
                               label_data=np.asarray(label_data),
-                              # hr_data=np.asarray(hr_data),
                               target_length=params.time_length)
 
     elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
@@ -171,9 +178,7 @@ def dataset_loader():
                                      label_data=np.asarray(label_data))
         else:
             dataset = PhysNetDataset(video_data=np.asarray(video_data),
-                                     label_data=np.asarray(label_data),
-                                     target_length=params.time_length
-                                     )
+                                     label_data=np.asarray(label_data))
     elif params.model in ["PPNet"]:
         dataset = PPNetDataset(ppg=np.asarray(ppg),
                                sbp=np.asarray(sbp),
