@@ -56,12 +56,6 @@ def get_model():
     elif params.model == "Vitamon":
         model =  Vitamon()
     elif params.model =="TEST":
-        feature_size = 256
-        seq_len = params.time_length
-        num_heads = 8
-        num_layers = 6
-        vocab_size = 64
-        # model = APNET_Backbone()
         model = APNET()
     else:
         log_warning("pls implemented model")
