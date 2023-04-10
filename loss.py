@@ -9,10 +9,12 @@ import torch.nn.functional as F
 import scipy
 import math
 from torchmetrics.functional.audio import scale_invariant_signal_noise_ratio as si_snr
+from numpy import dot
+from numpy.linalg import norm
 
 import torch.utils.checkpoint as cp
 from params import params
-
+from scipy.signal import find_peaks
 
 def loss_fn():
     """
@@ -345,6 +347,37 @@ def mutual_information_loss(signal1, signal2, num_bins=32):
     # Return the negative mutual information as the loss
     return NMI / signal1.shape[0]
 
+
+def peak_loss(y_true, y_pred, alpha=1.0, beta=1.0):
+    def find_peaks_torch(signal, height=None, distance=None):
+        signal_np = signal.detach().cpu().numpy()
+        peaks, _ = find_peaks(signal_np, height=height, distance=distance)
+        return torch.tensor(peaks, dtype=torch.int64)
+
+    batch_size = y_true.size(0)
+    total_loss = 0
+
+    for i in range(batch_size):
+        # Find the peaks in the true and predicted signals
+        y_true_peaks = find_peaks_torch(y_true[i])
+        y_pred_peaks = find_peaks_torch(y_pred[i])
+
+        # Calculate the difference in the number of peaks
+        peak_count_difference = np.abs(y_true_peaks.size(0) - y_pred_peaks.size(0))
+
+        # Calculate the difference in peak positions
+        # min_peak_count = min(y_true_peaks.size(0), y_pred_peaks.size(0))
+        # y_true_peaks = y_true_peaks[:min_peak_count]
+        # y_pred_peaks = y_pred_peaks[:min_peak_count]
+
+        # peak_position_difference = np.sum(np.abs(y_true_peaks - y_pred_peaks))
+
+        # Combine the losses
+        loss = alpha * peak_count_difference #+ beta * peak_position_difference
+        total_loss += loss
+
+    return loss/batch_size
+
 class BVPVelocityLoss(nn.Module):
     def __init__(self):
         super(BVPVelocityLoss, self).__init__()
@@ -358,12 +391,66 @@ class BVPVelocityLoss(nn.Module):
         # (r >-< t, r <->f) (r >-<r, r <-> f)
 
         pearson = neg_Pearson_Loss(predictions, targets)
-        NMI = mutual_information_loss(predictions, targets)
-        phase = phase_correlation_loss(predictions, targets)
+        # NMI = mutual_information_loss(predictions, targets)
+        # phase = phase_correlation_loss(predictions, targets)
 
+        # perd_loss = periodic_signal_loss(targets,predictions)
 
-
-        loss = pearson #+ NMI + phase
+        loss = pearson + peak_loss(targets,predictions) + derivative_loss(predictions,targets)#+ NMI + phase
 
         return loss
 
+def cos_sim(A, B):
+  return dot(A, B)/(norm(A)*norm(B))
+
+# derivative loss for bvp
+def derivative_loss(predictions, targets):
+    predictions = predictions.detach().cpu().numpy()
+    targets = targets.detach().cpu().numpy()
+    batch = predictions.shape[0]
+
+    loss = 0
+
+    for i in range(len(predictions)):
+        predictions[i] = np.gradient(predictions[i])
+        targets[i] = np.gradient(targets[i])
+        loss += cos_sim(predictions[i], targets[i])
+
+
+    return 1 - loss/batch
+
+
+def periodic_signal_loss(signal, pred_period):
+
+    for s in signal:
+        periods = s.unfold(1, pred_period, pred_period).squeeze(0)
+        min_values, _ = torch.min(periods, dim=1)
+        max_values, _ = torch.max(periods, dim=1)
+
+
+    # 예측된 주기를 정수로 변환
+    pred_period = int(pred_period.item())
+
+    # 주기의 시작 인덱스를 찾기 위해 신호를 여러 개의 주기로 분할
+    periods = signal.unfold(1, pred_period, pred_period).squeeze(0)
+
+    # 각 주기의 최소값과 최대값 찾기
+    min_values, _ = torch.min(periods, dim=1)
+    max_values, _ = torch.max(periods, dim=1)
+
+    # 최소값과 최대값의 차이 계산
+    min_max_diff = torch.mean(max_values - min_values)
+
+    return min_max_diff
+
+def autocorrelation(signal, max_lag=None):
+    if max_lag is None:
+        max_lag = signal.shape[-1] // 2
+
+    acf = torch.zeros(max_lag)
+    signal_mean = torch.mean(signal)
+
+    for lag in range(max_lag):
+        acf[lag] = torch.mean((signal[:, :-lag - 1] - signal_mean) * (signal[:, lag:] - signal_mean))
+
+    return acf
