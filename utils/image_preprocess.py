@@ -3,6 +3,8 @@ import math
 import cv2
 import mediapipe as mp
 import numpy as np
+import face_recognition
+from PIL import Image
 from face_recognition import face_locations, face_landmarks
 from skimage.util import img_as_float
 # from test import plot_graph_from_image,get_graph_from_image
@@ -11,6 +13,7 @@ from tqdm import tqdm
 import json
 from skimage.transform import PiecewiseAffineTransform, warp
 import OpenGL.GL as gl
+
 
 
 
@@ -107,32 +110,10 @@ def PhysNet_preprocess_Video(path, **kwargs):
         data.sort()
         frame_total = len(data)
         raw_video = np.empty((frame_total, img_size, img_size, 3))
-        point_list = np.empty((frame_total, 12))
-
         j = 0
-
-        detector = None
 
         if face_detect_algorithm == 2:
             detector = FaceMeshDetector(maxFaces=2)
-
-        if face_detect_algorithm == 4:
-            uv_path = "uv_datas/uv_map.json"  # taken from https://github.com/spite/FaceMeshFaceGeometry/blob/353ee557bec1c8b55a5e46daf785b57df819812c/js/geometry.js
-            uv_map_dict = json.load(open(uv_path))
-            uv_map = np.array([(uv_map_dict["u"][str(i)], uv_map_dict["v"][str(i)]) for i in range(468)])
-            face_mesh = mp.solutions.face_mesh.FaceMesh(
-                static_image_mode=True,
-                refine_landmarks=True,
-                max_num_faces=1,
-                min_detection_confidence=0.5)
-        elif face_detect_algorithm == 5:
-            face_mesh = mp.solutions.face_mesh.FaceMesh(
-                static_image_mode=True,
-                max_num_faces=1,
-                refine_landmarks=True,
-                min_detection_confidence=0.5)
-
-            mp_face_mesh = mp.solutions.face_mesh
 
         mp_face_detection = mp.solutions.face_detection
         with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
@@ -163,8 +144,6 @@ def PhysNet_preprocess_Video(path, **kwargs):
                     height, width, channel = frame.shape
                     frame.flags.writeable = False
 
-                    if frame is None:
-                        break
                     if face_detect_algorithm == 1:
                         rst, crop_frame = faceDetection(frame)
                         if not rst:  # can't detect face
@@ -178,64 +157,15 @@ def PhysNet_preprocess_Video(path, **kwargs):
 
                         _, dot = detector.findFaceMesh(f)
 
-                    elif face_detect_algorithm == 4:
-                        results = face_mesh.process(frame)
-                        crop_frame = faceUnwrapping(frame, results, (img_size, img_size), uv_map, flip_flag)
-                    elif face_detect_algorithm == 5:
-                        results = face_mesh.process(frame)
 
-                        landmarks = results.multi_face_landmarks
-                        if landmarks is None:
-                            return False, None
-
-                        keypoints = get_face_mesh_keypoints(results, frame.shape)
-
-                        frame = crop_face_with_face_mesh(frame, keypoints)
-                        frame = get_forward_face(frame, keypoints)
-                        frame = cv2.resize(frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
-                        results = face_mesh.process(frame)
-
-                        keypoints = get_face_mesh_keypoints(results, frame.shape)
-
-                        if type(keypoints) != type(None):
-
-                            # (69x,151y) (299x,151y)
-                            # (69x,65y) (299x,295y)
-                            # draw rectangle
-                            forehead_x1 = int(keypoints[69, 0])
-                            forehead_y1 = int(keypoints[10, 1])
-                            forehead_x2 = int(keypoints[299, 0])
-                            forehead_y2 = int(keypoints[296, 1])
-
-                            lcheek_x1 = int(keypoints[117, 0])
-                            lcheek_y1 = int(keypoints[229, 1])
-                            lcheek_x2 = int(keypoints[165, 0])
-                            lcheek_y2 = int(keypoints[165, 1])
-
-                            # 449 346 391
-                            rcheek_x1 = int(keypoints[391, 0])
-                            rcheek_y1 = int(keypoints[449, 1])
-                            rcheek_x2 = int(keypoints[346, 0])
-                            rcheek_y2 = int(keypoints[391, 1])
-
-                            point_list[j] = [forehead_x1, forehead_y1, forehead_x2, forehead_y2,
-                                             lcheek_x1, lcheek_y1, lcheek_x2, lcheek_y2,
-                                             rcheek_x1, rcheek_y1, rcheek_x2, rcheek_y2]
-                        else:
-                            point_list[j] = point_list[j - 1]
-
-                        # cv2.rectangle(frame, (forehead_x1,forehead_y1),(forehead_x2,forehead_y2), (0, 255, 0), 1)
-                        # cv2.rectangle(frame, (lcheek_x1, lcheek_y1), (lcheek_x2, lcheek_y2), (0, 255, 0), 1)
-                        # cv2.rectangle(frame, (rcheek_x1, rcheek_y1), (rcheek_x2, rcheek_y2), (0, 255, 0), 1)
-                        crop_frame = frame
                     else:
                         crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
-                    if face_detect_algorithm != 5:
-                        crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
+                    crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
                     crop_frame = generate_Floatimage(crop_frame)
 
                     raw_video[j] = crop_frame
+                    pbar.update(1)
                     j += 1
 
     else:
@@ -303,6 +233,18 @@ def PhysNet_preprocess_Video(path, **kwargs):
                     results = face_mesh.process(frame)
                     crop_frame = faceUnwrapping(frame, results,(img_size, img_size),uv_map,flip_flag)
                 elif face_detect_algorithm == 5:
+
+                    face_locations = face_recognition.face_locations(frame)
+                    face_landmarks = face_recognition.face_landmarks(frame, face_locations)
+
+                    # 얼굴이 상하 뒤집힌 경우, 이미지를 상하로 뒤집기
+                    for landmark in face_landmarks:
+                        top_y = min([p[1] for p in landmark['top_lip']])
+                        bottom_y = max([p[1] for p in landmark['bottom_lip']])
+                        if top_y > bottom_y:
+                            frame = frame.transpose(method=Image.FLIP_TOP_BOTTOM)
+                            break
+
                     results = face_mesh.process(frame)
 
                     landmarks = results.multi_face_landmarks
@@ -310,7 +252,6 @@ def PhysNet_preprocess_Video(path, **kwargs):
                         return False, None
 
                     keypoints = get_face_mesh_keypoints(results, frame.shape)
-
                     frame = crop_face_with_face_mesh(frame,keypoints)
                     frame = get_forward_face(frame, keypoints)
                     frame = cv2.resize(frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
