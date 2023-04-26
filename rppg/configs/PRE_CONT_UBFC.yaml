@@ -1,0 +1,34 @@
+---
+PREPROCESS:
+  FLAG: true
+  datasets:
+    - name: UBFC
+      type: continuous # diff or continuous
+      video_fps: 30
+      face_detect_algorithm: 1 # 1: face recognition 2: FaceMesh
+      face_position: 0 # 0 : face tracking 1: fixed position
+      image_size: 128
+      label_sampling_rate: 30
+FIT:
+  FLAG: false
+  train:
+    model:
+    dataset:
+    fs: #video fps
+    batch_size:
+    learning_rate:
+    epochs:
+    loss:
+    optimizer:
+  val:
+    dataset:
+    fs: #video fps
+    batch_size:
+  test:
+    metric: ['MAE','RMSE','MAPE','Pearson']
+    dataset:
+    interval:
+    fs: #video fps
+    batch_size:
+
+
