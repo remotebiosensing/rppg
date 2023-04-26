@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from torch import optim
 from tqdm import tqdm
 
-from utils.funcs import normalize
+from rppg.utils.funcs import normalize
 
 
 def accuracy(predictions, targets):

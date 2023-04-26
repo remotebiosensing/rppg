@@ -112,6 +112,21 @@ class TimeDomainAttention(torch.nn.Module):
         # self.gap3d = torch.nn.AdaptiveAvgPool3d(1)
         self.conv1d = torch.nn.Conv1d(in_channels=3, out_channels=3, kernel_size=5, padding='same')
         self.activation = torch.nn.Sigmoid()
+    def forward(self, d):
+        [N, C, Block, H, W] = d.shape
+        # Global Average Pooling : (N,C,Block,H,W) -> (N,C,Block,1,1)
+        m = torch.nn.functional.adaptive_avg_pool3d(d, output_size=(Block, 1, 1))
+        # Squeeze : (N,C,Block,1,1) -> (N,C,Block)
+        m = m.view(N, C, -1)
+        # one-dimensional convolution : (N,C,Block) -> (N,C,Block)
+        m = self.conv1d(m)
+        # 1 + sigmoid activation : (N,C,Block) -> (N,C,Block)
+        m = self.activation(m) + 1
+        # Unsqueeze : (N,C,Block) -> (N,C,Block,1,1)
+        m = m.view(N, C, Block, 1, 1)
+        # multiplication : (N,C,Block,1,1) * (N,C,Block,H,W) -> (N,C,Block,H,W)
+        d = m * d
+        return d
 
 class rPPGgenerator(torch.nn.Module):
     def __init__(self, length):

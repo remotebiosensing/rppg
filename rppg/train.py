@@ -6,7 +6,7 @@ import wandb
 from tqdm import tqdm
 
 from params import params
-from utils.funcs import calculate_hr
+from rppg.utils.funcs import calculate_hr
 
 
 def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = True):

@@ -7,7 +7,7 @@ from skimage.transform import resize
 from params import params
 
 
-class TestDataset(Dataset):
+class APNETv2Dataset(Dataset):
     def __init__(self, video_data, keypoint_data, label_data, target_length):
         self.transform = transforms.Compose([
             transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))

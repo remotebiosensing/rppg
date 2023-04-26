@@ -7,8 +7,6 @@ import numpy as np
 from log import log_warning
 import torch.nn.functional as F
 import scipy
-import math
-from torchmetrics.functional.audio import scale_invariant_signal_noise_ratio as si_snr
 from numpy import dot
 from numpy.linalg import norm
 
@@ -16,7 +14,7 @@ import torch.utils.checkpoint as cp
 from params import params
 from scipy.signal import find_peaks
 from scipy.signal import butter, sosfiltfilt
-from utils.funcs import _next_power_of_2
+from rppg.utils.funcs import _next_power_of_2
 def loss_fn():
     """
     :param loss_fn: implement loss function for training
