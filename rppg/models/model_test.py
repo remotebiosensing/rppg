@@ -9,7 +9,7 @@ device = torch.device(
         "cuda:0" if torch.cuda.is_available() else "cpu"
     )
 
-model_name = "APNETv2"
+model_name = "ETArPPGNet"
 
 if __name__ == '__main__':
 
@@ -22,10 +22,9 @@ if __name__ == '__main__':
         net = DeepPhys().to(device)
         out = net(img) # [batch, 1]
     elif model_name == "ETArPPGNet":
-        #TODO : need to check input shape
-        img = torch.rand(32,5,3, 60, 50, 50).to(device) #[batch, block, Channel, time, width, height]
+        img = torch.rand(32,30,3, 10, 224, 224).to(device) #[batch, block, Channel, time, width, height]
         net = ETArPPGNet().to(device)
-        out = net(img)
+        out = net(img) #[batch, block * time]
     elif model_name == "APNETv2":
         img = torch.rand(3,32, 64,3,30,30).to(device) #[fore head + left cheek + right cheek, batch, time, channel, width, height]
         net = APNETv2().to(device)
