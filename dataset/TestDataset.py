@@ -12,7 +12,7 @@ class TestDataset(Dataset):
         self.transform = transforms.Compose([
             transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
         ])
-        video_data = np.reshape(video_data,(-1,target_length,params.img_size,params.img_size,3))
+        # video_data = np.reshape(video_data,(-1,target_length,params.img_size,params.img_size,3))
         self.label_data = np.reshape(label_data,(-1,target_length))
         keypoint_data = np.clip(keypoint_data,0,params.img_size)
         keypoint_data = np.reshape(keypoint_data,(-1,target_length,12))
@@ -29,6 +29,7 @@ class TestDataset(Dataset):
             y_p = k[1::2]
             if y_p[0] >= y_p[1] or y_p[2] >= y_p[3] or y_p[4] >= y_p[5] or x_p[0] >=x_p[1] or x_p[2] >=x_p[3] or x_p[4] >= x_p[5]:
                 idx.append(i)
+
         video_data = np.delete(video_data,idx, axis = 0)
         self.label_data = np.delete(self.label_data, idx, axis = 0)
         keypoint_data = np.delete(keypoint_data, idx, axis = 0)
@@ -57,10 +58,6 @@ class TestDataset(Dataset):
             self.forehead_data[i] = resize(f[:], (self.target_length, 30, 30))
             self.lcheek_data[i] = resize(l[:], (self.target_length, 30, 30))
             self.rcheek_data[i] = resize(r[:], (self.target_length, 30, 30))
-
-        # self.forehead_data = np.reshape(self.forehead_data,(-1,30,30,3))
-        # self.lcheek_data = np.reshape(self.lcheek_data,(-1,30,30,3))
-        # self.rcheek_data = np.reshape(self.rcheek_data,(-1,30,30,3))
 
 
     def __getitem__(self, index):

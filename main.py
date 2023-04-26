@@ -54,7 +54,7 @@ else:
 '''
 Setting Learning Model //Optimizer // Criterior // LR Scheduler
 '''
-lr_sch = {0: 10e-5, 300: 10e-5, 600: 10e-6, 900: 10e-7 }
+lr_sch = {0: 10e-4, 300: 10e-5, 600: 10e-6, 900: 10e-7 }
 if params.multi_model :
     models = [time_checker("get_model", get_model) for i in range(params.number_of_model)]
     opts = [optimizer(models[i].parameters(), params.lr, params.optimizer) for i in range(params.number_of_model)]
@@ -128,11 +128,7 @@ else:
         if min_val_loss > val_loss :
             min_val_loss = val_loss
             running_loss = test_fn(epoch, model, criterion, data_loaders[-1], "Test", params.wandb_flag, params.save_img_flag)
-            # if min_test_loss > running_loss:
-            #     min_test_loss = running_loss
-            #     torch.save(model.state_dict(),
-            #                params.model_root_path + params.dataset_name + "_" + params.model + "_" + params.loss_fn)
-        # if epoch % 10 == 0:
+
 
 
 

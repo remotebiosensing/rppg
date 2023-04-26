@@ -15,7 +15,8 @@ from numpy.linalg import norm
 import torch.utils.checkpoint as cp
 from params import params
 from scipy.signal import find_peaks
-
+from scipy.signal import butter, sosfiltfilt
+from utils.funcs import _next_power_of_2
 def loss_fn():
     """
     :param loss_fn: implement loss function for training
@@ -348,35 +349,66 @@ def mutual_information_loss(signal1, signal2, num_bins=32):
     return NMI / signal1.shape[0]
 
 
-def peak_loss(y_true, y_pred, alpha=1.0, beta=1.0):
+def peak_loss(y_true, y_pred, alpha=0.5, beta=1.0):
     def find_peaks_torch(signal, height=None, distance=None):
         signal_np = signal.detach().cpu().numpy()
         peaks, _ = find_peaks(signal_np, height=height, distance=distance)
         return torch.tensor(peaks, dtype=torch.int64)
 
+    def find_peaks_negative(signal, height=None, distance=None):
+        signal_np = -1.0 * signal.detach().cpu().numpy()
+        peaks, _ = find_peaks(signal_np, height=height, distance=distance)
+        return torch.tensor(peaks, dtype=torch.int64)
+
+    def find_peak_freq_torch(signal, fs=30):
+        signal_np = signal.detach().cpu().numpy()
+        N = _next_power_of_2(signal_np.shape[0])
+        f_ppg, pxx_ppg = scipy.signal.periodogram(signal_np, fs=fs, nfft=N, detrend=False)
+        fmask_ppg = np.argwhere((f_ppg >= 0.75) & (f_ppg <= 2.5))
+        mask_ppg = np.take(f_ppg, fmask_ppg)
+        mask_pxx = np.take(pxx_ppg, fmask_ppg)
+        peak_freq = np.take(mask_ppg, np.argmax(mask_pxx, 0))[0]
+        return peak_freq
+
+    def find_peaks_values(signal, peaks):
+        return signal[peaks]
+
     batch_size = y_true.size(0)
     total_loss = 0
 
-    for i in range(batch_size):
-        # Find the peaks in the true and predicted signals
-        y_true_peaks = find_peaks_torch(y_true[i])
-        y_pred_peaks = find_peaks_torch(y_pred[i])
+    with torch.no_grad():
+        for i in range(batch_size):
+            # Find the peaks in the true and predicted signals
+            y_true_peaks = find_peaks_torch(y_true[i])
+            y_pred_peaks = find_peaks_torch(y_pred[i])
 
-        # Calculate the difference in the number of peaks
-        peak_count_difference = np.abs(y_true_peaks.size(0) - y_pred_peaks.size(0))
+            y_pred_peak_values = find_peaks_values(y_pred[i], y_pred_peaks)
 
-        # Calculate the difference in peak positions
-        # min_peak_count = min(y_true_peaks.size(0), y_pred_peaks.size(0))
-        # y_true_peaks = y_true_peaks[:min_peak_count]
-        # y_pred_peaks = y_pred_peaks[:min_peak_count]
+            # Calculate the difference in the number of peaks
+            peak_count_difference = np.abs(y_true_peaks.size(0) - y_pred_peaks.size(0))
+            peak_value_difference = torch.abs(1 - y_pred_peak_values.mean())
 
-        # peak_position_difference = np.sum(np.abs(y_true_peaks - y_pred_peaks))
+            y_true_peaks = find_peaks_negative(y_true[i])
+            y_pred_peaks = find_peaks_negative(y_pred[i])
 
-        # Combine the losses
-        loss = alpha * peak_count_difference #+ beta * peak_position_difference
-        total_loss += loss
+            y_pred_peak_values = find_peaks_values(y_pred[i], y_pred_peaks)
 
-    return loss/batch_size
+            # Calculate the difference in the number of peaks
+            neg_peak_count_difference = np.abs(y_true_peaks.size(0) - y_pred_peaks.size(0))
+
+            neg_peak_value_difference = torch.abs(1 - y_pred_peak_values.mean())
+
+            y_true_peak_freq = find_peak_freq_torch(y_true[i])
+            y_pred_peak_freq = find_peak_freq_torch(y_pred[i])
+
+            # Calculate the difference in peak frequency
+            freq_diff = torch.abs(torch.tensor(y_true_peak_freq - y_pred_peak_freq))
+
+            # Combine the losses
+            loss = alpha * (peak_count_difference+neg_peak_count_difference + peak_value_difference + neg_peak_value_difference) + freq_diff  # + beta * peak_position_difference
+            total_loss += loss
+
+    return total_loss / batch_size
 
 class BVPVelocityLoss(nn.Module):
     def __init__(self):
@@ -412,12 +444,17 @@ def derivative_loss(predictions, targets):
     loss = 0
 
     for i in range(len(predictions)):
+        # 1st derivative
+        predictions[i] = np.gradient(predictions[i])
+        targets[i] = np.gradient(targets[i])
+        loss += cos_sim(predictions[i], targets[i])
+        # 2nd derivative
         predictions[i] = np.gradient(predictions[i])
         targets[i] = np.gradient(targets[i])
         loss += cos_sim(predictions[i], targets[i])
 
 
-    return 1 - loss/batch
+    return 2 - loss/batch
 
 
 def periodic_signal_loss(signal, pred_period):
@@ -454,3 +491,13 @@ def autocorrelation(signal, max_lag=None):
         acf[lag] = torch.mean((signal[:, :-lag - 1] - signal_mean) * (signal[:, lag:] - signal_mean))
 
     return acf
+
+def bandpass_filter(data, lowcut=0.8, highcut=2.5, fs=30, order=5):
+    # Design bandpass filter
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    sos = butter(order, [low, high], analog=False, btype='band', output='sos')
+    # Apply bandpass filter
+    y = sosfiltfilt(sos, data)
+    return y
