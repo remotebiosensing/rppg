@@ -1,6 +1,8 @@
 ---
 PREPROCESS:
-  FLAG: true
+  FLAG: "pre" # pre , analyze, false , pre + analyze
+  dataset_path:
+  save_path:
   datasets:
     - name: UBFC
       type: continuous # diff or continuous
