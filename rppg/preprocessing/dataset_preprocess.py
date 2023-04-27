@@ -15,20 +15,6 @@ import math
 from params import params
 
 
-def dataset_split(**kwargs):
-    dataset, ratio = kwargs["dataset"], kwargs["ratio"]
-    dataset_len = len(dataset)
-    if ratio.__len__() == 3:
-        train_len = int(np.floor(dataset_len * ratio[0]))
-        val_len = int(np.floor(dataset_len * ratio[1]))
-        test_len = dataset_len - train_len - val_len
-
-        return random_split(dataset, [train_len, val_len, test_len])
-    elif ratio.__len__() == 2:
-        train_len = int(np.floor(dataset_len * ratio[0]))
-        test_len = dataset_len - train_len
-        return random_split(dataset, [train_len, test_len])
-
 
 def preprocessing():
     """

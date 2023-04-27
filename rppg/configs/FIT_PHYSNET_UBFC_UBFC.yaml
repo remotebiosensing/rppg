@@ -1,14 +1,15 @@
 ---
-PREPROCESS:
-  FLAG: false
+preprocess:
+  flag: false
   analyze : false
   dataset_path:
   save_path:
   datasets:
-FIT:
-  FLAG: true
+fit:
+  flag: true
   model: PhysNet
   train:
+    flag: true
     dataset: UBFC
     fs: 30 #video fps
     batch_size: 64
@@ -17,10 +18,13 @@ FIT:
     loss: negPearson
     optimizer: adam
   val:
-    dataset: PhysNet
+    flag: true
+    dataset: UBFC
+    interval: 1 # min 1
     fs: 30 #video fps
     batch_size: 100
   test:
+    flag: true
     metric: ['MAE','RMSE','MAPE','Pearson']
     dataset: UBFC
     interval: 20 # test interval epoch

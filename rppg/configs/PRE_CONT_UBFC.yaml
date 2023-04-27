@@ -1,6 +1,6 @@
 ---
-PREPROCESS:
-  FLAG: "pre" # pre , analyze, false , pre + analyze
+preprocess:
+  flag: "pre" # pre , analyze, false , pre + analyze
   dataset_path:
   save_path:
   datasets:
@@ -11,10 +11,11 @@ PREPROCESS:
       face_position: 0 # 0 : face tracking 1: fixed position
       image_size: 128
       label_sampling_rate: 30
-FIT:
-  FLAG: false
+fit:
+  flag: false
   model:
   train:
+    flag: false
     dataset:
     fs: #video fps
     batch_size:
@@ -23,10 +24,12 @@ FIT:
     loss:
     optimizer:
   val:
+    flag: false
     dataset:
     fs: #video fps
     batch_size:
   test:
+    flag: false
     metric: ['MAE','RMSE','MAPE','Pearson']
     dataset:
     interval:
