@@ -24,49 +24,41 @@ def get_ver_model(ver:int = 1):
     return TEST2(ver)
 
 
-def get_model():
+def get_model(model_name):
     """
     :param model_name: model name
     :return: model
     """
-    if params.__TIME__:
-        start_time = time.time()
 
-    if params.log_flag:
-        print("========= set model get_model() in"+ os.path.basename(__file__))
-
-    if params.model == "DeepPhys":
+    if model_name == "DeepPhys":
         model = DeepPhys()
-    elif params.model == "DeepPhys_DA":
+    elif model_name == "DeepPhys_DA":
         model = DeepPhys_DA()
-    elif params.model == "PhysNet":
+    elif model_name == "PhysNet":
         model = PhysNet()
-    elif params.model == "PhysNet_LSTM":
+    elif model_name == "PhysNet_LSTM":
         model = PhysNet_2DCNN_LSTM()
-    elif params.model == "PPNet":
+    elif model_name == "PPNet":
         model = PPNet()
-    elif params.model == "GCN":
+    elif model_name == "GCN":
         model = TEST()#Seq_GCN()#TEST()#
-    elif params.model == "AxisNet":
+    elif model_name == "AxisNet":
         model = AxisNet(),PhysiologicalGenerator()
-    elif params.model == "RhythmNet":
+    elif model_name == "RhythmNet":
         model = RhythmNet()
-    elif params.model == "ETArPPGNet":
+    elif model_name == "ETArPPGNet":
         model = ETArPPGNet()
-    elif params.model == "Vitamon":
+    elif model_name == "Vitamon":
         model =  Vitamon()
-    elif params.model =="TEST":
+    elif model_name =="TEST":
         model = APNET()
     else:
         log_warning("pls implemented model")
         raise NotImplementedError("implement a custom model(%s) in /nets/models/" % params.model)
 
-    if params.__MODEL_SUMMARY__:
-        summary(model)
+    # if params.__MODEL_SUMMARY__:
+    #     summary(model)
 
-    if params.__TIME__:
-        end_time = time.time()
-        log_info_time("model load time : ", end_time - start_time)
     return model.cuda()
 
 

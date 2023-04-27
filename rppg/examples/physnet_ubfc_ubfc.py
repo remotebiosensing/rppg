@@ -1,14 +1,16 @@
-from rppg.config import get_config
-from rppg.preprocessing.dataset_preprocess import preprocessing
-from rppg.dataset_loader import (dataset_loader, dataset_split, split_data_loader)
-from rppg.train import train_fn, test_fn
+import random
+
+import numpy as np
+import torch
+
+from loss import loss_fn
 from models import get_model
 from optim import optimizer
-from loss import loss_fn
-import torch
-import numpy as np
-import random
-import os
+from rppg.config import get_config
+from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
+from rppg.preprocessing.dataset_preprocess import preprocessing
+from rppg.train import train_fn, test_fn
+
 SEED = 0
 
 # for Reproducible model
@@ -31,37 +33,119 @@ if __name__ == "__main__":
     if cfg.fit.flag:
         # load dataset
         if cfg.fit.test.flag:
-            test_data = dataset_loader()
-            test_data = split_data_loader(test_data)
+            test_data = dataset_loader(
+                save_root_path=cfg.dataset_path,
+                model_name=cfg.fit.model,
+                dataset_name=cfg.fit.test.dataset
+            )
+            test_data = data_loader(
+                datasets=[test_data],
+                batch_sizes=[cfg.fit.test.batch_size],
+                shuffles=[cfg.fit.test.shuffle]
+            )
         elif cfg.fit.train.flag and cfg.fit.val.flag:
             if cfg.fit.train.dataset == cfg.fit.val.dataset == cfg.fit.test.dataset:
-                dataset = dataset_loader()
+                dataset = dataset_loader(
+                    save_root_path=cfg.dataset_path,
+                    model_name=cfg.fit.model,
+                    dataset_name=cfg.fit.train.dataset
+                )
                 train_dataset, val_dataset, test_dataset = dataset_split(dataset, [0.8, 0.1, 0.1])
+                train_dataset, val_dataset, test_dataset = data_loader(
+                    datasets=[train_dataset, val_dataset, test_dataset],
+                    batch_sizes=[cfg.fit.train.batch_size,
+                                 cfg.fit.val.batch_size,
+                                 cfg.fit.test.batch_size],
+                    shuffles=[cfg.fit.train.shuffle,
+                              cfg.fit.val.shuffle,
+                              cfg.fit.test.shuffle]
+
+                )
 
             elif cfg.fit.train.dataset == cfg.fit.val.dataset != cfg.fit.test.dataset:
-                dataset = dataset_loader()
+                dataset = dataset_loader(
+                    save_root_path=cfg.dataset_path,
+                    model_name=cfg.fit.model,
+                    dataset_name=cfg.fit.train.dataset
+                )
                 train_dataset, val_dataset = dataset_split(dataset, [0.8, 0.2])
-                test_dataset = dataset_loader()
-            else:
-                train_dataset = dataset_loader()
-                val_dataset = dataset_loader()
-                test_dataset = dataset_loader()
+                test_dataset = dataset_loader(
+                    save_root_path=cfg.dataset_path,
+                    model_name=cfg.fit.model,
+                    dataset_name=cfg.fit.test.dataset
+                )
+                train_dataset, val_dataset, test_dataset = data_loader(
+                    datasets=[train_dataset, val_dataset, test_dataset],
+                    batch_sizes=[cfg.fit.train.batch_size,
+                                 cfg.fit.val.batch_size,
+                                 cfg.fit.test.batch_size],
+                    shuffles=[cfg.fit.train.shuffle,
+                              cfg.fit.val.shuffle,
+                              cfg.fit.test.shuffle]
 
-        model = get_model()
-        opt = optimizer()
-        criterion = loss_fn()
+                )
+            else:
+                train_dataset = dataset_loader(
+                    save_root_path=cfg.dataset_path,
+                    model_name=cfg.fit.model,
+                    dataset_name=cfg.fit.train.dataset)
+                val_dataset = dataset_loader(
+                    save_root_path=cfg.dataset_path,
+                    model_name=cfg.fit.model,
+                    dataset_name=cfg.fit.val.dataset)
+                test_dataset = dataset_loader(
+                    save_root_path=cfg.dataset_path,
+                    model_name=cfg.fit.model,
+                    dataset_name=cfg.fit.test.dataset)
+                train_dataset, val_dataset, test_dataset = data_loader(
+                    datasets=[train_dataset, val_dataset, test_dataset],
+                    batch_sizes=[cfg.fit.train.batch_size,
+                                 cfg.fit.val.batch_size,
+                                 cfg.fit.test.batch_size],
+                    shuffles=[cfg.fit.train.shuffle,
+                              cfg.fit.val.shuffle,
+                              cfg.fit.test.shuffle]
+
+                )
+
+        model = get_model(cfg.fit.model)
+        opt = optimizer(cfg.fit.train.optimizer)
+        criterion = loss_fn(cfg.fit.train.loss)
 
         if cfg.fit.train.flag:
             for epoch in range(cfg.fit.train.epochs):
-                train_fn()
-                if cfg.fit.val.flag and epoch % cfg.fit.val.interval == 0 :
-                    test_fn()
-                if cfg.fit.test.flag and epoch % cfg.fit.test.interval == 0 :
-                    test_fn()
+                train_fn(
+                    epoch=epoch,
+                    model=model,
+                    optimizer=opt,
+                    criterion=criterion,
+                    dataloaders=train_dataset,
+                    step="Train",
+                    wandb_flag=True
+                )
+                if cfg.fit.val.flag and epoch % cfg.fit.val.interval == 0:
+                    test_fn(
+                        epoch=epoch,
+                        model=model,
+                        criterion=criterion,
+                        dataloaders=val_dataset,
+                        step="Val",
+                        wandb_flag=True
+                    )
+                if cfg.fit.test.flag and epoch % cfg.fit.test.interval == 0:
+                    test_fn(
+                        epoch=epoch,
+                        model=model,
+                        criterion=criterion,
+                        dataloaders=test_dataset,
+                        step="Test",
+                        wandb_flag=True
+                    )
         elif cfg.fit.test.flag:
-            test_fn()
-
-
-
-
-
+            test_fn(
+                epoch=None,
+                model=model,
+                criterion=criterion,
+                dataloaders=test_dataset,
+                step="Test",
+                wandb_flag=True)

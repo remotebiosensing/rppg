@@ -17,52 +17,50 @@ from rppg.datasets.VitamonDataset import VitamonDataset
 from utils.funcs import detrend
 
 
-def dataset_split(**kwargs):
-    dataset, ratio = kwargs["dataset"], kwargs["ratio"]
+def dataset_split(
+        dataset,
+        ratio
+):
     dataset_len = len(dataset)
     if ratio.__len__() == 3:
         train_len = int(np.floor(dataset_len * ratio[0]))
         val_len = int(np.floor(dataset_len * ratio[1]))
         test_len = dataset_len - train_len - val_len
-
-        return random_split(dataset, [train_len, val_len, test_len])
+        datasets = random_split(dataset, [train_len, val_len, test_len])
+        return datasets[0], datasets[1], datasets[2],
     elif ratio.__len__() == 2:
         train_len = int(np.floor(dataset_len * ratio[0]))
-        test_len = dataset_len - train_len
-        return random_split(dataset, [train_len, test_len])
+        val_len = dataset_len - train_len
+        datasets = random_split(dataset, [train_len, val_len])
+        return datasets[0], datasets[1]
 
 
 
-def split_data_loader(**kwargs):
-    datasets, batch_size, train_shuffle, test_shuffle = kwargs["datasets"], kwargs["batch_size"], kwargs["train_shuffle"], kwargs["test_shuffle"]
+def data_loader(
+        datasets,
+        batch_sizes,
+        shuffles
+):
     if datasets.__len__() == 3:
-        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=train_shuffle)
-        validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=test_shuffle)
-        test_loader = DataLoader(datasets[2], batch_size=batch_size, shuffle=test_shuffle)
+        train_loader = DataLoader(datasets[0], batch_size=batch_sizes[0], shuffle=shuffles[0])
+        validation_loader = DataLoader(datasets[1], batch_size=batch_sizes[0], shuffle=shuffles[1])
+        test_loader = DataLoader(datasets[2], batch_size=batch_sizes[0], shuffle=shuffles[2])
         return [train_loader, validation_loader, test_loader]
     elif datasets.__len__() == 2:
-        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=train_shuffle)
-        test_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=test_shuffle)
+        train_loader = DataLoader(datasets[0], batch_size=batch_sizes[0], shuffle=shuffles[0])
+        test_loader = DataLoader(datasets[1], batch_size=batch_sizes[0], shuffle=shuffles[1])
         return [train_loader, test_loader]
+    elif datasets.__len__() == 1:
+        data_loader = DataLoader(datasets[0], batch_size=batch_sizes[0], shuffle=shuffles[0])
+        return [data_loader]
 
 
-def dataset_loader():
-    '''
-    :param save_root_path: save file destination path
-    :param model_name : model_name
-    :param dataset_name: data set name(ex. UBFC, COFACE)
-    :param option:[train, test]
-    :return: dataset
-    '''
-    if params.log_flag:
-        print("========= dataset_loader() in" + os.path.basename(__file__))
-
-    cnt = 0
-    flag = True
+def dataset_loader(
+        save_root_path : str,
+        model_name : str,
+        dataset_name : str
+):
     name = params.model
-
-
-
     available_memory = psutil.virtual_memory().available
     print("available_memory : ", available_memory / 1024 / 1024, 'MB')
 
