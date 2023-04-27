@@ -7,7 +7,6 @@ from torch.utils.data import ConcatDataset
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 
-from params import params
 from rppg.datasets.APNETv2Dataset import APNETv2Dataset
 from rppg.datasets.DeepPhysDataset import DeepPhysDataset
 from rppg.datasets.ETArPPGNetDataset import ETArPPGNetDataset
@@ -58,13 +57,22 @@ def data_loader(
 def dataset_loader(
         save_root_path : str,
         model_name : str,
-        dataset_name : str
+        dataset_name : str,
+        time_length : int,
+        overlap_interval : int,
+
 ):
-    name = params.model
     available_memory = psutil.virtual_memory().available
     print("available_memory : ", available_memory / 1024 / 1024, 'MB')
 
-    root_file_path = params.save_root_path + name + "_" + params.dataset_name + "_" + params.dataset_date +"_"
+    model_type = ''
+    if model_name in ["DeepPhys", "MTTS"]:
+        model_type = 'DIFF'
+    else:
+        model_type = 'CONT'
+
+    root_file_path = save_root_path + model_type + "_" + dataset_name +"_"
+
     idx = 0
 
     target_memory = 1024*1024*1024*3
@@ -77,39 +85,39 @@ def dataset_loader(
 
     while True:
         if round_flag == 0:
-            if params.model in ["DeepPhys", "MTTS"]:
+            if model_name in ["DeepPhys", "MTTS"]:
                 appearance_data = []
                 motion_data = []
                 target_data = []
-            elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+            elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
                 video_data = []
                 label_data = []
                 bpm_data = []
                 keypoint_data = []
-            elif params.model in ["TEST"]:
+            elif model_name in ["TEST"]:
                 video_data = []
                 keypoint_data = []
                 label_data = []
-            elif params.model in ["PPNet"]:
+            elif model_name in ["PPNet"]:
                 ppg = []
                 sbp = []
                 dbp = []
                 hr = []
-            elif params.model in ["RTNet"]:
+            elif model_name in ["RTNet"]:
                 face_data = []
                 mask_data = []
                 target_data = []
-            elif params.model in ["AxisNet"]:
+            elif model_name in ["AxisNet"]:
                 video_data = []
                 label_data = []
                 ptt_data = []
-            elif params.model in ["RhythmNet"]:
+            elif model_name in ["RhythmNet"]:
                 st_map_data = []
                 target_data = []
-            elif params.model in ["ETArPPGNet"]:
+            elif model_name in ["ETArPPGNet"]:
                 video_data = []
                 label_data = []
-            elif params.model in ["Vitamon", "Vitamon_phase2"]:
+            elif model_name in ["Vitamon", "Vitamon_phase2"]:
                 video_data = []
                 label_data = []
             round_flag = 1
@@ -125,16 +133,16 @@ def dataset_loader(
                 dataset_memory += file_size
 
             idx += 1
-            file = h5py.File(file_name, "r")
+            file = h5py.File(file_name)
             h5_tree(file)
             for key in file.keys():
-                if params.model in ["DeepPhys", "MTTS"]:
+                if model_name in ["DeepPhys", "MTTS"]:
                     appearance_data.extend(file[key]['preprocessed_video'][:, :, :, -3:])
                     motion_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
                     target_data.extend(file[key]['preprocessed_label'])
-                elif params.model in ["TEST"]:
+                elif model_name in ["TEST"]:
                     start = 0
-                    end = params.time_length
+                    end = time_length
                     label =detrend(file[key]['preprocessed_label'],100)
 
                     while end <= len(file[key]['raw_video']):
@@ -149,59 +157,76 @@ def dataset_loader(
                         tmp_label = np.around(normalize(tmp_label,0,1),2)
                         label_data.append(tmp_label)
                         # video_chunks.append(video_chunk)
-                        start += params.time_length - params.interval
-                        end += params.time_length - params.interval
-                elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
-                    if len(file[key]['preprocessed_video']) == len(file[key]['preprocessed_label']):
-                        video_data.extend(file[key]['preprocessed_video'])
-                        label_data.extend(file[key]['preprocessed_label'])
-                elif params.model in ["PPNet"]:
+                        start += time_length - overlap_interval
+                        end += time_length - overlap_interval
+                elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+                    start = 0
+                    end = time_length
+                    label = detrend(file[key]['preprocessed_label'], 100)
+
+                    while end <= len(file[key]['raw_video']):
+                        video_chunk = file[key]['raw_video'][start:end]
+                        # min_val = np.min(video_chunk, axis=(0, 1, 2), keepdims=True)
+                        # max_val = np.max(video_chunk, axis=(0, 1, 2), keepdims=True)
+                        # video_chunk = (video_chunk - min_val) / (max_val - min_val)
+                        video_data.append(video_chunk)
+                        keypoint_data.append(file[key]['keypoint'][start:end])
+                        tmp_label = label[start:end]
+
+                        tmp_label = np.around(normalize(tmp_label, 0, 1), 2)
+                        label_data.append(tmp_label)
+                        # video_chunks.append(video_chunk)
+                        start += time_length - overlap_interval
+                        end += time_length - overlap_interval
+
+                elif model_name in ["PPNet"]:
                     ppg.extend(file[key]['ppg'])
                     sbp.extend(file[key]['sbp'])
                     dbp.extend(file[key]['dbp'])
                     hr.extend(file[key]['hr'])
-                elif params.model in ["RTNet"]:
+                elif model_name in ["RTNet"]:
                     face_data.extend(file[key]['preprocessed_video'][:, :, :, -3:])
                     mask_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
                     target_data.extend(file[key]['preprocessed_label'])
-                elif params.model in ["AxisNet"]:
+                elif model_name in ["AxisNet"]:
                     video_data.extend(file[key]['preprocessed_video'])
                     ptt_data.extend(file[key]['preprocessed_ptt'])
                     label_data.extend(file[key]['preprocessed_label'])
-                elif params.model in ["RhythmNet"]:
+                elif model_name in ["RhythmNet"]:
                     st_map_data.extend(file[key]['preprocessed_video'])
                     target_data.extend(file[key]['preprocessed_label'])
-                elif params.model in ["ETArPPGNet"]:
+                elif model_name in ["ETArPPGNet"]:
                     video_data.extend(file[key]['preprocessed_video'])
                     label_data.extend(file[key]['preprocessed_label'])
-                elif params.model in ["Vitamon", "Vitamon_phase2"]:
+                elif model_name in ["Vitamon", "Vitamon_phase2"]:
                     video_data.extend(file[key]['preprocessed_video'])
                     label_data.extend(file[key]['preprocessed_label'])
             file.close()
             if dataset_memory > target_memory:
                 round_flag = 2
         elif round_flag == 2:
-            if params.model in ["DeepPhys", "MTTS"]:
+            if model_name in ["DeepPhys", "MTTS"]:
                 dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                           motion_data=np.asarray(motion_data),
                                           target=np.asarray(target_data))
-            elif params.model in ["TEST"]:
+            elif model_name in ["TEST"]:
                 dataset = APNETv2Dataset(video_data=np.asarray(video_data),
                                       keypoint_data=np.asarray(keypoint_data),
                                       label_data=np.asarray(label_data),
-                                      target_length=params.time_length)
+                                      target_length=time_length)
 
-            elif params.model in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+            elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
                 dataset = PhysNetDataset(video_data=np.asarray(video_data),
-                                         label_data=np.asarray(label_data))
-            elif params.model in ["RhythmNet"]:
+                                         label_data=np.asarray(label_data),
+                                         target_length = time_length)
+            elif model_name in ["RhythmNet"]:
                 dataset = RhythmNetDataset(st_map_data=np.asarray(st_map_data),
                                            target_data=np.asarray(target_data))
-            elif params.model in ["ETArPPGNet"]:
+            elif model_name in ["ETArPPGNet"]:
                 dataset = ETArPPGNetDataset(video_data=np.asarray(video_data),
                                             label_data=np.asarray(label_data))
 
-            elif params.model in ["Vitamon","Vitamon_phase2"]:
+            elif model_name in ["Vitamon","Vitamon_phase2"]:
                 dataset = VitamonDataset(video_data=np.asarray(video_data),
                                             label_data=np.asarray(label_data))
             datasets = [rst_dataset, dataset]

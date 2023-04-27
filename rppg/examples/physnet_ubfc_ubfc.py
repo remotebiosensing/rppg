@@ -32,23 +32,15 @@ if __name__ == "__main__":
 
     if cfg.fit.flag:
         # load dataset
-        if cfg.fit.test.flag:
-            test_data = dataset_loader(
-                save_root_path=cfg.dataset_path,
-                model_name=cfg.fit.model,
-                dataset_name=cfg.fit.test.dataset
-            )
-            test_data = data_loader(
-                datasets=[test_data],
-                batch_sizes=[cfg.fit.test.batch_size],
-                shuffles=[cfg.fit.test.shuffle]
-            )
-        elif cfg.fit.train.flag and cfg.fit.val.flag:
+
+        if cfg.fit.train.flag and cfg.fit.val.flag and cfg.fit.test.flag:
             if cfg.fit.train.dataset == cfg.fit.val.dataset == cfg.fit.test.dataset:
                 dataset = dataset_loader(
                     save_root_path=cfg.dataset_path,
                     model_name=cfg.fit.model,
-                    dataset_name=cfg.fit.train.dataset
+                    dataset_name=cfg.fit.train.dataset,
+                    time_length=cfg.fit.time_length,
+                    overlap_interval=cfg.fit.overlap_interval
                 )
                 train_dataset, val_dataset, test_dataset = dataset_split(dataset, [0.8, 0.1, 0.1])
                 train_dataset, val_dataset, test_dataset = data_loader(
@@ -66,13 +58,17 @@ if __name__ == "__main__":
                 dataset = dataset_loader(
                     save_root_path=cfg.dataset_path,
                     model_name=cfg.fit.model,
-                    dataset_name=cfg.fit.train.dataset
+                    dataset_name=cfg.fit.train.dataset,
+                    time_length=cfg.fit.time_length,
+                    overlap_interval=cfg.fit.overlap_interval
                 )
                 train_dataset, val_dataset = dataset_split(dataset, [0.8, 0.2])
                 test_dataset = dataset_loader(
                     save_root_path=cfg.dataset_path,
                     model_name=cfg.fit.model,
-                    dataset_name=cfg.fit.test.dataset
+                    dataset_name=cfg.fit.test.dataset,
+                    time_length=cfg.fit.time_length,
+                    overlap_interval=cfg.fit.overlap_interval
                 )
                 train_dataset, val_dataset, test_dataset = data_loader(
                     datasets=[train_dataset, val_dataset, test_dataset],
@@ -88,15 +84,24 @@ if __name__ == "__main__":
                 train_dataset = dataset_loader(
                     save_root_path=cfg.dataset_path,
                     model_name=cfg.fit.model,
-                    dataset_name=cfg.fit.train.dataset)
+                    dataset_name=cfg.fit.train.dataset,
+                    time_length=cfg.fit.time_length,
+                    overlap_interval=cfg.fit.overlap_interval
+                )
                 val_dataset = dataset_loader(
                     save_root_path=cfg.dataset_path,
                     model_name=cfg.fit.model,
-                    dataset_name=cfg.fit.val.dataset)
+                    dataset_name=cfg.fit.val.dataset,
+                    time_length=cfg.fit.time_length,
+                    overlap_interval=cfg.fit.overlap_interval
+                )
                 test_dataset = dataset_loader(
                     save_root_path=cfg.dataset_path,
                     model_name=cfg.fit.model,
-                    dataset_name=cfg.fit.test.dataset)
+                    dataset_name=cfg.fit.test.dataset,
+                    time_length=cfg.fit.time_length,
+                    overlap_interval=cfg.fit.overlap_interval
+                )
                 train_dataset, val_dataset, test_dataset = data_loader(
                     datasets=[train_dataset, val_dataset, test_dataset],
                     batch_sizes=[cfg.fit.train.batch_size,
@@ -107,12 +112,32 @@ if __name__ == "__main__":
                               cfg.fit.test.shuffle]
 
                 )
+        elif  cfg.fit.test.flag:
+            test_data = dataset_loader(
+                save_root_path=cfg.dataset_path,
+                model_name=cfg.fit.model,
+                dataset_name=cfg.fit.test.dataset,
+                time_length=cfg.fit.time_length,
+                overlap_interval=cfg.fit.overlap_interval
+            )
+            test_data = data_loader(
+                datasets=[test_data],
+                batch_sizes=[cfg.fit.test.batch_size],
+                shuffles=[cfg.fit.test.shuffle],
+            )
 
         model = get_model(cfg.fit.model)
-        opt = optimizer(cfg.fit.train.optimizer)
-        criterion = loss_fn(cfg.fit.train.loss)
 
         if cfg.fit.train.flag:
+            opt = optimizer(
+                model_params=model.parameters(),
+                learning_rate=cfg.fit.train.learning_rate,
+                optim=cfg.fit.train.optimizer)
+            criterion = loss_fn(loss_name = cfg.fit.train.loss)
+            lr_sch = torch.optim.lr_scheduler.OneCycleLR(
+                opt, max_lr=cfg.fit.train.learning_rate, epochs=cfg.fit.train.epochs,
+                steps_per_epoch=len(train_dataset))
+
             for epoch in range(cfg.fit.train.epochs):
                 train_fn(
                     epoch=epoch,

@@ -11,8 +11,6 @@ def optimizer(model_params, learning_rate: float = 1, optim: str = "mse", log_fl
     :param optim: optimizer
     :return: selected optimizer object
     '''
-    if log_flag:
-        print("========= optimizer() in" + os.path.basename(__file__))
 
     if optim == "adam":
         return opt.Adam(model_params, learning_rate,weight_decay=0.00005)
