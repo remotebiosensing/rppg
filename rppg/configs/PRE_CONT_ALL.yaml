@@ -34,8 +34,8 @@ PREPROCESS:
       label_sampling_rate: 30
 FIT:
   FLAG: false
+  model:
   train:
-    model:
     dataset:
     fs: #video fps
     batch_size:

@@ -1,13 +1,14 @@
 ---
 PREPROCESS:
-  FLAG: "false" # pre , analyze, false , pre + analyze
+  FLAG: false
+  analyze : false
   dataset_path:
   save_path:
   datasets:
 FIT:
   FLAG: true
+  model: PhysNet
   train:
-    model: PhysNet
     dataset: UBFC
     fs: 30 #video fps
     batch_size: 64
