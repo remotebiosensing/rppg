@@ -1,70 +1,129 @@
-# Implement Deep Learning based Rppg(remote photoplethsmography) Model & cNIBP(continuous non-invasive blood pressure) using pytorch
+# Remote Biosensing
+[![GitHub license](https://img.shields.io/github/license/remotebiosensing/rppg)](https://github.com/remotebiosensing/rppg/blob/main/LICENSE)
+[![Slack](https://img.shields.io/badge/Chat-Slack-red)](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg)
 
-### model list (TODO : UPDATE)
+Remote Biosensing (`rPPG`) is a framework for non-contact algorithms for remote photoplethysmography (rPPG) and for non-invasive blood pressure measurement algorithms (CNIBP) technology.
+We aim to implement a deep learning-based remote photoplethysmography (rPPG) model and continuous non-invasive blood pressure (CNIBP) using PyTorch.
 
-- #### Facial Image Based ppg measurement algorithm
-- [x] [DeepPhys : DeepPhys: Video-Based Physiological Measurement Using Convolutional Attention Networks](https://arxiv.org/abs/1805.07888)
-- [ ] [MTTS  :Multi-Task Temporal Shift Attention Networks for
-  On-Device Contactless Vitals Measurement](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf)
-    + need to verification
-- [x] DeepPhys + LSTM
-- [x] [3D physNet :  Remote Photoplethysmograph Signal Measurement from Facial Videos Using Spatio-Temporal Networks](https://arxiv.org/abs/1905.02419)
-- [x] [2D phsyNet + LSTM](https://arxiv.org/abs/1905.02419)
+### Quick Start with our examples
+- #### rPPG( remote PPG)
+- [ ] DeepPhys example [paper](https://arxiv.org/abs/1805.07888)
+- [ ] MTTS example [paper](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf)
+- [ ] DeepPhys + LSTM example paper
+- [x] physNet [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/physnet_ubfc_ubfc.py) [paper](https://arxiv.org/abs/1905.02419)
+- [ ] 2D phsyNet example [paper](https://arxiv.org/abs/1905.02419)
+- [ ] APNETv2 [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/apnetv2_ubfc_ubfc.py) paper
 
-- #### PPG Based Blood Pressure estimation algorithm
-- [x] [PP-Net: A Deep Learning Framework for PPG based Blood Pressure and Heart Rate Estimation](https://ieeexplore.ieee.org/document/9082808)
+- #### CNIBP (Continuous non-invasive blood pressure)
+- [ ] PP-Net exmaple [paper](https://ieeexplore.ieee.org/document/9082808)
 
-## TODO
+### Documentation(TBD)
 
-## Additional info
+### Performance Comparison
+- rPPG
 
-#####  *  How to test  (Assessment of ROI selection for facial video based rPPG)
+| MODEL | Train/val Dataset | Test Dataset | lr  | MAE | RMSE | MAPE | r   |
+|-------|-------------------|--------------|-----|-----|------|------|-----|
 
-- before test modify sample2.cfg(./pyVHR/analysis/sample2.cfg)
+- CNIBP
 
-~~~
-[DEFAULT]
-'''
-methods         = ['POS','CHROM','ICA','SSR','LGI','PBV','GREEN'] # Change Method
-'''
-[VIDEO]
-dataset     = LGI_PPGI # change dataset
-videodataDIR= /media/hdd1/LGGI/ # change dataset path
-BVPdataDIR  = /media/hdd1/LGGI/
-;videoIdx    = all
-videoIdx    = [1,2,5,6] # change test video idx
-detector    = media-pipe # use media-pipe, it's proposed ROI option
-~~~
 
-- before test, modify test suit file(./pyVHR/analysis/testsuite.py), all regions one-hot mapping.
+[//]: # ()
+[//]: # (## )
 
-~~~
-   '''
-   test for all region
-    '''
-    # tmp = bin(test)
-    # binary = ''
-    # for i in range(mask_num-len(tmp[2:])):
-    #     binary += '0'
-    # binary += tmp[2:]
-    '''
-    test for top-5 & bot -5
-    '''
-    if test_case == 0 :
-        binary = '0011000000000000000100000001001'
-    else :
-        binary = '0000000001100001011000000000000'
-~~~
+[//]: # ()
+[//]: # (## Additional info)
 
-* run _1_rppg_assesment.py
+[//]: # ()
+[//]: # (#####  *  How to test  &#40;Assessment of ROI selection for facial video based rPPG&#41;)
 
-* all mask information found at video.py's make_mask function (./pyVHR/signals/video.py)
+[//]: # ()
+[//]: # (- before test modify sample2.cfg&#40;./pyVHR/analysis/sample2.cfg&#41;)
+
+[//]: # ()
+[//]: # (~~~)
+
+[//]: # ([DEFAULT])
+
+[//]: # (''')
+
+[//]: # (methods         = ['POS','CHROM','ICA','SSR','LGI','PBV','GREEN'] # Change Method)
+
+[//]: # (''')
+
+[//]: # ([VIDEO])
+
+[//]: # (dataset     = LGI_PPGI # change dataset)
+
+[//]: # (videodataDIR= /media/hdd1/LGGI/ # change dataset path)
+
+[//]: # (BVPdataDIR  = /media/hdd1/LGGI/)
+
+[//]: # (;videoIdx    = all)
+
+[//]: # (videoIdx    = [1,2,5,6] # change test video idx)
+
+[//]: # (detector    = media-pipe # use media-pipe, it's proposed ROI option)
+
+[//]: # (~~~)
+
+[//]: # ()
+[//]: # (- before test, modify test suit file&#40;./pyVHR/analysis/testsuite.py&#41;, all regions one-hot mapping.)
+
+[//]: # ()
+[//]: # (~~~)
+
+[//]: # (   ''')
+
+[//]: # (   test for all region)
+
+[//]: # (    ''')
+
+[//]: # (    # tmp = bin&#40;test&#41;)
+
+[//]: # (    # binary = '')
+
+[//]: # (    # for i in range&#40;mask_num-len&#40;tmp[2:]&#41;&#41;:)
+
+[//]: # (    #     binary += '0')
+
+[//]: # (    # binary += tmp[2:])
+
+[//]: # (    ''')
+
+[//]: # (    test for top-5 & bot -5)
+
+[//]: # (    ''')
+
+[//]: # (    if test_case == 0 :)
+
+[//]: # (        binary = '0011000000000000000100000001001')
+
+[//]: # (    else :)
+
+[//]: # (        binary = '0000000001100001011000000000000')
+
+[//]: # (~~~)
+
+[//]: # ()
+[//]: # (* run _1_rppg_assesment.py)
+
+[//]: # ()
+[//]: # (* all mask information found at video.py's make_mask function &#40;./pyVHR/signals/video.py&#41;)
+
+## Community
+
+Our community is eagerly waiting for researchers and developers interested in non-contact/non-invasive algorithm research and development to [join](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) us.
+
+<a href="https://github.com/remotebiosensing/rppg/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=remotebiosensing/rppg" />
+</a>
+
 
 ## Contacts
 
 - Dae Yeol Kim, spicyyeol@gmail.com  
 - Kwangkee Lee, kwangkeelee@gmail.com  
-- Jin Soo Kim, wlstn25092303@gmail.com  
 
 ## Funding
 
@@ -74,4 +133,3 @@ MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogen
 ## reference
 
 1. [ZitongYu/PhysNet](https://github.com/ZitongYu/PhysNet)
-2. [phuselab/pyVHR](https://github.com/phuselab/pyVHR)
