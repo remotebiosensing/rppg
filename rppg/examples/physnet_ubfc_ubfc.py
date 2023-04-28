@@ -2,7 +2,8 @@ import random
 
 import numpy as np
 import torch
-
+import wandb
+import datetime
 from loss import loss_fn
 from models import get_model
 from optim import optimizer
@@ -26,6 +27,7 @@ generator = torch.Generator()
 generator.manual_seed(SEED)
 
 if __name__ == "__main__":
+
     cfg = get_config("../configs/FIT_PHYSNET_UBFC_UBFC.yaml")
     if cfg.preprocess.flag:
         preprocessing()
@@ -137,6 +139,22 @@ if __name__ == "__main__":
             model_name=cfg.fit.model,
             time_length=cfg.fit.time_length)
 
+        wandb_cfg = get_config("../configs/WANDB_CONFG.yaml")
+        if wandb_cfg.flag and cfg.fit.train.flag:
+            wandb.init(project=wandb_cfg.wandb_project_name,
+                       entity=wandb_cfg.wandb_entity,
+                       name=cfg.fit.model +"/TRAIN_DATA" +
+                            cfg.fit.train.dataset + "/TEST_DATA"+
+                            cfg.fit.test.dataset + "/"+
+                            str(cfg.fit.time_length) +"/" +
+                            datetime.datetime.now().strftime('%m-%d%H:%M:%S'))
+            wandb.config = {
+                "learning_rate": cfg.fit.train.learning_rate,
+                "epochs": cfg.fit.train.epochs,
+                "batch_size": cfg.fit.train.batch_size
+            }
+            wandb.watch(model, log="all", log_freq=10)
+
         if cfg.fit.train.flag:
             opt = optimizer(
                 model_params=model.parameters(),
@@ -155,7 +173,7 @@ if __name__ == "__main__":
                     criterion=criterion,
                     dataloaders=train_dataset,
                     step="Train",
-                    wandb_flag=True
+                    wandb_flag=wandb_cfg.flag
                 )
                 if cfg.fit.val.flag and epoch % cfg.fit.val.interval == 0:
                     test_fn(
@@ -164,7 +182,7 @@ if __name__ == "__main__":
                         criterion=criterion,
                         dataloaders=val_dataset,
                         step="Val",
-                        wandb_flag=True
+                        wandb_flag=wandb_cfg.flag
                     )
                 if cfg.fit.test.flag and epoch % cfg.fit.test.interval == 0:
                     test_fn(
@@ -173,7 +191,7 @@ if __name__ == "__main__":
                         criterion=criterion,
                         dataloaders=test_dataset,
                         step="Test",
-                        wandb_flag=True
+                        wandb_flag=wandb_cfg.flag
                     )
         elif cfg.fit.test.flag:
             test_fn(
