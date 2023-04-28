@@ -11,7 +11,6 @@ from numpy import dot
 from numpy.linalg import norm
 
 import torch.utils.checkpoint as cp
-from params import params
 from scipy.signal import find_peaks
 from scipy.signal import butter, sosfiltfilt
 from rppg.utils.funcs import _next_power_of_2

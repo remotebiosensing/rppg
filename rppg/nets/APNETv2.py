@@ -6,9 +6,9 @@ from torchvision import transforms
 
 time_length = 64
 
-class APNET(torch.nn.Module):
+class APNETv2(torch.nn.Module):
     def __init__(self):
-        super(APNET, self).__init__()
+        super(APNETv2, self).__init__()
 
         self.f_m = APNET_Backbone()
         self.l_m = APNET_Backbone()

@@ -36,7 +36,6 @@ def dataset_split(
         return datasets[0], datasets[1]
 
 
-
 def data_loader(
         datasets,
         batch_sizes,
@@ -57,12 +56,12 @@ def data_loader(
 
 
 def dataset_loader(
-        save_root_path : str,
-        model_name : str,
-        dataset_name : str,
-        time_length : int,
-        overlap_interval : int,
-        img_size : int
+        save_root_path: str,
+        model_name: str,
+        dataset_name: str,
+        time_length: int,
+        overlap_interval: int,
+        img_size: int
 ):
     available_memory = psutil.virtual_memory().available
     print("available_memory : ", available_memory / 1024 / 1024, 'MB')
@@ -73,11 +72,11 @@ def dataset_loader(
     else:
         model_type = 'CONT'
 
-    root_file_path = save_root_path + model_type + "_" + dataset_name +"_"
+    root_file_path = save_root_path + model_type + "_" + dataset_name + "_"
 
     idx = 0
 
-    target_memory = 1024*1024*1024*3
+    target_memory = 1024 * 1024 * 1024 * 3
 
     dataset_memory = 0
 
@@ -96,7 +95,7 @@ def dataset_loader(
                 label_data = []
                 bpm_data = []
                 keypoint_data = []
-            elif model_name in ["TEST"]:
+            elif model_name in ["APNETv2"]:
                 video_data = []
                 keypoint_data = []
                 label_data = []
@@ -131,7 +130,7 @@ def dataset_loader(
                 break
             else:
                 file_size = os.path.getsize(file_name)
-                print("file size : ", file_size/ 1024 / 1024, 'MB')
+                print("file size : ", file_size / 1024 / 1024, 'MB')
                 dataset_memory += file_size
 
             idx += 1
@@ -142,10 +141,10 @@ def dataset_loader(
                     appearance_data.extend(file[key]['preprocessed_video'][:, :, :, -3:])
                     motion_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
                     target_data.extend(file[key]['preprocessed_label'])
-                elif model_name in ["TEST"]:
+                elif model_name in ["APNETv2"]:
                     start = 0
                     end = time_length
-                    label =detrend(file[key]['preprocessed_label'],100)
+                    label = detrend(file[key]['preprocessed_label'], 100)
 
                     while end <= len(file[key]['raw_video']):
                         video_chunk = file[key]['raw_video'][start:end]
@@ -156,7 +155,7 @@ def dataset_loader(
                         keypoint_data.append(file[key]['keypoint'][start:end])
                         tmp_label = label[start:end]
 
-                        tmp_label = np.around(normalize(tmp_label,0,1),2)
+                        tmp_label = np.around(normalize(tmp_label, 0, 1), 2)
                         label_data.append(tmp_label)
                         # video_chunks.append(video_chunk)
                         start += time_length - overlap_interval
@@ -170,7 +169,7 @@ def dataset_loader(
                         new_shape = (num_frame, img_size, img_size, c)
                         resized_img = np.zeros(new_shape)
                         for i in range(num_frame):
-                            resized_img[i] = cv2.resize(file[key]['raw_video'][i],(img_size,img_size))
+                            resized_img[i] = cv2.resize(file[key]['raw_video'][i], (img_size, img_size))
 
                     while end <= len(file[key]['raw_video']):
                         if w != img_size:
@@ -219,16 +218,17 @@ def dataset_loader(
                 dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                           motion_data=np.asarray(motion_data),
                                           target=np.asarray(target_data))
-            elif model_name in ["TEST"]:
+            elif model_name in ["APNETv2"]:
                 dataset = APNETv2Dataset(video_data=np.asarray(video_data),
-                                      keypoint_data=np.asarray(keypoint_data),
-                                      label_data=np.asarray(label_data),
-                                      target_length=time_length)
+                                         keypoint_data=np.asarray(keypoint_data),
+                                         label_data=np.asarray(label_data),
+                                         target_length=time_length,
+                                         img_size=img_size)
 
             elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
                 dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data),
-                                         target_length = time_length)
+                                         target_length=time_length)
             elif model_name in ["RhythmNet"]:
                 dataset = RhythmNetDataset(st_map_data=np.asarray(st_map_data),
                                            target_data=np.asarray(target_data))
@@ -236,15 +236,15 @@ def dataset_loader(
                 dataset = ETArPPGNetDataset(video_data=np.asarray(video_data),
                                             label_data=np.asarray(label_data))
 
-            elif model_name in ["Vitamon","Vitamon_phase2"]:
+            elif model_name in ["Vitamon", "Vitamon_phase2"]:
                 dataset = VitamonDataset(video_data=np.asarray(video_data),
-                                            label_data=np.asarray(label_data))
+                                         label_data=np.asarray(label_data))
             datasets = [rst_dataset, dataset]
             rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
             round_flag = 0
 
-
     return rst_dataset
+
 
 def h5_tree(val, pre=''):
     items = len(val)
@@ -254,13 +254,13 @@ def h5_tree(val, pre=''):
             # the last item
             if type(val) == h5py._hl.group.Group:
                 print(pre + '└── ' + key)
-                h5_tree(val, pre+'    ')
+                h5_tree(val, pre + '    ')
             else:
                 print(pre + '└── ' + key + ' (%d)' % len(val))
         else:
             if type(val) == h5py._hl.group.Group:
                 print(pre + '├── ' + key)
-                h5_tree(val, pre+'│   ')
+                h5_tree(val, pre + '│   ')
             else:
                 print(pre + '├── ' + key + ' (%d)' % len(val))
 
@@ -270,7 +270,7 @@ def normalize(arr, t_min, t_max):
     diff = t_max - t_min
     diff_arr = max(arr) - min(arr)
     for i in arr:
-        tmp = ((( i - min(arr)*diff)/diff_arr)) + t_min
+        tmp = (((i - min(arr) * diff) / diff_arr)) + t_min
         norm_arr.append(tmp)
 
     return norm_arr

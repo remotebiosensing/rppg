@@ -4,17 +4,22 @@ import torchvision.transforms as transforms
 from matplotlib import pyplot as plt
 from torch.utils.data import Dataset
 from skimage.transform import resize
-from params import params
+
+def load_video_frames(frames):
+    # Load the video frames and convert to RGB pixel values
+    frames = [transforms.ToTensor()(frame) for frame in frames]
+    frames = torch.stack(frames)
+
+    return frames
 
 
 class APNETv2Dataset(Dataset):
-    def __init__(self, video_data, keypoint_data, label_data, target_length):
+    def __init__(self, video_data, keypoint_data, label_data, target_length, img_size):
         self.transform = transforms.Compose([
             transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
         ])
-        # video_data = np.reshape(video_data,(-1,target_length,params.img_size,params.img_size,3))
         self.label_data = np.reshape(label_data,(-1,target_length))
-        keypoint_data = np.clip(keypoint_data,0,params.img_size)
+        keypoint_data = np.clip(keypoint_data,0,img_size)
         keypoint_data = np.reshape(keypoint_data,(-1,target_length,12))
         self.target_length = target_length
 
@@ -64,9 +69,9 @@ class APNETv2Dataset(Dataset):
         if torch.is_tensor(index):
             index = index.tolist()
 
-        forehead_data = self.load_video_frames(self.forehead_data[index])
-        lcheek_data = self.load_video_frames(self.lcheek_data[index])
-        rcheek_data = self.load_video_frames(self.rcheek_data[index])
+        forehead_data = load_video_frames(self.forehead_data[index])
+        lcheek_data = load_video_frames(self.lcheek_data[index])
+        rcheek_data = load_video_frames(self.rcheek_data[index])
 
         # if self.transform:
         #     forehead_data = self.transform(forehead_data)
@@ -88,24 +93,3 @@ class APNETv2Dataset(Dataset):
     def __len__(self):
         return len(self.forehead_data)
 
-    def load_video_frames(self, frames):
-        # Load the video frames and convert to RGB pixel values
-        frames = [transforms.ToTensor()(frame) for frame in frames]
-        frames = torch.stack(frames)
-
-        return frames
-
-# class LowPassFilter(object):
-#     def __init__(self,cut_off_freq, ts):
-#         self.ts = ts
-#         self.cut_off_freq = cut_off_freq
-#         self.tau = self.get_tau()
-#
-#         self.prev_data = 0.
-#     def get_tau(self):
-#         return 1/(2*np.pi*self.cut_off_freq)
-#
-#     def filter(self, data):
-#         val = (self.ts * data + self.tau * self.prev_data) / (self.tau + self.ts)
-#         self.prev_data = val
-#         return val

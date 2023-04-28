@@ -1,9 +1,9 @@
 import torch
 
-from rppg.models.APNETv2 import APNET as APNETv2
-from rppg.models.DeepPhys import DeepPhys as DeepPhys
-from rppg.models.ETArPPGNet import ETArPPGNet as ETArPPGNet
-from rppg.models.PhysNet import PhysNet as PhysNet
+from rppg.nets.APNETv2 import APNETv2 as APNETv2
+from rppg.nets.DeepPhys import DeepPhys as DeepPhys
+from rppg.nets.ETArPPGNet import ETArPPGNet as ETArPPGNet
+from rppg.nets.PhysNet import PhysNet as PhysNet
 
 device = torch.device(
         "cuda:0" if torch.cuda.is_available() else "cpu"

@@ -3,9 +3,6 @@ import scipy.signal
 from matplotlib import pyplot as plt
 from scipy.signal import butter
 from scipy.sparse import spdiags
-import time
-import params as params
-from scipy.signal import find_peaks
 
 
 
