@@ -1,8 +1,7 @@
 from tqdm import tqdm
 import torch
 import wandb
-import matplotlib.pyplot as plt
-from utils.funcs import plot_graph
+
 
 def train_fn(epoch, model, optimizer, criterion, dataloaders, step: str = "Train ", wandb_flag: bool = False):
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
