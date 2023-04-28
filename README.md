@@ -130,10 +130,3 @@ Our community is eagerly waiting for researchers and developers interested in no
 This work was partly supported by the ICT R&D program of
 MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
-## reference
-
-1. [ZitongYu/PhysNet](https://github.com/ZitongYu/PhysNet)
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=remotebiosensing/rppg&type=Date)](https://star-history.com/#remotebiosensing/rppg&Date)
