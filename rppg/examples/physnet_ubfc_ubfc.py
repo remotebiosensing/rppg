@@ -40,7 +40,8 @@ if __name__ == "__main__":
                     model_name=cfg.fit.model,
                     dataset_name=cfg.fit.train.dataset,
                     time_length=cfg.fit.time_length,
-                    overlap_interval=cfg.fit.overlap_interval
+                    overlap_interval=cfg.fit.overlap_interval,
+                    img_size=cfg.fit.img_size
                 )
                 train_dataset, val_dataset, test_dataset = dataset_split(dataset, [0.8, 0.1, 0.1])
                 train_dataset, val_dataset, test_dataset = data_loader(
@@ -60,7 +61,8 @@ if __name__ == "__main__":
                     model_name=cfg.fit.model,
                     dataset_name=cfg.fit.train.dataset,
                     time_length=cfg.fit.time_length,
-                    overlap_interval=cfg.fit.overlap_interval
+                    overlap_interval=cfg.fit.overlap_interval,
+                    img_size=cfg.fit.img_size
                 )
                 train_dataset, val_dataset = dataset_split(dataset, [0.8, 0.2])
                 test_dataset = dataset_loader(
@@ -68,7 +70,8 @@ if __name__ == "__main__":
                     model_name=cfg.fit.model,
                     dataset_name=cfg.fit.test.dataset,
                     time_length=cfg.fit.time_length,
-                    overlap_interval=cfg.fit.overlap_interval
+                    overlap_interval=cfg.fit.overlap_interval,
+                    img_size=cfg.fit.img_size
                 )
                 train_dataset, val_dataset, test_dataset = data_loader(
                     datasets=[train_dataset, val_dataset, test_dataset],
@@ -86,21 +89,24 @@ if __name__ == "__main__":
                     model_name=cfg.fit.model,
                     dataset_name=cfg.fit.train.dataset,
                     time_length=cfg.fit.time_length,
-                    overlap_interval=cfg.fit.overlap_interval
+                    overlap_interval=cfg.fit.overlap_interval,
+                    img_size=cfg.fit.img_size
                 )
                 val_dataset = dataset_loader(
                     save_root_path=cfg.dataset_path,
                     model_name=cfg.fit.model,
                     dataset_name=cfg.fit.val.dataset,
                     time_length=cfg.fit.time_length,
-                    overlap_interval=cfg.fit.overlap_interval
+                    overlap_interval=cfg.fit.overlap_interval,
+                    img_size=cfg.fit.img_size
                 )
                 test_dataset = dataset_loader(
                     save_root_path=cfg.dataset_path,
                     model_name=cfg.fit.model,
                     dataset_name=cfg.fit.test.dataset,
                     time_length=cfg.fit.time_length,
-                    overlap_interval=cfg.fit.overlap_interval
+                    overlap_interval=cfg.fit.overlap_interval,
+                    img_size=cfg.fit.img_size
                 )
                 train_dataset, val_dataset, test_dataset = data_loader(
                     datasets=[train_dataset, val_dataset, test_dataset],
@@ -118,7 +124,8 @@ if __name__ == "__main__":
                 model_name=cfg.fit.model,
                 dataset_name=cfg.fit.test.dataset,
                 time_length=cfg.fit.time_length,
-                overlap_interval=cfg.fit.overlap_interval
+                overlap_interval=cfg.fit.overlap_interval,
+                img_size=cfg.fit.img_size
             )
             test_data = data_loader(
                 datasets=[test_data],
@@ -126,7 +133,9 @@ if __name__ == "__main__":
                 shuffles=[cfg.fit.test.shuffle],
             )
 
-        model = get_model(cfg.fit.model)
+        model = get_model(
+            model_name=cfg.fit.model,
+            time_length=cfg.fit.time_length)
 
         if cfg.fit.train.flag:
             opt = optimizer(

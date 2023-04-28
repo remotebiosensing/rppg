@@ -15,6 +15,8 @@ from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
 from utils.funcs import detrend
 
+import cv2
+
 
 def dataset_split(
         dataset,
@@ -60,7 +62,7 @@ def dataset_loader(
         dataset_name : str,
         time_length : int,
         overlap_interval : int,
-
+        img_size : int
 ):
     available_memory = psutil.virtual_memory().available
     print("available_memory : ", available_memory / 1024 / 1024, 'MB')
@@ -163,14 +165,22 @@ def dataset_loader(
                     start = 0
                     end = time_length
                     label = detrend(file[key]['preprocessed_label'], 100)
+                    num_frame, w, h, c = file[key]['raw_video'][:].shape
+                    if w != img_size:
+                        new_shape = (num_frame, img_size, img_size, c)
+                        resized_img = np.zeros(new_shape)
+                        for i in range(num_frame):
+                            resized_img[i] = cv2.resize(file[key]['raw_video'][i],(img_size,img_size))
 
                     while end <= len(file[key]['raw_video']):
-                        video_chunk = file[key]['raw_video'][start:end]
+                        if w != img_size:
+                            video_chunk = resized_img[start:end]
+                        else:
+                            video_chunk = file[key]['raw_video'][start:end]
                         # min_val = np.min(video_chunk, axis=(0, 1, 2), keepdims=True)
                         # max_val = np.max(video_chunk, axis=(0, 1, 2), keepdims=True)
                         # video_chunk = (video_chunk - min_val) / (max_val - min_val)
                         video_data.append(video_chunk)
-                        keypoint_data.append(file[key]['keypoint'][start:end])
                         tmp_label = label[start:end]
 
                         tmp_label = np.around(normalize(tmp_label, 0, 1), 2)

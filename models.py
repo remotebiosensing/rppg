@@ -6,7 +6,7 @@ from nets.models.AxisNet import AxisNet,PhysiologicalGenerator
 from nets.models.DeepPhys import DeepPhys
 from nets.models.DeepPhys_DA import DeepPhys_DA
 from nets.models.PPNet import PPNet
-from nets.models.PhysNet import PhysNet
+from rppg.models.PhysNet import PhysNet
 from nets.models.PhysNet import PhysNet_2DCNN_LSTM
 from nets.models.Seq_GCN import Seq_GCN
 from nets.models.TEST import TEST,TEST2,APNET,APNET_Backbone
@@ -24,7 +24,7 @@ def get_ver_model(ver:int = 1):
     return TEST2(ver)
 
 
-def get_model(model_name):
+def get_model(model_name,time_length):
     """
     :param model_name: model name
     :return: model
@@ -35,7 +35,7 @@ def get_model(model_name):
     elif model_name == "DeepPhys_DA":
         model = DeepPhys_DA()
     elif model_name == "PhysNet":
-        model = PhysNet()
+        model = PhysNet(frames=time_length)
     elif model_name == "PhysNet_LSTM":
         model = PhysNet_2DCNN_LSTM()
     elif model_name == "PPNet":
