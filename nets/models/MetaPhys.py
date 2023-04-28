@@ -5,7 +5,7 @@ import torch
 from nets.models.sub_models.AppearanceModel import AppearanceModel_2D
 from nets.models.sub_models.LinearModel import LinearModel
 from nets.models.sub_models.MotionModel import MotionModel_TS
-from utils.funcs import plot_graph, detrend
+from rppg.utils.funcs import plot_graph, detrend
 
 
 class TSCAN(torch.nn.Module):

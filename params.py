@@ -19,10 +19,10 @@ class params():
 
     # preprocessing parameters
     # dataset
-    dataset_name = "UBFC"
+    dataset_name = "VIPL_HR"
     # UBFC / PURE / V4V / VIPL_HR
     save_root_path = "/media/hdd1/dy/dataset/"
-    dataset_date = "2023-02-27"
+    dataset_date = "2023-04-01"
     data_root_path = "/media/hdd1/"
     model_root_path = "/media/hdd1/dy/model/"
     train_ratio = 0.8
@@ -30,6 +30,7 @@ class params():
     divide_flag = 1  # 1 : divide by number 0: divide by subject
     fixed_position = 1  # 1 : fixed position 0: not fixed position
     time_length = 64  # The number of frames in dataset.__GetItem__
+    interval = 48
     chunk_size = 4  # The number of subjects processed at one time
 
     # train paramaters
@@ -38,7 +39,7 @@ class params():
     val_ratio = 0.1
     test_ratio = 0.1
 
-    batch_size = 32
+    batch_size = 196
     train_shuffle = 1
 
     test_shuffle = 1

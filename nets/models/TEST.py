@@ -112,7 +112,7 @@ class APNET_Backbone(nn.Module):
                          mbconv_expansion_rate=4, mbconv_shrinkage_rate=0.5, w=4, dim_head=8, dropout=0.1, flag=False)
         )
         self.sa_main = SpatialAttention(in_channels=32)
-        self.rnn = nn.LSTM(input_size=64*32, hidden_size=32, num_layers=1, batch_first=True, bidirectional=True)
+        self.rnn = nn.LSTM(input_size=64*32, hidden_size=32, num_layers=2, batch_first=True, bidirectional=True,dropout=0.2)
         self.adaptive = nn.AdaptiveAvgPool2d((32, 16))
         self.max_vit = MaxViT_layer(layer_depth=2, layer_dim_in=1, layer_dim=32,
                                     kernel=3, dilation=1, padding=1,
