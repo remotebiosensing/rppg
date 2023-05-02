@@ -16,25 +16,15 @@ from sklearn.preprocessing import minmax_scale
 import pandas as pd
 
 # local
-def label_preprocess(model_name, path,**kwargs):
-    if model_name == ['DeepPhys']:
+def label_preprocess(preprocess_type, path,**kwargs):
+    if preprocess_type == "DIFF":
         return Deepphys_preprocess_Label(path, **kwargs)
-    elif model_name == 'GCN':
-        return GCN_preprocess_Label(path, **kwargs)
-    elif model_name in ['PhysNet','TEST']:
+    elif preprocess_type == 'CONT':
         return PhysNet_preprocess_Label(path, **kwargs)
-    elif model_name == 'Axis':
-        return Axis_preprocess_Label(path, **kwargs)
-    elif model_name == 'RhythmNet':
-        return RhythmNet_preprocess_Label(path, **kwargs)
-    elif model_name == 'ETArPPGNet':
-        return ETArPPGNet_preprocess_Label(path, **kwargs)
-    elif model_name in ["Vitamon","Vitamon_phase2"]:
-        return Vitamon_preprocess_Label(path, **kwargs)
     else:
         raise ValueError('model_name is not valid')
 
-def Deepphys_preprocess_Label(path):
+def Deepphys_preprocess_Label(path, **kwargs):
 
     if path.__contains__("label.txt"):
         cap = cv2.VideoCapture(path[:-9] + "video.mkv")

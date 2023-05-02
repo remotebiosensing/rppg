@@ -1,8 +1,11 @@
 ---
+data_root_path : "/media/hdd1/"
+dataset_path: "/media/hdd1/dy/dataset/" # preprocessed data path
+model_path: "/media/hdd1/dy/model/"
 preprocess:
-  flag: "pre" # pre , analyze, false , pre + analyze
-  dataset_path:
-  save_path:
+  flag: true
+  analyze: false
+  chunk_size: 4
   datasets:
     - name: UBFC
       type: continuous # diff or continuous

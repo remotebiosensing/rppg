@@ -5,6 +5,7 @@ model_path: "/media/hdd1/dy/model/"
 preprocess:
   flag: false
   analyze : false
+  chunk_size: 4
   datasets:
 fit:
   flag: true
