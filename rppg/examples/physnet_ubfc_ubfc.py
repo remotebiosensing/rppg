@@ -30,7 +30,10 @@ if __name__ == "__main__":
 
     cfg = get_config("../configs/FIT_PHYSNET_UBFC_UBFC.yaml")
     if cfg.preprocess.flag:
-        preprocessing()
+        preprocessing(
+            dataset_root_path=cfg.data_root_path,
+            preprocess_cfg=cfg.preprocess
+        )
 
     if cfg.fit.flag:
         # load dataset

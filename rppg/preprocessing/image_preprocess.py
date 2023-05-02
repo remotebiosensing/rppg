@@ -17,29 +17,23 @@ import OpenGL.GL as gl
 
 
 
-def video_preprocess(model_name, path,**kwargs):
-    if model_name == 'Deepphys':
-        return Deepphys_preprocess_Video(path, **kwargs)
-    elif model_name in ['PhysNet','TEST']:
-        return PhysNet_preprocess_Video(path, **kwargs)
-    elif model_name == 'RTNet':
-        return RTNet_preprocess_Video(path, **kwargs)
-    elif model_name == 'GCN':
-        return GCN_preprocess_Video(path,**kwargs)
-    elif model_name == 'Axis':
-        return Axis_preprocess_Video(path,**kwargs)
-    elif model_name == 'RhythmNet':
-        return RhythmNet_preprocess_Video(path,**kwargs)
-    elif model_name == 'ETArPPGNet':
-        return ETArPPGNet_preprocess_Video(path,**kwargs)
-    elif model_name in ["Vitamon","Vitamon_phase2"]:
-        return Vitamon_preprocess_Video(path,**kwargs)
+def video_preprocess(preprocess_type, path,**kwargs):
+    if preprocess_type == 'DIFF':
+        return DIFF_preprocess_Video(path, **kwargs)
+    elif preprocess_type in 'CONT':
+        return CONT_preprocess_Video(path, **kwargs)
+    # elif model_name == 'RhythmNet':
+    #     return RhythmNet_preprocess_Video(path,**kwargs)
+    # elif model_name == 'ETArPPGNet':
+    #     return ETArPPGNet_preprocess_Video(path,**kwargs)
+    # elif model_name in ["Vitamon","Vitamon_phase2"]:
+    #     return Vitamon_preprocess_Video(path,**kwargs)
     else:
         return {"face_detect": False,
                 "video_data": None}
 
 
-def Deepphys_preprocess_Video(path, **kwargs):
+def DIFF_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -56,32 +50,44 @@ def Deepphys_preprocess_Video(path, **kwargs):
     prev_frame = None
     j = 0
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if frame is None:
-            break
-        if face_detect_algorithm:
-            rst, crop_frame = faceDetection(frame)
-            if not rst:  # can't detect face
-                return False, None
-        else:
-            crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+    with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if frame is None:
+                break
+            if face_detect_algorithm:
+                rst, crop_frame = faceDetection(frame)
+                if not rst:  # can't detect face
+                    return False, None
+            else:
+                crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
 
-        crop_frame = cv2.resize(crop_frame, dsize=(36, 36), interpolation=cv2.INTER_AREA)
-        crop_frame = generate_Floatimage(crop_frame)
+            crop_frame = cv2.resize(crop_frame, dsize=(36, 36), interpolation=cv2.INTER_AREA)
+            crop_frame = generate_Floatimage(crop_frame)
 
-        if prev_frame is None:
+            if prev_frame is None:
+                prev_frame = crop_frame
+                continue
+            raw_video[j, :, :, :3], raw_video[j, :, :, -3:] = preprocess_Image(prev_frame, crop_frame)
             prev_frame = crop_frame
-            continue
-        raw_video[j, :, :, :3], raw_video[j, :, :, -3:] = preprocess_Image(prev_frame, crop_frame)
-        prev_frame = crop_frame
-        j += 1
+            j += 1
+            pbar.update(1)
     raw_video[:, :, :, :3] = video_normalize(raw_video[:, :, :, :3])
     cap.release()
 
+    flip_arr = np.zeros((frame_total // 32, 32))
+    frame_number = np.zeros((frame_total // 32, 32))
+    point_list = np.zeros((frame_total // 32, 32))
+    split_raw_video = np.zeros(((frame_total) // 32, 32, 36, 36, 3))
+
     return { "face_detect" : True,
-             "video_data" : raw_video}
-def PhysNet_preprocess_Video(path, **kwargs):
+             "frame_number" : frame_number,
+             "raw_video" : raw_video,
+             "keypoint": point_list,
+             "video_data": split_raw_video,
+             "flip_arr": flip_arr
+             }
+def CONT_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -310,17 +316,6 @@ def PhysNet_preprocess_Video(path, **kwargs):
     split_raw_video = np.zeros(((frame_total)//32, 32, img_size, img_size, 3))
     flip_arr = np.zeros((frame_total // 32, 32))
     frame_number = np.zeros((frame_total // 32, 32))
-
-    index = 0
-
-    length = (frame_total)//32
-
-    # for x in range(length):
-    #
-    #     split_raw_video[x] = raw_video[index:index + 32]
-    #     flip_arr[x] = flip_flag
-    #     frame_number[x] = np.arange(index, index + 32)
-    #     index = index + 32
 
 
     return { "face_detect" : True,
@@ -587,8 +582,9 @@ def faceDetection(frame):
     if len(face_location) == 0:  # can't detect face
         return False, None
     top, right, bottom, left = face_location[0]
-    # dst = resized_frame[top:bottom, left:right]
-    return True, [top, right, bottom, left]
+    dst = resized_frame[top:bottom, left:right]
+    return True, dst
+    # return True, [top, right, bottom, left]
 def generate_Floatimage(frame):
     '''
     :param frame: roi frame
@@ -1086,7 +1082,7 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
            Step 3: Downsample the face cropped frame to output_shape = 36x36
        '''
         faces = detector.detectMultiScale(frame, 1.3, 5)
-        if len(faces) is not 0:
+        if len(faces) != 0:
             (x, y, w, d) = faces[0]
             frame_cropped = frame[y:(y + d), x:(x + w)]
             frame_masked = frame_cropped
@@ -1230,7 +1226,7 @@ def preprocess_video(video_path, output_shape, clip_size=256):
             if frame is None:
                 break
             faces = detector.detectMultiScale(frame, 1.3, 5)
-            if len(faces) is not 0:
+            if len(faces) != 0:
                 (x, y, w, d) = faces[0]
                 frame_cropped = frame[y:(y + d), x:(x + w)]
                 # eyes = eye_detector.detectMultiScale(frame_cropped, 1.2, 3)
@@ -1300,7 +1296,7 @@ def RhythmNet_preprocessor(video_path, clip_size):
            Step 3: Downsample the face cropped frame to output_shape = 36x36
        '''
         faces = detector.detectMultiScale(frame, 1.3, 5)
-        if len(faces) is not 0:
+        if len(faces) != 0:
             (x, y, w, d) = faces[0]
             frame_cropped = frame[y:(y + d), x:(x + w)]
             eyes = eye_detector.detectMultiScale(frame_cropped, 1.2, 3)
