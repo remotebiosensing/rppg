@@ -9,29 +9,30 @@ We aim to implement a deep learning-based remote photoplethysmography (rPPG) mod
 pressure (CNIBP) using PyTorch.
 
 ### Quick Start with our examples
-
+ 
 - #### rPPG( remote PPG) models
-| Implementation  |       model       |                                             example                                              |                                                config                                                 |                                           paper                                            | 
-|:---------------:|:-----------------:|:------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------:|
-|    &#10004;     |     DeepPhys      | [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/physnet_ubfc_ubfc.py) | [config](https://github.com/remotebiosensing/rppg/blob/main/rppg/configs/FIT_DEEPPHYS_UBFC_UBFC.yaml) |                         [paper](https://arxiv.org/abs/1805.07888)                          |
-|    &#10005;     |       MTTS        |                                             example                                              |                                                config                                                 | [paper](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf) |
-|    &#10004;     |      PhysNet      | [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/physnet_ubfc_ubfc.py) | [config](https://github.com/remotebiosensing/rppg/blob/main/rppg/configs/FIT_PHYSNET_UBFC_UBFC.yaml)  |                         [paper](https://arxiv.org/abs/1905.02419)                          |
-|    &#10005;     | 2D PhysNet + LSTM |                                             example                                              |                                                config                                                 |                         [paper](https://arxiv.org/abs/1905.02419)                          |
- |    &#10004;     |      APNETv2      | [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/apnetv2_ubfc_ubfc.py) |                                                config                                                 |                                           paper                                            |
+| **Implementation** | type |     **model**     |                                            **example**                                            |                                              **config**                                               |                                           paper                                            | 
+|:------------------:|:----:|:-----------------:|:-------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------:|
+|      &#10004;      |  DL  |     DeepPhys      | [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/physnet_ubfc_ubfc.py)  | [config](https://github.com/remotebiosensing/rppg/blob/main/rppg/configs/FIT_DEEPPHYS_UBFC_UBFC.yaml) |                         [paper](https://arxiv.org/abs/1805.07888)                          |
+|      &#10005;      |  DL  |       MTTS        |                                              example                                              |                                                config                                                 | [paper](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf) |
+ |      &#10004;      |  DL  |     MetaPhys      | [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/metaphys_ubfc_ubfc.py) | [config](https://github.com/remotebiosensing/rppg/blob/main/rppg/configs/FIT_METAPHYS_UBFC_UBFC.yaml) |                         [paper](https://arxiv.org/abs/2010.01773)                          |
+|      &#10004;      |  DL  |      PhysNet      | [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/physnet_ubfc_ubfc.py)  | [config](https://github.com/remotebiosensing/rppg/blob/main/rppg/configs/FIT_PHYSNET_UBFC_UBFC.yaml)  |                         [paper](https://arxiv.org/abs/1905.02419)                          |
+|      &#10005;      |  DL  | 2D PhysNet + LSTM |                                              example                                              |                                                config                                                 |                         [paper](https://arxiv.org/abs/1905.02419)                          |
+ |      &#10004;      |  DL  |      APNETv2      | [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/apnetv2_ubfc_ubfc.py)  |                                                config                                                 |                                           paper                                            |
 
 - #### rPPG datasets
-| Implementation |  Dataset   |   DIFF   |   CONT   | example | config | link |
-|:--------------:|:----------:|:--------:|:--------:|:-------:|:------:|:----:|
-|    &#10005;    |    ALL     | &#10004; | &#10004; | example | config | link |
-|    &#10004;    |    UBFC    | &#10004; | &#10004; | example | config | link |
-|    &#10005;    | UBFC-phys  | &#10004; | &#10004; | example | config | link |
-|    &#10004;    |  COHFACE   | &#10004; | &#10004; | example | config | link |
-|    &#10004;    |    LGGI    | &#10004; | &#10004; | example | config | link |
-|    &#10004;    | MAHNOB_HCI | &#10004; | &#10004; | example | config | link |
-|    &#10004;    |  VIPL-HR   | &#10004; | &#10004; | example | config | link |
-|    &#10004;    |    PURE    | &#10004; | &#10004; | example | config | link |
-|    &#10004;    |    V4V     | &#10004; | &#10004; | example | config | link |
-|    &#10005;    |    MMPD    | &#10004; | &#10004; | example | config | link |
+| **Implementation** | **Dataset** | **DIFF** | **CONT** | **example** | **config** | **link** |
+|:------------------:|:-----------:|:--------:|:--------:|:-----------:|:----------:|:--------:|
+|      &#10005;      |     ALL     | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10004;      |    UBFC     | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10005;      |  UBFC-phys  | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10004;      |   COHFACE   | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10004;      |    LGGI     | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10004;      | MAHNOB_HCI  | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10004;      |   VIPL-HR   | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10004;      |    PURE     | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10004;      |     V4V     | &#10004; | &#10004; |   example   |   config   |   link   |
+|      &#10005;      |    MMPD     | &#10004; | &#10004; |   example   |   config   |   link   |
 
 
 - #### CNIBP (Continuous non-invasive blood pressure)

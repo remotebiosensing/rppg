@@ -9,6 +9,11 @@ preprocess:
   datasets:
 fit:
   flag: true
+  meta:
+    flag: false
+    inner_optim: adam
+    inner_loss: mse
+    inner_lr: 0.01
   model: APNETv2
   time_length: 64
   overlap_interval : 32 # default 0
