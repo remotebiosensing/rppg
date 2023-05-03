@@ -24,12 +24,14 @@ pressure (CNIBP) using PyTorch.
 |:--------------:|:----------:|:----:|:----:|:-------:|:------:|:----:|
 |      :x:       |    ALL     | :o:  | :o:  | example | config | link |
 |      :o:       |    UBFC    | :o:  | :o:  | example | config | link |
+|      :x:       | UBFC-phys  | :o:  | :o:  | example | config | link |
 |      :o:       |  COHFACE   | :o:  | :o:  | example | config | link |
 |      :o:       |    LGGI    | :o:  | :o:  | example | config | link |
 |      :o:       | MAHNOB_HCI | :o:  | :o:  | example | config | link |
 |      :o:       |  VIPL-HR   | :o:  | :o:  | example | config | link |
 |      :o:       |    PURE    | :o:  | :o:  | example | config | link |
 |      :o:       |    V4V     | :o:  | :o:  | example | config | link |
+|      :x:       |    MMPD    | :o:  | :o:  | example | config | link |
 
 
 
