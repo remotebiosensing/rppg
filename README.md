@@ -9,7 +9,7 @@ We aim to implement a deep learning-based remote photoplethysmography (rPPG) mod
 pressure (CNIBP) using PyTorch.
 
 ### Quick Start with our examples
-
+ 
 - #### rPPG( remote PPG) models
 | **Implementation** | type |     **model**     |                                            **example**                                            |                                              **config**                                               |                                           paper                                            | 
 |:------------------:|:----:|:-----------------:|:-------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------:|
