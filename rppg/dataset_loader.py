@@ -91,6 +91,7 @@ def dataset_loader(
 
     round_flag = 0
 
+    rst_dataset = None
 
     if meta:
         rst_dataset = []
