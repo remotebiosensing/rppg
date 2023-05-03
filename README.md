@@ -34,8 +34,6 @@ pressure (CNIBP) using PyTorch.
 |    &#10005;    |    MMPD    | &#10004; | &#10004; | example | config | link |
 
 
-
-
 - #### CNIBP (Continuous non-invasive blood pressure)
 - [ ] PP-Net exmaple [paper](https://ieeexplore.ieee.org/document/9082808)
 
