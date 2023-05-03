@@ -10,7 +10,7 @@ preprocess:
 fit:
   flag: true
   meta:
-    flag: false
+    flag: true
     inner_optim: adam
     inner_loss: mse
     inner_lr: 0.01
@@ -25,7 +25,7 @@ fit:
     fs: 30 #video fps
     batch_size: 100
     learning_rate: 0.001
-    epochs: 1
+    epochs: 2
     loss: mse
     optimizer: adam
   val:
