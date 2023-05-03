@@ -56,14 +56,6 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
                 outputs = model(inputs)
                 loss = criterion(outputs, target)
 
-                if step == 'Test':
-
-                    for i in range(len(outputs)):
-                        out_hr = calculate_hr(outputs[i].cpu().numpy(),30)
-                        target_hr = calculate_hr(target[i].cpu().numpy(),30)
-                        hr_mae_arr.append(np.abs(out_hr - target_hr))
-
-
                 if ~torch.isfinite(loss):
                     continue
                 running_loss += loss.item()
@@ -73,28 +65,12 @@ def test_fn(epoch, model, criterion, dataloaders, step: str = "Test", wandb_flag
                     p_array.extend(( p - p.min())/(p.max()-p.min()))
                     t_array.extend(( t - t.min())/(t.max()-t.min()))
                     save_flag = False
-                if step == 'Test':
-                    tepoch.set_postfix({'': 'loss : %.4f | HR_MAE :%.4f' % (running_loss / tepoch.__len__(),
-                     np.mean(hr_mae_arr))})
-                else:
-                    tepoch.set_postfix({'': 'loss : %.4f |' % (running_loss / tepoch.__len__())})
+
+                tepoch.set_postfix({'': 'loss : %.4f |' % (running_loss / tepoch.__len__())})
 
             if wandb_flag:
-                if step == 'Test':
-                    wandb.log({step + "_loss": running_loss / tepoch.__len__(),
-                               'hr_mae': np.mean(hr_mae_arr)},
-                              step=epoch)
-                else:
-                    wandb.log({step + "_loss": running_loss / tepoch.__len__()},
-                              step=epoch)
-                if save_img and step=='Test' :
-                    plt.clf()
-                    plt.rcParams["figure.figsize"] = (16, 5)
-                    plt.plot(range(params.time_length),t_array,label='target')
-                    plt.plot(range(params.time_length),p_array,label='predic')
-                    plt.legend(fontsize='x-large')
-                    # plt.savefig("graph.png")
-                    plt.show()
+                wandb.log({step + "_loss": running_loss / tepoch.__len__()},
+                          step=epoch)
 
         return running_loss/tepoch.__len__()
 

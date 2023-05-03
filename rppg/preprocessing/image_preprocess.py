@@ -29,8 +29,9 @@ def video_preprocess(preprocess_type, path,**kwargs):
     # elif model_name in ["Vitamon","Vitamon_phase2"]:
     #     return Vitamon_preprocess_Video(path,**kwargs)
     else:
-        return {"face_detect": False,
-                "video_data": None}
+        return {
+            'face_detect' : False
+        }
 
 
 def DIFF_preprocess_Video(path, **kwargs):
@@ -58,6 +59,7 @@ def DIFF_preprocess_Video(path, **kwargs):
             if face_detect_algorithm:
                 rst, crop_frame = faceDetection(frame)
                 if not rst:  # can't detect face
+
                     return False, None
             else:
                 crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]

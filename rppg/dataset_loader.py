@@ -138,8 +138,8 @@ def dataset_loader(
             h5_tree(file)
             for key in file.keys():
                 if model_name in ["DeepPhys", "MTTS"]:
-                    appearance_data.extend(file[key]['preprocessed_video'][:, :, :, -3:])
-                    motion_data.extend(file[key]['preprocessed_video'][:, :, :, :3])
+                    appearance_data.extend(file[key]['raw_video'][:, :, :, -3:])
+                    motion_data.extend(file[key]['raw_video'][:, :, :, :3])
                     target_data.extend(file[key]['preprocessed_label'])
                 elif model_name in ["APNETv2"]:
                     start = 0
