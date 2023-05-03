@@ -142,7 +142,7 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     rst_dict = video_preprocess(preprocess_type=preprocess_type,
                                 path=path + vid_name,
                                 **kwargs)
-    if not rst_dict["face_detect"]:
+    if None in rst_dict :
         return
 
     # ppg, sbp, dbp, hr
