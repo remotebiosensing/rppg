@@ -7,10 +7,10 @@ We aim to implement a deep learning-based remote photoplethysmography (rPPG) mod
 
 ### Quick Start with our examples
 - #### rPPG( remote PPG)
-- [ ] DeepPhys example [paper](https://arxiv.org/abs/1805.07888)
+- [x] DeepPhys [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/physnet_ubfc_ubfc.py) [yaml](https://github.com/remotebiosensing/rppg/blob/main/rppg/configs/FIT_DEEPPHYS_UBFC_UBFC.yaml) [paper](https://arxiv.org/abs/1805.07888)
 - [ ] MTTS example [paper](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf)
 - [ ] DeepPhys + LSTM example paper
-- [x] physNet [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/physnet_ubfc_ubfc.py) [paper](https://arxiv.org/abs/1905.02419)
+- [x] physNet [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/physnet_ubfc_ubfc.py) [yaml](https://github.com/remotebiosensing/rppg/blob/main/rppg/configs/FIT_PHYSNET_UBFC_UBFC.yaml) [paper](https://arxiv.org/abs/1905.02419)
 - [ ] 2D phsyNet example [paper](https://arxiv.org/abs/1905.02419)
 - [ ] APNETv2 [example](https://github.com/remotebiosensing/rppg/blob/main/rppg/examples/apnetv2_ubfc_ubfc.py) paper
 
