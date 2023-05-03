@@ -115,3 +115,6 @@ to [join](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-x
 This work was partly supported by the ICT R&D program of
 MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
+## Reference
+If you use this code before our paper is published, please cite the GitHub link.
+https://github.com/remotebiosensing/rppg
