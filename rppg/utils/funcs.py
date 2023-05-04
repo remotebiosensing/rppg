@@ -4,8 +4,6 @@ from matplotlib import pyplot as plt
 from scipy.signal import butter
 from scipy.sparse import spdiags
 
-
-
 def detrend(signal, Lambda):
     """detrend(signal, Lambda) -> filtered_signal
     This function applies a detrending filter.
@@ -36,9 +34,9 @@ def detrend(signal, Lambda):
     return filtered_signal
 
 
-def BPF(input_val, fs=30):
-    low = 0.75 / (0.5 * fs)
-    high = 2.5 / (0.5 * fs)
+def BPF(input_val, fs=30,low= 0.75, high=2.5):
+    low = low / (0.5 * fs)
+    high = high / (0.5 * fs)
     [b_pulse, a_pulse] = butter(1, [low, high], btype='bandpass')
     return scipy.signal.filtfilt(b_pulse, a_pulse, np.double(input_val))
 
@@ -60,13 +58,45 @@ def _next_power_of_2(x):
     """Calculate the nearest power of 2."""
     return 1 if x == 0 else 2 ** (x - 1).bit_length()
 
-def calculate_hr(ppg_signal, fs=60, low_pass=0.75, high_pass=2.5):
+def calculate_hr(cal_type, ppg_signal, fs=60, low_pass=0.75, high_pass=2.5):
     """Calculate heart rate based on PPG using Fast Fourier transform (FFT)."""
-    ppg_signal = np.expand_dims(ppg_signal, 0)
-    N = _next_power_of_2(ppg_signal.shape[1])
-    f_ppg, pxx_ppg = scipy.signal.periodogram(ppg_signal, fs=fs, nfft=N, detrend=False)
-    fmask_ppg = np.argwhere((f_ppg >= low_pass) & (f_ppg <= high_pass))
-    mask_ppg = np.take(f_ppg, fmask_ppg)
-    mask_pxx = np.take(pxx_ppg, fmask_ppg)
-    fft_hr = np.take(mask_ppg, np.argmax(mask_pxx, 0))[0] * 60
-    return fft_hr
+    if cal_type == "FFT":
+        ppg_signal = np.expand_dims(ppg_signal, 0)
+        N = _next_power_of_2(ppg_signal.shape[1])
+        f_ppg, pxx_ppg = scipy.signal.periodogram(ppg_signal, fs=fs, nfft=N, detrend=False)
+        fmask_ppg = np.argwhere((f_ppg >= low_pass) & (f_ppg <= high_pass))
+        mask_ppg = np.take(f_ppg, fmask_ppg)
+        mask_pxx = np.take(pxx_ppg, fmask_ppg)
+        hr = np.take(mask_ppg, np.argmax(mask_pxx, 0))[0] * 60
+    else:
+        ppg_peaks, _ = scipy.signal.find_peaks(ppg_signal)
+        hr = 60 / (np.mean(np.diff(ppg_peaks)) / fs)
+    return hr
+
+def mag2db(magnitude):
+    return 20. * np.log10(magnitude)
+
+def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,high=2.5):
+    if model_type == "DIFF":
+        pred = detrend(np.cumsum(pred),100)
+        label = detrend(np.cumsum(label),100)
+    else:
+        pred = detrend(pred,100)
+        label = detrend(label,100)
+
+    if bpf_flag:
+        pred = BPF(pred,fs,low,high)
+        label = BPF(pred,fs,low,high)
+
+    if cal_type != "BOTH":
+        hr_pred = calculate_hr(cal_type,pred,fs,low,high)
+        hr_label = calculate_hr(cal_type, label, fs, low, high)
+    else:
+        hr_pred_fft = calculate_hr("FFT", pred, fs, low, high)
+        hr_label_fft = calculate_hr("FFT", label, fs, low, high)
+        hr_pred_peak = calculate_hr("PEAK", pred, fs, low, high)
+        hr_label_peak = calculate_hr("PEAK", label, fs, low, high)
+        hr_pred = [hr_pred_fft,hr_pred_peak]
+        hr_label = [hr_label_fft, hr_label_peak]
+
+    return hr_pred, hr_label
