@@ -10,7 +10,7 @@ from rppg.optim import optimizer
 from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import preprocessing
-from rppg.train import train_fn, test_fn
+from rppg.train import train_fn, val_fn, test_fn
 from rppg.MAML import MAML
 SEED = 0
 
@@ -201,7 +201,7 @@ if __name__ == "__main__":
                         wandb_flag=wandb_cfg.flag
                     )
                     if cfg.fit.val.flag and epoch % cfg.fit.val.interval == 0:
-                        test_fn(
+                        val_fn(
                             epoch=epoch,
                             model=model,
                             criterion=criterion,
@@ -211,20 +211,21 @@ if __name__ == "__main__":
                         )
                     if cfg.fit.test.flag and epoch % cfg.fit.test.interval == 0:
                         test_fn(
-                            epoch=epoch,
+                            epoch=None,
                             model=model,
-                            criterion=criterion,
                             dataloaders=test_dataset,
-                            step="Test",
+                            cal_type=cfg.fit.test.cal_type,
+                            metrics=cfg.fit.test.metric,
                             wandb_flag=wandb_cfg.flag
                         )
             elif cfg.fit.test.flag:
                 test_fn(
                     epoch=None,
                     model=model,
-                    criterion=criterion,
                     dataloaders=test_dataset,
-                    step="Test",
-                    wandb_flag=True)
+                    cal_type=cfg.fit.test.cal_type,
+                    metrics=cfg.fit.test.metric,
+                    wandb_flag=wandb_cfg.flag
+                )
             
 

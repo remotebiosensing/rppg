@@ -37,11 +37,12 @@ fit:
     batch_size: 100
   test:
     flag: true
+    cal_type : FFT
     metric: ['MAE','RMSE','MAPE','Pearson']
     dataset: UBFC
     shuffle: false
     interval: 20 # test interval epoch
     fs: 30 #video fps
-    batch_size: 100
+    batch_size: 4
 
 

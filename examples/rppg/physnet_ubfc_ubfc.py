@@ -10,7 +10,7 @@ from rppg.optim import optimizer
 from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import preprocessing
-from rppg.train import train_fn, test_fn
+from rppg.train import train_fn, val_fn, test_fn
 
 SEED = 0
 
@@ -28,7 +28,7 @@ generator.manual_seed(SEED)
 
 if __name__ == "__main__":
 
-    cfg = get_config("../configs/FIT_PHYSNET_UBFC_UBFC.yaml")
+    cfg = get_config("../../rppg/configs/FIT_PHYSNET_UBFC_UBFC.yaml")
     if cfg.preprocess.flag:
         preprocessing(
             dataset_root_path=cfg.data_root_path,
@@ -142,7 +142,7 @@ if __name__ == "__main__":
             model_name=cfg.fit.model,
             time_length=cfg.fit.time_length)
 
-        wandb_cfg = get_config("../configs/WANDB_CONFG.yaml")
+        wandb_cfg = get_config("../../rppg/configs/WANDB_CONFG.yaml")
         if wandb_cfg.flag and cfg.fit.train.flag:
             wandb.init(project=wandb_cfg.wandb_project_name,
                        entity=wandb_cfg.wandb_entity,
@@ -175,32 +175,32 @@ if __name__ == "__main__":
                     optimizer=opt,
                     criterion=criterion,
                     dataloaders=train_dataset,
-                    step="Train",
                     wandb_flag=wandb_cfg.flag
                 )
                 if cfg.fit.val.flag and epoch % cfg.fit.val.interval == 0:
-                    test_fn(
+                    val_fn(
                         epoch=epoch,
                         model=model,
                         criterion=criterion,
                         dataloaders=val_dataset,
-                        step="Val",
                         wandb_flag=wandb_cfg.flag
                     )
                 if cfg.fit.test.flag and epoch % cfg.fit.test.interval == 0:
                     test_fn(
                         epoch=epoch,
                         model=model,
-                        criterion=criterion,
                         dataloaders=test_dataset,
-                        step="Test",
+                        model_name=cfg.fit.model,
+                        cal_type=cfg.fit.test.cal_type,
+                        metrics=cfg.fit.test.metric,
                         wandb_flag=wandb_cfg.flag
                     )
         elif cfg.fit.test.flag:
             test_fn(
                 epoch=None,
                 model=model,
-                criterion=criterion,
                 dataloaders=test_dataset,
-                step="Test",
-                wandb_flag=True)
+                cal_type=cfg.fit.test.cal_type,
+                metrics=cfg.fit.test.metric,
+                wandb_flag=wandb_cfg.flag
+            )

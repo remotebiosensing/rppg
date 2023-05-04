@@ -89,8 +89,8 @@ def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,hig
         label = BPF(pred,fs,low,high)
 
     if cal_type != "BOTH":
-        hr_pred = calculate_hr(cal_type,pred,fs,low,high)
-        hr_label = calculate_hr(cal_type, label, fs, low, high)
+        hr_pred = [calculate_hr(cal_type,p,fs,low,high) for p in pred]
+        hr_label = [calculate_hr(cal_type,l,fs,low,high) for l in label]
     else:
         hr_pred_fft = calculate_hr("FFT", pred, fs, low, high)
         hr_label_fft = calculate_hr("FFT", label, fs, low, high)
@@ -100,3 +100,16 @@ def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,hig
         hr_label = [hr_label_fft, hr_label_peak]
 
     return hr_pred, hr_label
+
+def MAE(pred,label):
+    return np.mean(np.abs(pred-label))
+
+def RMSE(pred,label):
+    return np.sqrt(np.mean(np.square(pred-label)))
+
+def MAPE(pred,label):
+    return np.mean(np.abs((pred-label)/label)) *100
+
+def corr(pred,label):
+    return np.corrcoef(pred,label)
+
