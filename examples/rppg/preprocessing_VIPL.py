@@ -10,7 +10,7 @@ from rppg.optim import optimizer
 from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import preprocessing
-from rppg.train import train_fn, test_fn
+from rppg.train import train_fn, val_fn
 
 SEED = 0
 

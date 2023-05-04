@@ -13,7 +13,7 @@ from rppg.datasets.ETArPPGNetDataset import ETArPPGNetDataset
 from rppg.datasets.PhysNetDataset import PhysNetDataset
 from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
-from utils.funcs import detrend
+from rppg.utils.funcs import detrend
 
 import cv2
 
