@@ -14,6 +14,7 @@ from nets.models.RhythmNet import RhythmNet
 from nets.models.ETArPPGNet import ETArPPGNet
 from nets.models.sub_models.VitaMon import Vitamon
 from rppg.nets.APNETv2 import APNETv2
+from rppg.nets.APNETv3 import APNETv3
 from log import log_info_time
 
 import os
@@ -54,6 +55,8 @@ def get_model(model_name,time_length):
         model = APNET()
     elif model_name == "APNETv2":
         model = APNETv2()
+    elif model_name == "APNETv3":
+        model = APNETv3()
     else:
         log_warning("pls implemented model")
         raise NotImplementedError("implement a custom model(%s)" % model_name)

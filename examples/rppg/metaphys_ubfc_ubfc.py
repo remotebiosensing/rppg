@@ -28,7 +28,7 @@ generator.manual_seed(SEED)
 
 if __name__ == "__main__":
 
-    cfg = get_config("../configs/FIT_METAPHYS_UBFC_UBFC.yaml")
+    cfg = get_config("../../rppg/configs/FIT_METAPHYS_UBFC_UBFC.yaml")
     if cfg.preprocess.flag:
         preprocessing(
             dataset_root_path=cfg.data_root_path,

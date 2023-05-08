@@ -28,7 +28,7 @@ generator.manual_seed(SEED)
 
 if __name__ == "__main__":
 
-    cfg = get_config("../../rppg/configs/FIT_APNETv2_UBFC_UBFC.yaml")
+    cfg = get_config("../../rppg/configs/FIT_APNETv3_UBFC_UBFC.yaml")
     if cfg.preprocess.flag:
         preprocessing()
 
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             model_name=cfg.fit.model,
             time_length=cfg.fit.time_length)
 
-        wandb_cfg = get_config("../configs/WANDB_CONFG.yaml")
+        wandb_cfg = get_config("../../rppg/configs/WANDB_CONFG.yaml")
         if wandb_cfg.flag and cfg.fit.train.flag:
             wandb.init(project=wandb_cfg.wandb_project_name,
                        entity=wandb_cfg.wandb_entity,
@@ -172,7 +172,6 @@ if __name__ == "__main__":
                     optimizer=opt,
                     criterion=criterion,
                     dataloaders=train_dataset,
-                    step="Train",
                     wandb_flag=wandb_cfg.flag
                 )
                 if cfg.fit.val.flag and epoch % cfg.fit.val.interval == 0:
@@ -181,14 +180,14 @@ if __name__ == "__main__":
                         model=model,
                         criterion=criterion,
                         dataloaders=val_dataset,
-                        step="Val",
                         wandb_flag=wandb_cfg.flag
                     )
                 if cfg.fit.test.flag and epoch % cfg.fit.test.interval == 0:
                     test_fn(
-                        epoch=None,
+                        epoch=epoch,
                         model=model,
                         dataloaders=test_dataset,
+                        model_name=cfg.fit.model,
                         cal_type=cfg.fit.test.cal_type,
                         metrics=cfg.fit.test.metric,
                         wandb_flag=wandb_cfg.flag

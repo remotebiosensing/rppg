@@ -13,6 +13,7 @@ from rppg.datasets.ETArPPGNetDataset import ETArPPGNetDataset
 from rppg.datasets.PhysNetDataset import PhysNetDataset
 from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
+from rppg.datasets.APNETv3Dataset import APNETv3Dataset
 from rppg.utils.funcs import detrend
 
 import cv2
@@ -168,7 +169,7 @@ def dataset_loader(
                             # video_chunks.append(video_chunk)
                             start += time_length - overlap_interval
                             end += time_length - overlap_interval
-                    elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+                    elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN","APNETv3"]:
                         start = 0
                         end = time_length
                         label = detrend(file[key]['preprocessed_label'], 100)
@@ -232,6 +233,10 @@ def dataset_loader(
                                              label_data=np.asarray(label_data),
                                              target_length=time_length,
                                              img_size=img_size)
+                elif  model_name in ["APNETv3"]:
+                    dataset = APNETv3Dataset(video_data=np.asarray(video_data),
+                                             label_data=np.asarray(label_data),
+                                             target_length=time_length)
 
                 elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
                     dataset = PhysNetDataset(video_data=np.asarray(video_data),
@@ -250,6 +255,7 @@ def dataset_loader(
                 datasets = [rst_dataset, dataset]
                 rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
                 round_flag = 0
+                break
 
     return rst_dataset
 

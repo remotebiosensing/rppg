@@ -423,7 +423,7 @@ class BVPVelocityLoss(nn.Module):
 
         # perd_loss = periodic_signal_loss(targets,predictions)
 
-        loss = pearson + peak_loss(targets,predictions) + derivative_loss(predictions,targets)#+ NMI + phase
+        loss = pearson# + peak_loss(targets,predictions) + derivative_loss(predictions,targets)#+ NMI + phase
 
         return loss
 
