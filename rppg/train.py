@@ -62,7 +62,8 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
 def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_flag: bool = True):
     # To evaluate a model by subject, you can use the meta option
     step = "Test"
-
+    if epoch is None:
+        epoch = 0
     if model_name in ["DeepPhys", "MTTS"]:
         model_type = 'DIFF'
     else:
@@ -76,6 +77,8 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
             for inputs, target in tepoch:
                 tepoch.set_description(step + "%d" % epoch)
                 outputs = model(inputs)
+                if model_name in ['ContrastPhys']:
+                    outputs = outputs[:,-1,:]
                 hr_pred, hr_target = get_hr(outputs.detach().cpu().numpy(),target.detach().cpu().numpy(),model_type= model_type ,cal_type=cal_type)
                 hr_preds.extend(hr_pred)
                 hr_targets.extend(hr_target)

@@ -169,7 +169,7 @@ def dataset_loader(
                             # video_chunks.append(video_chunk)
                             start += time_length - overlap_interval
                             end += time_length - overlap_interval
-                    elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN","APNETv3"]:
+                    elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN","APNETv3","ContrastPhys"]:
                         start = 0
                         end = time_length
                         label = detrend(file[key]['preprocessed_label'], 100)
@@ -238,7 +238,7 @@ def dataset_loader(
                                              label_data=np.asarray(label_data),
                                              target_length=time_length)
 
-                elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+                elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN","ContrastPhys"]:
                     dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                              label_data=np.asarray(label_data),
                                              target_length=time_length)
@@ -255,7 +255,7 @@ def dataset_loader(
                 datasets = [rst_dataset, dataset]
                 rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
                 round_flag = 0
-                break
+
 
     return rst_dataset
 
