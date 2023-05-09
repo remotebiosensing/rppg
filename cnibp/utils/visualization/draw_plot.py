@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 
 def dbp_sbp_scatter_plot(ch):
-    with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
+    with open('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/config/parameter.json') as f:
         json_data = json.load(f)
         channels = json_data.get("parameters").get("in_channels")
         root_path = json_data.get("parameters").get("root_path")  # mimic uci containing folder
@@ -28,7 +28,7 @@ def dbp_sbp_scatter_plot(ch):
         print(len(test_size))
 
     # DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_root_path = '/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/BPNet_V1.0/'
+    model_root_path = '/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/weights/BPNet_V1.0/'
     model = torch.load(model_root_path + "model_uci_(" + str(channel) + ")_bpnet.pt")
     model = model.to('cpu')
     model.eval()
@@ -58,7 +58,7 @@ dbp_sbp_scatter_plot('sixth')
 
 
 def AHA_class_scatter_plot():
-    with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
+    with open('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/config/parameter.json') as f:
         json_data = json.load(f)
         channels = json_data.get("parameters").get("in_channels")
         root_path = json_data.get("parameters").get("root_path")  # mimic uci containing folder
@@ -111,7 +111,7 @@ def AHA_class_scatter_plot():
             print(len(test_size5))
 
         # DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model_root_path = '/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/weights/BPNet_V1.0/'
+        model_root_path = '/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/weights/BPNet_V1.0/'
         model = torch.load(model_root_path + "model_uci_(" + str(channel) + ")_checker_shuffled.pt")
         model = model.to('cpu')
         model.eval()
