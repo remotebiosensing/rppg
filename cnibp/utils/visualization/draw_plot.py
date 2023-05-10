@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 
 def dbp_sbp_scatter_plot(ch):
-    with open('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/config/parameter.json') as f:
+    with open('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/configs/parameter.json') as f:
         json_data = json.load(f)
         channels = json_data.get("parameters").get("in_channels")
         root_path = json_data.get("parameters").get("root_path")  # mimic uci containing folder
@@ -58,7 +58,7 @@ dbp_sbp_scatter_plot('sixth')
 
 
 def AHA_class_scatter_plot():
-    with open('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/config/parameter.json') as f:
+    with open('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/configs/parameter.json') as f:
         json_data = json.load(f)
         channels = json_data.get("parameters").get("in_channels")
         root_path = json_data.get("parameters").get("root_path")  # mimic uci containing folder
