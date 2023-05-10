@@ -1,0 +1,32 @@
+data_root_path: "" # raw data path
+dataset_path: "" # preprocessed data path
+model_path: "" # model path
+preprocess:
+  flag: false
+  analyze: false
+  chunk_size: 750 # signal length
+  dataset: mimic
+  dataset_version: 3 # version of mimic dataset
+fit:
+  flag: true
+  model: bpnet
+  meta:
+    flag: true
+    optim: adam
+    lr: 0.001
+    epochs: 100
+  train:
+    flag: true
+    shuffle: true
+    batch_size: 2048
+  val:
+    flag: true
+    shuffle: true
+    batch_size: 2048
+  test:
+    flag: true
+    metric: ['MAE','RMSE', 'SMAPE', 'Pearson']
+    shuffle: false
+    batch_size: 2048
+
+
