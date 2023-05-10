@@ -1,7 +1,7 @@
 import numpy as np
 import mat73
 import os
-import vid2bp.preprocessing.utils.signal_utils as su
+import cnibp.preprocessing.utils.signal_utils as su
 
 
 def data_aggregator(model_name, root_path, chunk_size=750, samp_rate=60):
@@ -24,9 +24,9 @@ def data_aggregator(model_name, root_path, chunk_size=750, samp_rate=60):
             ppg_total.append(ppg_temp)
             abp_total.append(abp_temp)
 
-    ppg_total = np.expand_dims(ppg_total, axis=1)
-    abp_total = np.expand_dims(abp_total, axis=1)
-    sig_total = np.swapaxes(np.concatenate([abp_total, ppg_total], axis=1), 1, 2)
+    ppg_total = np.expand_dims(ppg_total, axis=1)[:100]
+    abp_total = np.expand_dims(abp_total, axis=1)[:100]
+    sig_total = np.swapaxes(np.concatenate([abp_total, ppg_total], axis=1), 1, 2)[:100]
     abp, ple, dsm = su.signal_slicing(model_name, sig_total, chunk_size, samp_rate, fft=True)
 
     return ple, abp, dsm

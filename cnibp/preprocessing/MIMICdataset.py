@@ -3,7 +3,7 @@ import os
 import wfdb
 import numpy as np
 from tqdm import tqdm
-import vid2bp.preprocessing.utils.signal_utils as su
+import cnibp.preprocessing.utils.signal_utils as su
 
 '''
 find_available_data(root_path)
@@ -52,10 +52,11 @@ def find_idx(path)
 
 def find_idx(path):
     record = wfdb.rdrecord(path)
-    channel = [i for i in range(len(record.sig_name)) if (record.sig_name[i] == 'ABP' or record.sig_name[i] == 'PLETH')]
+    ABP_channel = [i for i in range(len(record.sig_name)) if (record.sig_name[i] == 'ABP')]
+    PPG_channel = [i for i in range(len(record.sig_name)) if (record.sig_name[i] == 'PLETH')]
     # print('channel :', len(channel))
-    flag = len(channel)
-    return channel, flag
+    # flag = len(channel)
+    return ABP_channel, PPG_channel
 
 
 '''
@@ -76,17 +77,15 @@ as attributes in a Record or MultiRecord object.
 ''' 바로 return.p_signal 하도록 변경 '''
 
 
-# TODO -> Record.inti_value를 추가로 return 해주는데, 뒤에 함수들 전부 수정
+# TODO -> Record.init_value를 추가로 return 해주는데, 뒤에 함수들 전부 수정
 def read_record(path, sampfrom=0, sampto=None):
-    channel, flag = find_idx(path)
-    if flag == 2:
-        record = wfdb.rdrecord(path, channels=channel, sampfrom=sampfrom, sampto=sampto)
-        # wfdb.plot_wfdb(record=record, title='Record from PhysioNet MIMIC Dataset')
-        # display(record.__dict__)
-        return record.p_signal
-    else:
-        print('read_recored() -> missing signal')
-        return None
+    # channel = ['ABP', 'PLETH']
+    ABP_channel, PPG_channel = find_idx(path)
+    ABP_record = wfdb.rdrecord(path, channels=ABP_channel, sampfrom=sampfrom, sampto=sampto)
+    PPG_record = wfdb.rdrecord(path, channels=PPG_channel, sampfrom=sampfrom, sampto=sampto)
+    # wfdb.plot_wfdb(record=record, title='Record from PhysioNet MIMIC Dataset')
+    # display(ABP_record.__dict__)
+    return ABP_record.p_signal, PPG_record.p_signal
 
 
 def data_aggregator(model_name, read_path, chunk_size, samp_rate):
@@ -99,7 +98,7 @@ def data_aggregator(model_name, read_path, chunk_size, samp_rate):
     print('Number of selected ICU patient :', len(available_list))
     used_file_cnt = 0
     # TODO ''' use total data after solving the problem of get_diastolic() '''
-    for a in available_list[:2]:
+    for a in available_list[:1]:
         p = read_path + a
         for (path, dirs, files) in os.walk(p):
             for file in tqdm(files):
@@ -109,6 +108,7 @@ def data_aggregator(model_name, read_path, chunk_size, samp_rate):
                     total_data = np.append(total_data, read_record(data_path), axis=0)
 
     sig_total = total_data[1:]
+    # for reshaping in signal_utils
     relength = (len(sig_total) // chunk_size) * chunk_size
     sig_total = sig_total[:relength]
     print('np.shape(sig_total) :', np.shape(sig_total))

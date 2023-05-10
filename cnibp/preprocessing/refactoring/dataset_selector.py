@@ -1,8 +1,8 @@
 import json
-import vid2bp.preprocessing.utils.math_module as mm
-import vid2bp.preprocessing.utils.train_utils as tu
+import cnibp.preprocessing.utils.math_functions as mm
+import cnibp.utils.visualization.plots as tu
 
-with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.json') as f:
+with open('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/configs/parameter.json') as f:
     json_data = json.load(f)
     param = json_data.get("parameters")
     root_path = json_data.get("parameters").get("root_path")  # mimic uci containing folder
@@ -13,7 +13,7 @@ with open('/home/paperc/PycharmProjects/Pytorch_rppgs/vid2bp/config/parameter.js
     chunk_size = json_data.get("parameters").get("chunk_size")
 
 
-def selector(model_name, dataset_name, degree, samp_rate, cv=0):
+def selector(model_name, dataset_name, degree, samp_rate, cv=1):
     print('< Blood Pressure Estimation dataset selector >')
     read_path = root_path + data_path[dataset_name][0]
     write_path = root_path + data_path[dataset_name][1]
@@ -21,16 +21,19 @@ def selector(model_name, dataset_name, degree, samp_rate, cv=0):
     print('model name :', model_name)
     print('dataset name :', dataset_name)
     print('read_path :', read_path)
-    print('write_path :', write_path)
 
     if dataset_name == "mimic":
-        import MIMICdataset
+        import cnibp.preprocessing.MIMICdataset as MIMICdataset
         save_path = write_path + 'case(' + str(degree[-1]) + ')_' + str(chunk_size)
         print('save_path :', save_path)
         ple, abp, dsm = MIMICdataset.data_aggregator(model_name, read_path, chunk_size, samp_rate)
-
+    elif dataset_name == "mimiciii":
+        import cnibp.preprocessing.refactoring.mimic3temp as mimic3temp
+        save_path = write_path + 'case(' + str(degree[-1]) + ')_' + str(chunk_size)
+        print('save_path :', save_path)
+        ple, abp, dsm = mimic3temp.multi_preprocessing(model_name, read_path)
     else:  # uci
-        import UCIdataset
+        import cnibp.preprocessing.UCIdataset as UCIdataset
         save_path = write_path + 'case(' + str(degree[-1]) + ')_' + str(chunk_size)
         print('save_path :', save_path)
         ple, abp, dsm = UCIdataset.data_aggregator(model_name, read_path, chunk_size, samp_rate)
@@ -57,7 +60,17 @@ def selector(model_name, dataset_name, degree, samp_rate, cv=0):
     else:
         print('not supported model... ')
 
+    print('save path :', save_path)
+
 
 order = orders["second"]
 samp_rate = sampling_rate["60"]
-selector(model_name="BPNet", dataset_name="mimic", degree=order, samp_rate=samp_rate, cv=1)
+selector(model_name="BPNet", dataset_name="uci", degree=order, samp_rate=samp_rate, cv=1)
+
+def total_channel_dataset():
+    total = [orders["zeroth"], orders["first"], orders["second"]]
+    samp_rate = sampling_rate["60"]
+    for t in total:
+        selector(model_name="BPNet", dataset_name="uci", degree=t, samp_rate=samp_rate, cv=1)
+
+# total_channel_dataset()
