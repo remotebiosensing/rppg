@@ -2,18 +2,10 @@ import multiprocessing
 import os
 
 import h5py
-import numpy as np
-from torch.utils.data import random_split
-
-import datetime
+import math
 
 from rppg.preprocessing.image_preprocess import video_preprocess
 from rppg.preprocessing.text_preprocess import label_preprocess
-
-import math
-
-from params import params
-
 
 
 def preprocessing(
@@ -46,7 +38,6 @@ def preprocessing(
         fixed_position = dataset["fixed_position"]
         img_size = dataset['image_size']
 
-
         dataset_root_path = data_root_path + dataset_name
 
         return_dict = manager.dict()
@@ -76,7 +67,7 @@ def preprocessing(
                     source_list = [source for source in os.listdir(person_data_path + "/" + person + "/" + v)]
                     for source in source_list:
                         tmp = data_dir + "/" + person + "/" + v + "/" + source
-                        if len(os.listdir(dataset_root_path+tmp)) == 5 and source == 'source1':
+                        if len(os.listdir(dataset_root_path + tmp)) == 5 and source == 'source1':
                             data_list.append(tmp)
 
             vid_name = "/video.avi"
@@ -124,8 +115,6 @@ def preprocessing(
                                 chunk_size=chunk_size, idx=i)
 
 
-
-
 def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, return_dict, **kwargs):
     """
     :param path: dataset path
@@ -142,7 +131,7 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     rst_dict = video_preprocess(preprocess_type=preprocess_type,
                                 path=path + vid_name,
                                 **kwargs)
-    if None in rst_dict :
+    if None in rst_dict:
         return
 
     # ppg, sbp, dbp, hr
@@ -151,15 +140,15 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
         'preprocessed_video': rst_dict["video_data"],
         'frame_number': rst_dict["frame_number"],
         'flip_arr': rst_dict["flip_arr"],
-        'keypoint' : rst_dict["keypoint"],
-        'raw_video' : rst_dict["raw_video"],
+        'keypoint': rst_dict["keypoint"],
+        'raw_video': rst_dict["raw_video"],
         'preprocessed_label': preprocessed_label}
     # elif preprocess_type in ["TEST"]:
     #     return_dict[path.replace('/', '')] = {
     #         'keypoint': rst_dict["keypoint"],
     #         'raw_video': rst_dict["raw_video"],
     #         'preprocessed_label': preprocessed_label }
-        # 'preprocessed_hr': preprocessed_hr}
+    # 'preprocessed_hr': preprocessed_hr}
 
 
 def chunk_preprocessing(preprocess_type,
@@ -174,8 +163,6 @@ def chunk_preprocessing(preprocess_type,
                         img_size,
                         chunk_size,
                         idx):
-
-
     process = []
     save_root_path = dataset_path
 
@@ -198,7 +185,6 @@ def chunk_preprocessing(preprocess_type,
         proc.start()
     for proc in process:
         proc.join()
-
 
     dataset_path = h5py.File(save_root_path + preprocess_type + "_" + dataset_name + "_" + str(idx) + ".hdf5",
                              "w")

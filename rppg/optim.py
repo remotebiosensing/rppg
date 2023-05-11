@@ -1,7 +1,7 @@
 import torch.optim as opt
 
-from log import log_warning
-import os
+from rppg.log import log_warning
+
 
 def optimizer(model_params, learning_rate: float = 1, optim: str = "mse", log_flag: bool = True):
     '''
@@ -13,7 +13,7 @@ def optimizer(model_params, learning_rate: float = 1, optim: str = "mse", log_fl
     '''
 
     if optim == "adam":
-        return opt.Adam(model_params, learning_rate,weight_decay=0.00005)
+        return opt.Adam(model_params, learning_rate, weight_decay=0.00005)
     elif optim == "sgd":
         return opt.SGD(model_params, learning_rate)
     elif optim == "rms_prop":

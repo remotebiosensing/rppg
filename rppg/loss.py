@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
 import numpy as np
-from log import log_warning
+from rppg.log import log_warning
 import torch.nn.functional as F
 import scipy
 from numpy import dot
