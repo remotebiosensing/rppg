@@ -1,6 +1,6 @@
 ---
-data_root_path : "/media/hdd1/"
-dataset_path: "/media/hdd1/dy/dataset/" # preprocessed data path
+data_root_path : "/media/hdd1/dataset/"
+dataset_path: "/media/hdd1/dy_project/dataset/" # preprocessed data path
 model_path: "/media/hdd1/dy/model/"
 preprocess:
   flag: false
@@ -8,41 +8,33 @@ preprocess:
   chunk_size: 4
   datasets:
 fit:
-  flag: true
+  model: PhysNet
+  time_length: 128
+  overlap_interval: 0 # default 0
+  img_size: 32
+  train_flag: True
+  eval_flag: True
+  batch_size: 30
   meta:
     flag: false
     inner_optim: adam
     inner_loss: mse
     inner_lr: 0.01
-  model: PhysNet
-  time_length: 64
-  overlap_interval : 32 # default 0
-  img_size: 64
   train:
-    flag: true
     dataset: UBFC
     shuffle: true
     fs: 30 #video fps
-    batch_size: 100
+    batch_size: 30
     learning_rate: 0.001
     epochs: 100
     loss: neg_pearson
     optimizer: adam
-  val:
-    flag: true
-    dataset: UBFC
-    shuffle: true
-    interval: 1 # min 1
-    fs: 30 #video fps
-    batch_size: 100
   test:
-    flag: true
     cal_type : FFT
     metric: ['MAE','RMSE','MAPE','Pearson']
     dataset: UBFC
     shuffle: false
-    interval: 20 # test interval epoch
     fs: 30 #video fps
-    batch_size: 4
+    batch_size: 10
 
 
