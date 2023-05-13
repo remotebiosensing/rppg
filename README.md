@@ -10,7 +10,7 @@ to [join](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-x
 
 [![GitHub license](https://img.shields.io/github/license/remotebiosensing/rppg)](https://github.com/remotebiosensing/rppg/blob/main/LICENSE)
 [![Slack](https://img.shields.io/badge/Chat-Slack-red)](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg)
-[![Tutorial](https://img.shields.io/badge/Tutorial-doc-blue)[https://github.com/remotebiosensing/rppg/wiki/rPPG-Documentation]
+[![Tutorial](https://img.shields.io/badge/Tutorial-doc-blue)](https://github.com/remotebiosensing/rppg/wiki/rPPG-Documentation)
 
 Remote Biosensing (`rPPG`) is a framework for non-contact algorithms for remote photoplethysmography (rPPG) and for
 non-invasive blood pressure measurement algorithms (CNIBP) technology.
