@@ -111,71 +111,8 @@ def PhysNet_preprocess_Label(path, **kwargs):
                 label_hr.append(data['Value']['pulseRate'])
             for data in json_data['/Image']:
                 time.append(data['Timestamp'])
-            print(str(len(label)) + path)
 
-        label_std = label_time[0]
-        time_std = time[0]
 
-        if label_std < time_std:
-            time = [(i - label_std) / 1000 for i in time]
-            label_time = [(i - label_std) / 1000 for i in label_time]
-            chek = "레이블기준"
-
-            j = 0
-            i = 0
-            new_label = []
-            new_hr = []
-
-            while i < len(time):
-                if j + 1 >= len(label_time):
-                    break
-                if i == 0:
-                    if time[i] <= label_time[j]:
-                        new_label.append(0)
-                        new_hr.append(0)
-                        i += 1
-
-                if label_time[j + 1] >= time[i] >= label_time[j]:
-                    term = label_time[j + 1] - label_time[j]
-                    head = time[i] - label_time[j]  # 앞에꺼
-                    back = label_time[j + 1] - time[i]  # 뒤에꺼
-                    new_label.append((label[i] * back + label[i - 1] * head) / term)
-                    new_hr.append((label_hr[i] * back + label_hr[i - 1] * head) / term)
-                    i += 1
-                else:
-                    j += 1
-
-        else:
-            label_time = [(i - time_std) / 1000 for i in label_time]
-            time = [(i - time_std) / 1000 for i in time]
-            chek = "시간기준"
-            j = 0
-            i = 0
-            new_label = []
-            new_hr = []
-
-            while i < len(time):
-                if j + 1 >= len(label_time):
-                    break
-
-                if time[i] <= label_time[j]:
-                    new_label.append(0)
-                    new_hr.append(0)
-                    i += 1
-                    continue
-
-                if label_time[j + 1] >= time[i] and time[i] >= label_time[j]:
-                    term = label_time[j + 1] - label_time[j]
-                    head = time[i] - label_time[j]  # 앞에꺼
-                    back = label_time[j + 1] - time[i]  # 뒤에꺼
-                    new_label.append((label[i] * back + label[i - 1] * head) / term)
-                    new_hr.append((label_hr[i] * back + label_hr[i - 1] * head) / term)
-                    i += 1
-                j += 1
-
-        # test = nk.ppg_clean(label, 60)
-        print("A")
-        # label = resample(label,len(label)//2)
     elif path.__contains__("csv"):
         f = open(path, 'r')
         rdr = csv.reader(f)

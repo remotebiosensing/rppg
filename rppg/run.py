@@ -2,10 +2,29 @@ import math
 import torch
 import wandb
 from tqdm import tqdm
-from rppg.utils.funcs import (get_hr,MAE,RMSE,MAPE,corr)
+from rppg.utils.funcs import (get_hr,MAE,RMSE,MAPE,corr,IrrelevantPowerRatio)
 import numpy as np
 
-def train_fn(epoch, model, optimizer, criterion, dataloaders, wandb_flag: bool = True):
+def run(model, optimizer, lr_sch, criterion, cfg, dataloaders,model_path, wandb_flag):
+
+    best_loss = 100000
+    val_loss = 0
+    if cfg.train_flag:
+        for epoch in range(cfg.train.epochs):
+            train_fn(epoch, model, optimizer,lr_sch, criterion,dataloaders[0])
+            val_loss = val_fn(epoch, model, criterion, dataloaders[1])
+            if best_loss> val_loss:
+                best_loss = val_loss
+                torch.save(model.state_dict(),model_path + cfg.model + "_" + cfg.train.dataset + ".pt")
+                if cfg.eval_flag:
+                    test_fn(epoch,model,dataloaders[2],cfg.model,cal_type=cfg.test.cal_type,
+                            metrics=cfg.test.metric, wandb_flag=wandb_flag)
+    else:
+        #model = torch.load()
+        print("TBD")
+
+
+def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag: bool = True):
     # TODO : Implement multiple loss
     step = "Train"
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
@@ -16,6 +35,8 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, wandb_flag: bool =
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
             outputs = model(inputs)
+            outputs = (outputs - torch.mean(outputs)) / torch.std(outputs)
+            target = (target -  torch.mean(target)) / torch.std(target)
             loss = criterion(outputs, target)
 
             if ~torch.isfinite(loss):
@@ -25,6 +46,8 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, wandb_flag: bool =
             running_loss += loss.item()
 
             optimizer.step()
+            if lr_sch is not None:
+                lr_sch.step()
 
             tepoch.set_postfix({'': 'loss : %.4f | ' % (running_loss / tepoch.__len__())})
 
@@ -38,6 +61,8 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
     # TODO : Implement multiple loss
     # TODO : Implement save model function
     step = "Val"
+
+
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.eval()
         running_loss = 0.0
@@ -46,7 +71,6 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
                 tepoch.set_description(step + "%d" % epoch)
                 outputs = model(inputs)
                 loss = criterion(outputs, target)
-
                 if ~torch.isfinite(loss):
                     continue
                 running_loss += loss.item()
