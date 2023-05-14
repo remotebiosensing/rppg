@@ -16,23 +16,16 @@ from tqdm import tqdm
 
 
 def video_preprocess(preprocess_type, path, **kwargs):
+    video_data = CONT_preprocess_Video(path, **kwargs)
+
     if preprocess_type == 'DIFF':
-        return DIFF_preprocess_Video(path, **kwargs)
-    elif preprocess_type in 'CONT':
-        return CONT_preprocess_Video(path, **kwargs)
-    # elif model_name == 'RhythmNet':
-    #     return RhythmNet_preprocess_Video(path,**kwargs)
-    # elif model_name == 'ETArPPGNet':
-    #     return ETArPPGNet_preprocess_Video(path,**kwargs)
-    # elif model_name in ["Vitamon","Vitamon_phase2"]:
-    #     return Vitamon_preprocess_Video(path,**kwargs)
+        return DIFF_preprocess_Video(path,video_data, **kwargs)
     else:
-        return {
-            'face_detect': False
-        }
+        return video_data
 
 
-def DIFF_preprocess_Video(path, **kwargs):
+
+def DIFF_preprocess_Video(path,video_data, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
@@ -41,52 +34,18 @@ def DIFF_preprocess_Video(path, **kwargs):
     '''
     face_detect_algorithm = kwargs['face_detect_algorithm']
 
-    cap = cv2.VideoCapture(path)
-    frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    raw_video = np.empty((frame_total - 1, 36, 36, 6))
-    prev_frame = None
-    j = 0
+    frame_total, h, w, c = video_data.shape
+
+    raw_video = np.empty((frame_total - 1, h, w, 6))
 
     with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if frame is None:
-                break
-            if face_detect_algorithm:
-                rst, crop_frame = faceDetection(frame)
-                if not rst:  # can't detect face
-
-                    return False, None
-            else:
-                crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
-
-            crop_frame = cv2.resize(crop_frame, dsize=(36, 36), interpolation=cv2.INTER_AREA)
-            crop_frame = generate_Floatimage(crop_frame)
-
-            if prev_frame is None:
-                prev_frame = crop_frame
-                continue
-            raw_video[j, :, :, :3], raw_video[j, :, :, -3:] = preprocess_Image(prev_frame, crop_frame)
-            prev_frame = crop_frame
-            j += 1
+        for frame_num in range(frame_total-1):
+            raw_video[frame_num, :, :, :3], raw_video[frame_num, :, :, -3:] = preprocess_Image(video_data[frame_num], video_data[frame_num+1])
             pbar.update(1)
+
     raw_video[:, :, :, :3] = video_normalize(raw_video[:, :, :, :3])
-    cap.release()
 
-    flip_arr = np.zeros((frame_total // 32, 32))
-    frame_number = np.zeros((frame_total // 32, 32))
-    point_list = np.zeros((frame_total // 32, 32))
-    split_raw_video = np.zeros(((frame_total) // 32, 32, 36, 36, 3))
-
-    return {"face_detect": True,
-            "frame_number": frame_number,
-            "raw_video": raw_video,
-            "keypoint": point_list,
-            "video_data": split_raw_video,
-            "flip_arr": flip_arr
-            }
+    return raw_video
 
 
 def CONT_preprocess_Video(path, **kwargs):
