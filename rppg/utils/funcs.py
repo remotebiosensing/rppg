@@ -76,7 +76,7 @@ def calculate_hr(cal_type, ppg_signal, fs=60, low_pass=0.75, high_pass=2.5):
 def mag2db(magnitude):
     return 20. * np.log10(magnitude)
 
-def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.6,high=4):
+def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,high=2.5):
     if model_type == "DIFF":
         pred = detrend(np.cumsum(pred),100)
         label = detrend(np.cumsum(label),100)

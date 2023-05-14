@@ -28,7 +28,7 @@ generator.manual_seed(SEED)
 
 if __name__ == "__main__":
 
-    cfg = get_config("../../rppg/configs/FIT_PHYSNET_UBFC_UBFC.yaml")
+    cfg = get_config("../../rppg/configs/FIT_PHYSNET_UBFC_PURE.yaml")
     if cfg.preprocess.flag:
         preprocessing(
             dataset_root_path=cfg.data_root_path,
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         wandb.config = {
             "learning_rate": cfg.fit.train.learning_rate,
             "epochs": cfg.fit.train.epochs,
-            "batch_size": cfg.fit.train.batch_size
+            "batch_size": cfg.fit.batch_size
         }
         wandb.watch(model, log="all", log_freq=10)
 

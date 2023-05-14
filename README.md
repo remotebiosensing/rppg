@@ -57,11 +57,14 @@ You can find information about datasets at the following [link](https://github.c
 ### Documentation(TBD)
 
 ### Performance Comparison
+#### - rPPG
 
-- rPPG
+- All evaluations are based on the model with the lowest loss value during validation.
 
-| MODEL | Train/val Dataset | Test Dataset | lr  | MAE | RMSE | MAPE | r   |
-|-------|-------------------|--------------|-----|-----|------|------|-----|
+|   MODEL   | Train/val Dataset | Test Dataset |   lr   |  optim  |  lr-sch  | HR - MAE | HR - RMSE | HR - MAPE | HR -corr |
+|:---------:|:-----------------:|:------------:|:------:|:-------:|:--------:|:--------:|:---------:|:---------:|:--------:|
+ |  PhysNet  |       UBFC        |     PURE     |  1e-3  |  Adam   |   None   |   1.74   |   8.40    |   1.75    |   0.92   |
+ |  PhysNet  |       PURE        |     UBFC     |  1e-3  |  Adam   |   None   |   1.90   |   7.02    |   2.11    |   0.87   |
 
 - CNIBP
 
