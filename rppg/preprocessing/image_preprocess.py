@@ -111,6 +111,7 @@ def CONT_preprocess_Video(path, **kwargs):
     flip_flag = kwargs['flip_flag']  # 0,1,2,3
     if flip_flag == None:
         flip_flag = 0
+    pos = []
 
     if path.__contains__("png"):
         path = path[:-3]
@@ -119,71 +120,96 @@ def CONT_preprocess_Video(path, **kwargs):
         frame_total = len(data)
         raw_video = np.empty((frame_total, img_size, img_size, 3))
         j = 0
-
-        if face_detect_algorithm == 2:
-            detector = FaceMeshDetector(maxFaces=2)
-
-        mp_face_detection = mp.solutions.face_detection
-        with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
-            # ret, frame = cap.read()
-
-            if fixed_position == 0:
-
-                frame = cv2.imread(path + "/" + data[0])
-                height, width, channel = frame.shape
-                frame.flags.writeable = False
-
-                if face_detect_algorithm == 0:
-                    # results = face_detection.process(frame)
-                    pass
-                elif face_detect_algorithm == 1:
-                    rst, position = faceDetection(frame)  # position [t, r, b, l]
+        with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+            while j < frame_total:
+                frame = cv2.imread(path + "/" + data[j])
+                face_locations = face_recognition.face_locations(frame,1)
+                if len(face_locations) >= 1 :
+                    face_locations = list(face_locations)
+                    face_location = face_locations[0]
+                    pos.append(
+                        {
+                            'success' : True,
+                            'x_pos' : face_location[1::2],
+                            'y_pos' : face_location[0::2],
+                        }
+                    )
                 else:
-                    f, dot = crop_mediapipe(detector, frame)
+                    pos.append(
+                        {
+                            'success' : False,
+                            'x_pos' : [0,0],
+                            'y_pos' : [0,0],
+                        }
+                    )
+                j += 1
+                pbar.update(1)
 
-            # elif fixed_position == 1:
-            #     for img in data:
-            #
-            # else :
+        for frame_num in range(frame_total):
+            if pos[frame_num]['success']:
+                lm_x = np.array(pos[frame_num]['x_pos'])
+                lm_y = np.array(pos[frame_num]['y_pos'])
 
-            with tqdm(total=data.__len__(), position=0, leave=True, desc=path) as pbar:
-                for img in data:
-                    frame = cv2.imread(path + "/" + img)
-                    height, width, channel = frame.shape
-                    frame.flags.writeable = False
+                minx = np.min(lm_x)
+                maxx = np.max(lm_x)
+                miny = np.min(lm_y)
+                maxy = np.max(lm_y)
 
-                    if face_detect_algorithm == 1:
-                        rst, crop_frame = faceDetection(frame)
-                        if not rst:  # can't detect face
-                            return False, None
-                    elif face_detect_algorithm == 2:
-                        f, dot = crop_mediapipe(detector, frame)
-                        # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
-                        bin_mask = '0011000000000000000100000001001'
-                        view, remove = make_mask(dot)
-                        crop_frame = generate_maks(f, view, remove)
+                y_range_ext = (maxy - miny) * 0.2
+                miny = miny - y_range_ext
 
-                        _, dot = detector.findFaceMesh(f)
+                cnt_x = np.round((minx + maxx) / 2).astype('int')
+                cnt_y = np.round((maxy + miny) / 2).astype('int')
+
+                break
+        bbox_size = bbox_size = np.round(1.5 * (maxy - miny)).astype('int')
+
+        if img_size == None:
+            img_size = bbox_size
+
+        raw_video = np.empty((frame_total, img_size, img_size, 3))
 
 
-                    else:
-                        crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+        for frame_num in range(frame_total):
+            if pos[frame_num]['success']:
+                lm_x_ = np.array(pos[frame_num]['x_pos'])
+                lm_y_ = np.array(pos[frame_num]['y_pos'])
 
-                    crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
-                    crop_frame = generate_Floatimage(crop_frame)
+                lm_x = 0.9 * lm_x + 0.1 * lm_x_
+                lm_y = 0.9 * lm_y + 0.1 * lm_y_
 
-                    raw_video[j] = crop_frame
-                    pbar.update(1)
-                    j += 1
+                minx = np.min(lm_x)
+                maxx = np.max(lm_x)
+                miny = np.min(lm_y)
+                maxy = np.max(lm_y)
+
+                y_range_ext = (maxy - miny) * 0.2
+                miny = miny - y_range_ext
+
+                cnt_x = np.round((minx + maxx) / 2).astype('int')
+                cnt_y = np.round((maxy + miny) / 2).astype('int')
+
+            frame = cv2.imread(path + "/" + data[frame_num])
+
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            ########## for bbox ################
+            bbox_half_size = int(bbox_size / 2)
+
+            face = np.take(frame, range(cnt_y - bbox_half_size, cnt_y - bbox_half_size + bbox_size), 0, mode='clip')
+            face = np.take(face, range(cnt_x - bbox_half_size, cnt_x - bbox_half_size + bbox_size), 1, mode='clip')
+
+            if img_size == bbox_size:
+                raw_video[frame_num] = face
+            else:
+                raw_video[frame_num] = cv2.resize(face, (img_size, img_size))
+
 
     else:
         cap = cv2.VideoCapture(path)
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-
-        pos = []
 
         with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
             while cap.isOpened():

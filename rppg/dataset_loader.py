@@ -14,8 +14,7 @@ from rppg.datasets.PhysNetDataset import PhysNetDataset
 from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
 from rppg.utils.funcs import detrend
-from rppg.preprocessing.image_preprocess import normalize_Image,generate_Floatimage
-
+from rppg.preprocessing.image_preprocess import normalize_Image, generate_Floatimage
 import cv2
 
 
@@ -45,7 +44,7 @@ def data_loader(
     if meta:
         data_loader = []
         for dataset in datasets:
-            data_loader.append(DataLoader(dataset,batch_size,shuffle=False))
+            data_loader.append(DataLoader(dataset, batch_size, shuffle=False))
         return data_loader
 
     if datasets.__len__() == 3:
@@ -70,11 +69,10 @@ def dataset_loader(
         time_length: int,
         overlap_interval: int,
         img_size: int,
-        train_flag : bool,
-        eval_flag : bool,
-        meta = False
+        train_flag: bool,
+        eval_flag: bool,
+        meta=False
 ):
-
     model_type = ''
     if model_name in ["DeepPhys", "MTTS"]:
         model_type = 'DIFF'
@@ -82,7 +80,7 @@ def dataset_loader(
         model_type = 'CONT'
 
     if dataset_name[0] == dataset_name[1]:
-        root_file_path = save_root_path + "/" + dataset_name[0] + "/"+model_type
+        root_file_path = save_root_path + "/" + dataset_name[0] + "/" + model_type
 
         path = get_all_files_in_path(root_file_path)
         path_len = len(path)
@@ -92,7 +90,7 @@ def dataset_loader(
             eval_path = path[-test_len:]
         if train_flag:
             train_len = int(np.floor(path_len * 0.6))
-            train_path  = path[:train_len]
+            train_path = path[:train_len]
             val_path = path[train_len:-test_len]
 
     elif dataset_name[0] != dataset_name[1]:
@@ -102,18 +100,15 @@ def dataset_loader(
         path_len = len(path)
         if train_flag:
             train_len = int(np.floor(path_len * 0.8))
-            train_path  = path[:train_len]
+            train_path = path[:train_len]
             val_path = path[train_len:]
         if eval_flag:
             root_file_path = save_root_path + "/" + dataset_name[1] + "/" + model_type
             path = get_all_files_in_path(root_file_path)
             eval_path = path
 
-
     idx = 0
     dataset_memory = 0
-
-
 
     if meta:
         rst_dataset = []
@@ -135,14 +130,14 @@ def dataset_loader(
             for key in file.keys():
                 if model_name in ["DeepPhys", "MTTS"]:
                     rst_dataset.append(DeepPhysDataset(appearance_data=np.asarray(file[key]['raw_video'][:, :, :, -3:]),
-                                    motion_data=np.asarray(file[key]['raw_video'][:, :, :, :3]),
-                                    target=np.asarray(file[key]['preprocessed_label'])))
+                                                       motion_data=np.asarray(file[key]['raw_video'][:, :, :, :3]),
+                                                       target=np.asarray(file[key]['preprocessed_label'])))
 
 
     else:
         dataset = []
         if train_flag:
-            train_dataset = get_dataset(train_path,model_type,model_name,time_length,overlap_interval,img_size)
+            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size)
             dataset.append(train_dataset)
             val_dataset = get_dataset(val_path, model_type, model_name, time_length, overlap_interval, img_size)
             dataset.append(val_dataset)
@@ -182,20 +177,22 @@ def normalize(arr, t_min, t_max):
 
     return norm_arr
 
+
 def get_all_files_in_path(path):
-  """Get all files in a given path.
+    """Get all files in a given path.
 
-  Args:
-    path: The path to the directory to search.
+    Args:
+      path: The path to the directory to search.
 
-  Returns:
-    A list of all files in the directory.
-  """
-  files = []
-  for dirpath, dirnames, filenames in os.walk(path):
-    for filename in filenames:
-      files.append(os.path.join(dirpath, filename))
-  return files
+    Returns:
+      A list of all files in the directory.
+    """
+    files = []
+    for dirpath, dirnames, filenames in os.walk(path):
+        for filename in filenames:
+            files.append(os.path.join(dirpath, filename))
+    return files
+
 
 def get_dataset(path, model_type, model_name, time_length, overlap_interval, img_size):
     idx = 0
@@ -255,6 +252,13 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                 # label = detrend(file['preprocessed_label'], 100)
                 label = file['preprocessed_label']
                 num_frame, w, h, c = file['raw_video'][:].shape
+
+                if len(label) != num_frame:
+                    label = np.interp(
+                        np.linspace(
+                            1, len(label), num_frame), np.linspace(
+                            1, len(label), len(label)), label)
+
                 if w != img_size:
                     new_shape = (num_frame, img_size, img_size, c)
                     resized_img = np.zeros(new_shape)

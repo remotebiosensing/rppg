@@ -2,7 +2,7 @@ import math
 import torch
 import wandb
 from tqdm import tqdm
-from rppg.utils.funcs import (get_hr,MAE,RMSE,MAPE,corr)
+from rppg.utils.funcs import (get_hr,MAE,RMSE,MAPE,corr,IrrelevantPowerRatio)
 import numpy as np
 
 def run(model, optimizer, lr_sch, criterion, cfg, dataloaders,model_path, wandb_flag):
@@ -61,6 +61,8 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
     # TODO : Implement multiple loss
     # TODO : Implement save model function
     step = "Val"
+
+
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.eval()
         running_loss = 0.0
@@ -69,7 +71,6 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
                 tepoch.set_description(step + "%d" % epoch)
                 outputs = model(inputs)
                 loss = criterion(outputs, target)
-
                 if ~torch.isfinite(loss):
                     continue
                 running_loss += loss.item()
