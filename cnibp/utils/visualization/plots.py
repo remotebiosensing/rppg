@@ -1,8 +1,6 @@
 import json
 import numpy as np
-import h5py
 import matplotlib.pyplot as plt
-import cnibp.unused.hdf_handler as hdf_handler
 
 with open('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/configs/parameter.json') as f:
     json_data = json.load(f)

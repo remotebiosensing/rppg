@@ -29,12 +29,8 @@ def get_model(model_name: str, channel: int, device, stage: int = 1):
             model = bvp2abp(in_channels=channel,
                             out_channels=oc,
                             target_samp_rate=60).to(device)
-            model_loss = [loss.NegPearsonLoss().to(device), loss.AmpLoss().to(device)]
             # model_loss = [loss.NegPearsonLoss().to(device), loss.AmpLoss().to(device)]
-            # model_loss = [loss.MAPELoss().to(device)]
-            # model_loss = [loss.NegPearsonLoss().to(device), loss.ScaledVectorCosineSimilarity().to(device)]
-            # model_loss = [loss.ScaledVectorCosineSimilarity().to(device)]
-            # model_loss = [loss.SelfScaler().to(device)]
+            model_loss = [loss.NegPearsonLoss().to(device), loss.DBPLoss().to(device), loss.SBPLoss().to(device)]
             model_optim = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
             model_scheduler = optim.lr_scheduler.ExponentialLR(model_optim, gamma=ga)
             # model_scheduler = optim.lr_scheduler.LambdaLR(optimizer=model_optim, lr_lambda=ga)

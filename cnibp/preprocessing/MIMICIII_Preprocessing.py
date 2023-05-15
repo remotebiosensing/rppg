@@ -182,7 +182,6 @@ def read_total_data(process_id: int, segments: list,
         total_chunk_cnt += 1
         chunk_per_segment = 0
         segment = segment.strip('.hea')
-        # patient_id = segment.split('/')[-2].split('_')[0]
         patient_id = segment.split('/')[-2].split('_')[0][-5:]
         ple_idx, abp_idx = wf.find_channel_idx(segment)
         raw_ple_segment, raw_abp_segment = np.squeeze(
@@ -193,16 +192,16 @@ def read_total_data(process_id: int, segments: list,
         else:
             nan_mask = ~(np.isnan(raw_ple_segment) | np.isnan(raw_abp_segment))
             if ple_scale:
+                digital_sig, gain, baseline = wf.get_channel_record(segment, ple_idx)
                 ple_record = wfdb.rdrecord(segment, channels=[ple_idx])
                 ple_digital_sig = np.squeeze(ple_record.adc())
                 ple_gain = ple_record.adc_gain[0]
                 ple_baseline = ple_record.baseline[0]
-                # ple_sig_len = ple_record.sig_len
-                # ple_analogue_sig = np.squeeze(ple_record.p_signal)
-                # ple_init_value = ple_record.init_value[0]
-                # ple_adc_zero = ple_record.adc_zero[0]
                 ''' ************************************************** revert gain controller '''
-                ple_segment = (((ple_digital_sig - ple_baseline) / ple_gain) * (1023. / ple_gain))[nan_mask]
+                if gain != 1023.:
+                    ple_segment = (((ple_digital_sig - ple_baseline) / ple_gain) * (1023. / ple_gain))[nan_mask]
+                else:
+                    ple_segment
                 ''' ************************************************************************* '''
             else:
                 ple_segment = raw_ple_segment[nan_mask]
@@ -210,9 +209,7 @@ def read_total_data(process_id: int, segments: list,
 
             if len(ple_segment) < chunk_size or len(abp_segment) < chunk_size:
                 continue
-            # ple_chunks = su.SignalHandler(ple_segment).list_slice(chunk_size)
-            # abp_chunks = su.SignalHandler(abp_segment).list_slice(chunk_size)
-            # ple_chunks, abp_chunks = su.shuffle_two_list(ple_chunks, abp_chunks)
+
             ple_chunks, abp_chunks = dsh(ple_segment, abp_segment).shuffle_lists()
             for p_chunk, a_chunk in zip(ple_chunks, abp_chunks):
                 p_flat_range = np.where(p_chunk == np.max(p_chunk))[0]

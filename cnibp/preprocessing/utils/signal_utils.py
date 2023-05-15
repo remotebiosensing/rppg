@@ -74,7 +74,6 @@ class DualSignalHandler:
         # return np.stack((self.sig1, self.sig2), axis=1)
 
 
-
 #
 # def shuffle_two_list(a, b):
 #     '''
@@ -150,11 +149,12 @@ class SignalHandler:
     def DC_value_removal(self):
         return self.input_sig - np.mean(self.input_sig)
 
-    def resize_list(self, size=20):
+    def resize_list(self, size=15):
         if len(self.input_sig) > size:
-            return self.input_sig[:size]
+            resized_list = self.input_sig[:size]
         else:
-            return np.append(self.input_sig, np.array([0] * (size - len(self.input_sig))))
+            resized_list = np.append(self.input_sig, np.array([0] * (size - len(self.input_sig))))
+        return resized_list
 
 
 class SignalInfoExtractor(SignalBase):

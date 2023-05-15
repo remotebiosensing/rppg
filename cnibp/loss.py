@@ -186,7 +186,8 @@ def Systolic_Loss(predictions, targets):
     targets = torch.squeeze(targets)
     rst = 0
     for i in range(predictions.shape[0]):
-        rst += torch.abs((targets[i] - predictions[i]) / targets[i])
+        # rst += torch.abs((targets[i] - predictions[i]) / targets[i])
+        rst += smape(predictions[i], targets[i]) / 2
     rst /= predictions.shape[0]
     return rst
 
@@ -196,7 +197,8 @@ def Diastolic_Loss(predictions, targets):
     targets = torch.squeeze(targets)
     rst = 0
     for i in range(predictions.shape[0]):
-        rst += torch.abs((targets[i] - predictions[i]) / targets[i])
+        # rst += torch.abs((targets[i] - predictions[i]) / targets[i])
+        rst += smape(predictions[i], targets[i]) / 2
     rst /= predictions.shape[0]
     return rst
 
