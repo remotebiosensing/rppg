@@ -86,10 +86,10 @@ def dataset_loader(
         path_len = len(path)
         test_len = 0
         if eval_flag:
-            test_len = int(np.floor(path_len * 0.3))
+            test_len = int(np.floor(path_len * 0.1))
             eval_path = path[-test_len:]
         if train_flag:
-            train_len = int(np.floor(path_len * 0.6))
+            train_len = int(np.floor(path_len * 0.8))
             train_path = path[:train_len]
             val_path = path[train_len:-test_len]
 
