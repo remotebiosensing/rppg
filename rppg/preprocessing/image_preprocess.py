@@ -1,23 +1,21 @@
+import json
 import os
-import math
+
 import cv2
+import face_recognition
+import math
 import mediapipe as mp
 import numpy as np
-import face_recognition
 from PIL import Image
 from face_recognition import face_locations, face_landmarks
+from skimage.transform import PiecewiseAffineTransform, warp
 from skimage.util import img_as_float
 # from test import plot_graph_from_image,get_graph_from_image
 from sklearn import preprocessing
 from tqdm import tqdm
-import json
-from skimage.transform import PiecewiseAffineTransform, warp
-import OpenGL.GL as gl
 
 
-
-
-def video_preprocess(preprocess_type, path,**kwargs):
+def video_preprocess(preprocess_type, path, **kwargs):
     if preprocess_type == 'DIFF':
         return DIFF_preprocess_Video(path, **kwargs)
     elif preprocess_type in 'CONT':
@@ -30,7 +28,7 @@ def video_preprocess(preprocess_type, path,**kwargs):
     #     return Vitamon_preprocess_Video(path,**kwargs)
     else:
         return {
-            'face_detect' : False
+            'face_detect': False
         }
 
 
@@ -82,13 +80,15 @@ def DIFF_preprocess_Video(path, **kwargs):
     point_list = np.zeros((frame_total // 32, 32))
     split_raw_video = np.zeros(((frame_total) // 32, 32, 36, 36, 3))
 
-    return { "face_detect" : True,
-             "frame_number" : frame_number,
-             "raw_video" : raw_video,
-             "keypoint": point_list,
-             "video_data": split_raw_video,
-             "flip_arr": flip_arr
-             }
+    return {"face_detect": True,
+            "frame_number": frame_number,
+            "raw_video": raw_video,
+            "keypoint": point_list,
+            "video_data": split_raw_video,
+            "flip_arr": flip_arr
+            }
+
+
 def CONT_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
@@ -108,9 +108,10 @@ def CONT_preprocess_Video(path, **kwargs):
     face_detect_algorithm = kwargs['face_detect_algorithm']
     fixed_position = kwargs['fixed_position']
     img_size = kwargs['img_size']
-    flip_flag = kwargs['flip_flag'] # 0,1,2,3
+    flip_flag = kwargs['flip_flag']  # 0,1,2,3
     if flip_flag == None:
         flip_flag = 0
+    pos = []
 
     if path.__contains__("png"):
         path = path[:-3]
@@ -119,62 +120,90 @@ def CONT_preprocess_Video(path, **kwargs):
         frame_total = len(data)
         raw_video = np.empty((frame_total, img_size, img_size, 3))
         j = 0
-
-        if face_detect_algorithm == 2:
-            detector = FaceMeshDetector(maxFaces=2)
-
-        mp_face_detection = mp.solutions.face_detection
-        with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
-            # ret, frame = cap.read()
-
-            if fixed_position == 0:
-
-                frame = cv2.imread(path + "/" + data[0])
-                height, width, channel = frame.shape
-                frame.flags.writeable = False
-
-                if face_detect_algorithm == 0:
-                    # results = face_detection.process(frame)
-                    pass
-                elif face_detect_algorithm == 1:
-                    rst, position = faceDetection(frame)  # position [t, r, b, l]
+        with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+            while j < frame_total:
+                frame = cv2.imread(path + "/" + data[j])
+                face_locations = face_recognition.face_locations(frame,1)
+                if len(face_locations) >= 1 :
+                    face_locations = list(face_locations)
+                    face_location = face_locations[0]
+                    pos.append(
+                        {
+                            'success' : True,
+                            'x_pos' : face_location[1::2],
+                            'y_pos' : face_location[0::2],
+                        }
+                    )
                 else:
-                    f, dot = crop_mediapipe(detector, frame)
+                    pos.append(
+                        {
+                            'success' : False,
+                            'x_pos' : [0,0],
+                            'y_pos' : [0,0],
+                        }
+                    )
+                j += 1
+                pbar.update(1)
 
-            # elif fixed_position == 1:
-            #     for img in data:
-            #
-            # else :
+        for frame_num in range(frame_total):
+            if pos[frame_num]['success']:
+                lm_x = np.array(pos[frame_num]['x_pos'])
+                lm_y = np.array(pos[frame_num]['y_pos'])
 
-            with tqdm(total=data.__len__(), position=0, leave=True, desc=path) as pbar:
-                for img in data:
-                    frame = cv2.imread(path + "/" + img)
-                    height, width, channel = frame.shape
-                    frame.flags.writeable = False
+                minx = np.min(lm_x)
+                maxx = np.max(lm_x)
+                miny = np.min(lm_y)
+                maxy = np.max(lm_y)
 
-                    if face_detect_algorithm == 1:
-                        rst, crop_frame = faceDetection(frame)
-                        if not rst:  # can't detect face
-                            return False, None
-                    elif face_detect_algorithm == 2:
-                        f, dot = crop_mediapipe(detector, frame)
-                        # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
-                        bin_mask = '0011000000000000000100000001001'
-                        view, remove = make_mask(dot)
-                        crop_frame = generate_maks(f, view, remove)
+                y_range_ext = (maxy - miny) * 0.2
+                miny = miny - y_range_ext
 
-                        _, dot = detector.findFaceMesh(f)
+                cnt_x = np.round((minx + maxx) / 2).astype('int')
+                cnt_y = np.round((maxy + miny) / 2).astype('int')
+
+                break
+        bbox_size = bbox_size = np.round(1.5 * (maxy - miny)).astype('int')
+
+        if img_size == None:
+            img_size = bbox_size
+
+        raw_video = np.empty((frame_total, img_size, img_size, 3))
 
 
-                    else:
-                        crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
+        for frame_num in range(frame_total):
+            if pos[frame_num]['success']:
+                lm_x_ = np.array(pos[frame_num]['x_pos'])
+                lm_y_ = np.array(pos[frame_num]['y_pos'])
 
-                    crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
-                    crop_frame = generate_Floatimage(crop_frame)
+                lm_x = 0.9 * lm_x + 0.1 * lm_x_
+                lm_y = 0.9 * lm_y + 0.1 * lm_y_
 
-                    raw_video[j] = crop_frame
-                    pbar.update(1)
-                    j += 1
+                minx = np.min(lm_x)
+                maxx = np.max(lm_x)
+                miny = np.min(lm_y)
+                maxy = np.max(lm_y)
+
+                y_range_ext = (maxy - miny) * 0.2
+                miny = miny - y_range_ext
+
+                cnt_x = np.round((minx + maxx) / 2).astype('int')
+                cnt_y = np.round((maxy + miny) / 2).astype('int')
+
+            frame = cv2.imread(path + "/" + data[frame_num])
+
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            ########## for bbox ################
+            bbox_half_size = int(bbox_size / 2)
+
+            face = np.take(frame, range(cnt_y - bbox_half_size, cnt_y - bbox_half_size + bbox_size), 0, mode='clip')
+            face = np.take(face, range(cnt_x - bbox_half_size, cnt_x - bbox_half_size + bbox_size), 1, mode='clip')
+
+            if img_size == bbox_size:
+                raw_video[frame_num] = face
+            else:
+                raw_video[frame_num] = cv2.resize(face, (img_size, img_size))
+
 
     else:
         cap = cv2.VideoCapture(path)
@@ -182,150 +211,103 @@ def CONT_preprocess_Video(path, **kwargs):
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        valid_frame_num = (frame_total)//32
+        with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+            while cap.isOpened():
+                # top, right, bottom, left = face_location[0]
+                ret, frame = cap.read()
+                if ret:
+                    face_locations = face_recognition.face_locations(frame, 1)
+                    if len(face_locations) >= 1 :
+                        face_locations = list(face_locations)
+                        face_location = face_locations[0]
+                        pos.append(
+                            {
+                                'success' : True,
+                                'x_pos' : face_location[1::2],
+                                'y_pos' : face_location[0::2],
+                            }
+                        )
+                    else:
+                        pos.append(
+                            {
+                                'success' : False,
+                                'x_pos' : [0,0],
+                                'y_pos' : [0,0],
+                            }
+                        )
+                else:
+                    break
+                #face_landmarks = face_recognition.face_landmarks(frame, face_locations)
+                pbar.update(1)
+        cap.release()
+
+        for frame_num in range(frame_total):
+            if pos[frame_num]['success']:
+                lm_x = np.array(pos[frame_num]['x_pos'])
+                lm_y = np.array(pos[frame_num]['y_pos'])
+
+                minx = np.min(lm_x)
+                maxx = np.max(lm_x)
+                miny = np.min(lm_y)
+                maxy = np.max(lm_y)
+
+                y_range_ext = (maxy-miny)*0.2
+                miny = miny - y_range_ext
+
+                cnt_x = np.round((minx + maxx) / 2).astype('int')
+                cnt_y = np.round((maxy + miny) / 2).astype('int')
+
+                break
+        bbox_size = bbox_size=np.round(1.5*(maxy-miny)).astype('int')
+
+        if img_size == None:
+            img_size = bbox_size
+
+        raw_video = np.empty((frame_total, img_size, img_size, 3))
+
+        cap = cv2.VideoCapture(path)
+
+        for frame_num in range(frame_total):
+            if pos[frame_num]['success']:
+                lm_x_ = np.array(pos[frame_num]['x_pos'])
+                lm_y_ = np.array(pos[frame_num]['y_pos'])
+
+                lm_x = 0.9 * lm_x + 0.1 * lm_x_
+                lm_y = 0.9 * lm_y + 0.1 * lm_y_
+
+                minx = np.min(lm_x)
+                maxx = np.max(lm_x)
+                miny = np.min(lm_y)
+                maxy = np.max(lm_y)
+
+                y_range_ext = (maxy - miny) * 0.2
+                miny = miny - y_range_ext
+
+                cnt_x = np.round((minx + maxx) / 2).astype('int')
+                cnt_y = np.round((maxy + miny) / 2).astype('int')
+            ret, frame = cap.read()
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            if not ret:
+                print("Can't receive frame (stream end?). Exiting ...")
+                break
+
+            ########## for bbox ################
+            bbox_half_size = int(bbox_size / 2)
+
+            face = np.take(frame, range(cnt_y - bbox_half_size, cnt_y - bbox_half_size + bbox_size), 0, mode='clip')
+            face = np.take(face, range(cnt_x - bbox_half_size, cnt_x - bbox_half_size + bbox_size), 1, mode='clip')
+
+            if img_size == bbox_size:
+                raw_video[frame_num] = face
+            else:
+                raw_video[frame_num] = cv2.resize(face, (img_size, img_size))
 
         cap.release()
 
-
-        raw_video = np.empty((frame_total, img_size, img_size, 3))
-        point_list = np.empty((frame_total, 12))
+    return raw_video
 
 
-
-        detector = None
-
-        if face_detect_algorithm == 2:
-            detector = FaceMeshDetector(maxFaces=2)
-
-        if face_detect_algorithm == 4:
-            uv_path = "uv_datas/uv_map.json"  # taken from https://github.com/spite/FaceMeshFaceGeometry/blob/353ee557bec1c8b55a5e46daf785b57df819812c/js/geometry.js
-            uv_map_dict = json.load(open(uv_path))
-            uv_map = np.array([(uv_map_dict["u"][str(i)], uv_map_dict["v"][str(i)]) for i in range(468)])
-            face_mesh = mp.solutions.face_mesh.FaceMesh(
-                static_image_mode=True,
-                refine_landmarks=True,
-                max_num_faces=1,
-                min_detection_confidence=0.5)
-        elif face_detect_algorithm == 5:
-            face_mesh = mp.solutions.face_mesh.FaceMesh(
-                static_image_mode=True,
-                max_num_faces=1,
-                refine_landmarks=True,
-                min_detection_confidence=0.5)
-
-            mp_face_mesh = mp.solutions.face_mesh
-
-        cap = cv2.VideoCapture(path)
-        j = 0
-        with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
-            while cap.isOpened():
-
-                ret, frame = cap.read()
-
-                if frame is None:
-                    break
-                if face_detect_algorithm == 1:
-                    rst, crop_frame = faceDetection(frame)
-                    if not rst:  # can't detect face
-                        return False, None
-                elif face_detect_algorithm == 2:
-                    f, dot = crop_mediapipe(detector, frame)
-                    # bin_mask =  '1001_0000_0001_0000_0000_0000_0000_1100'
-                    bin_mask = '0011000000000000000100000001001'
-                    view, remove = make_mask(dot)
-                    crop_frame = generate_maks(f, view, remove)
-
-                    _, dot = detector.findFaceMesh(f)
-
-                elif face_detect_algorithm == 4:
-                    results = face_mesh.process(frame)
-                    crop_frame = faceUnwrapping(frame, results,(img_size, img_size),uv_map,flip_flag)
-                elif face_detect_algorithm == 5:
-
-                    face_locations = face_recognition.face_locations(frame)
-                    face_landmarks = face_recognition.face_landmarks(frame, face_locations)
-
-                    # 얼굴이 상하 뒤집힌 경우, 이미지를 상하로 뒤집기
-                    for landmark in face_landmarks:
-                        top_y = min([p[1] for p in landmark['top_lip']])
-                        bottom_y = max([p[1] for p in landmark['bottom_lip']])
-                        if top_y > bottom_y:
-                            frame = frame.transpose(method=Image.FLIP_TOP_BOTTOM)
-                            break
-
-                    results = face_mesh.process(frame)
-
-                    landmarks = results.multi_face_landmarks
-                    if landmarks is None:
-                        return False, None
-
-                    keypoints = get_face_mesh_keypoints(results, frame.shape)
-                    frame = crop_face_with_face_mesh(frame,keypoints)
-                    frame = get_forward_face(frame, keypoints)
-                    frame = cv2.resize(frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
-                    results = face_mesh.process(frame)
-
-                    keypoints = get_face_mesh_keypoints(results, frame.shape)
-
-                    if type(keypoints) != type(None):
-
-                        # (69x,151y) (299x,151y)
-                        #(69x,65y) (299x,295y)
-                        # draw rectangle
-                        forehead_x1 = int(keypoints[69,0])
-                        forehead_y1 = int(keypoints[10, 1])
-                        forehead_x2 = int(keypoints[299, 0])
-                        forehead_y2 = int(keypoints[296, 1])
-
-                        lcheek_x1 = int(keypoints[117,0])
-                        lcheek_y1 = int(keypoints[229,1])
-                        lcheek_x2 = int(keypoints[165,0])
-                        lcheek_y2 = int(keypoints[165,1])
-
-    #449 346 391
-                        rcheek_x1 = int(keypoints[391, 0])
-                        rcheek_y1 = int(keypoints[449, 1])
-                        rcheek_x2 = int(keypoints[346, 0])
-                        rcheek_y2 = int(keypoints[391, 1])
-
-                        point_list[j] =[forehead_x1,forehead_y1,forehead_x2,forehead_y2,
-                                        lcheek_x1,lcheek_y1,lcheek_x2,lcheek_y2,
-                                        rcheek_x1,rcheek_y1,rcheek_x2,rcheek_y2]
-                    else:
-                        point_list[j] = point_list[j-1]
-
-                    # cv2.rectangle(frame, (forehead_x1,forehead_y1),(forehead_x2,forehead_y2), (0, 255, 0), 1)
-                    # cv2.rectangle(frame, (lcheek_x1, lcheek_y1), (lcheek_x2, lcheek_y2), (0, 255, 0), 1)
-                    # cv2.rectangle(frame, (rcheek_x1, rcheek_y1), (rcheek_x2, rcheek_y2), (0, 255, 0), 1)
-                    crop_frame = frame
-                else:
-                    crop_frame = frame[:, int(width / 2) - int(height / 2 + 1):int(height / 2) + int(width / 2), :]
-
-                if face_detect_algorithm !=5:
-                    crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
-                crop_frame = generate_Floatimage(crop_frame)
-
-                raw_video[j] = crop_frame
-                j += 1
-                pbar.update(1)
-                # if j == valid_frame_num * 32:
-                #     break
-            cap.release()
-
-
-
-
-    split_raw_video = np.zeros(((frame_total)//32, 32, img_size, img_size, 3))
-    flip_arr = np.zeros((frame_total // 32, 32))
-    frame_number = np.zeros((frame_total // 32, 32))
-
-
-    return { "face_detect" : True,
-             "frame_number" :frame_number,
-             "raw_video" : raw_video,
-             "keypoint" : point_list,
-             "video_data" : split_raw_video,
-             "flip_arr" : flip_arr}
 def RTNet_preprocess_Video(path, **kwargs):
     '''
     :param path: dataset path
@@ -367,8 +349,9 @@ def RTNet_preprocess_Video(path, **kwargs):
 
     preprocessed_video[:, :, :, 3] = video_normalize(preprocessed_video[:, :, :, 3])
 
-    return { "face_detect" : True,
-             "video_data" : preprocessed_video}
+    return {"face_detect": True,
+            "video_data": preprocessed_video}
+
 
 def GCN_preprocess_Video(path, **kwargs):
     '''
@@ -377,9 +360,10 @@ def GCN_preprocess_Video(path, **kwargs):
        :return:
        '''
     maps, sliding_window_stride = preprocess_video_to_st_maps(path, output_shape=(180, 180))
-    return { "face_detect" : True,
-             "sliding_window_stride" : sliding_window_stride,
-             "video_data" : maps}
+    return {"face_detect": True,
+            "sliding_window_stride": sliding_window_stride,
+            "video_data": maps}
+
 
 def Axis_preprocess_Video(path, **kwargs):
     '''
@@ -390,20 +374,22 @@ def Axis_preprocess_Video(path, **kwargs):
     preprocess_video_to_st_maps(path, (256, 256))
     maps, sliding_window_stride, num_frames, stacked_ptts = preprocess_video_to_st_maps(path, output_shape=(180, 180))
     # bvp,sliding,frames,ptt
-    return { "face_detect" : True,
-             "video_data" : maps,
-             "sliding_window_stride" : sliding_window_stride,
-             "num_frames" : num_frames,
-             "stacked_ptts" : stacked_ptts}
+    return {"face_detect": True,
+            "video_data": maps,
+            "sliding_window_stride": sliding_window_stride,
+            "num_frames": num_frames,
+            "stacked_ptts": stacked_ptts}
+
 
 def RhythmNet_preprocess_Video(path, **kwargs):
     time_length = kwargs['time_length']
     return RhythmNet_preprocessor(path, time_length)
-def ETArPPGNet_preprocess_Video(path, **kwargs):
 
+
+def ETArPPGNet_preprocess_Video(path, **kwargs):
     face_detect_algorithm = kwargs['face_detect_algorithm']
-    time_length = kwargs['time_length'] # 10
-    img_size = kwargs['img_size'] # 224
+    time_length = kwargs['time_length']  # 10
+    img_size = kwargs['img_size']  # 224
 
     Blocks = 30
     crop_length = time_length * Blocks
@@ -465,8 +451,10 @@ def ETArPPGNet_preprocess_Video(path, **kwargs):
             split_raw_video[i][x] = raw_video[index:index + time_length]
             index += time_length
 
-    return { "face_detect" : True,
-             "video_data" : split_raw_video}
+    return {"face_detect": True,
+            "video_data": split_raw_video}
+
+
 def Vitamon_preprocess_Video(path, **kwargs):
     """
         :param path: video data path
@@ -479,9 +467,8 @@ def Vitamon_preprocess_Video(path, **kwargs):
         """
 
     face_detect_algorithm = kwargs['face_detect_algorithm']
-    time_length = kwargs['time_length'] # 25
-    img_size = kwargs['img_size'] # 224
-
+    time_length = kwargs['time_length']  # 25
+    img_size = kwargs['img_size']  # 224
 
     cap = cv2.VideoCapture(path)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -508,12 +495,12 @@ def Vitamon_preprocess_Video(path, **kwargs):
                         crop_frame = frame[:, int(width / 4):int(width / 4) * 3, :]
                     else:
                         print('No Face exists')
-                        return { "face_detect" : False,
-                                "video_data" : None}
+                        return {"face_detect": False,
+                                "video_data": None}
             else:
                 print('Incorrect Mode Number')
-                return { "face_detect" : False,
-                        "video_data" : None}
+                return {"face_detect": False,
+                        "video_data": None}
 
             crop_frame = cv2.resize(crop_frame, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
             crop_frame = crop_frame[:, :, 1]
@@ -536,8 +523,10 @@ def Vitamon_preprocess_Video(path, **kwargs):
         split_raw_video[i] = raw_video[index:index + time_length]
         index += time_length
 
-    return { "face_detect" : True,
-             "video_data" : split_raw_video}
+    return {"face_detect": True,
+            "video_data": split_raw_video}
+
+
 def faceLandmarks(frame):
     '''
     :param frame: one frame
@@ -574,6 +563,8 @@ def faceLandmarks(frame):
     # test = cv2.bitwise_and(dst,dst,mask=mask)
 
     return True, dst, mask
+
+
 def faceDetection(frame):
     '''
     :param frame: one frame
@@ -587,6 +578,8 @@ def faceDetection(frame):
     dst = resized_frame[top:bottom, left:right]
     return True, dst
     # return True, [top, right, bottom, left]
+
+
 def generate_Floatimage(frame):
     '''
     :param frame: roi frame
@@ -597,6 +590,8 @@ def generate_Floatimage(frame):
     dst[dst > 1] = 1
     dst[dst < 0] = 0
     return dst
+
+
 def generate_MotionDifference(prev_frame, crop_frame):
     '''
     :param prev_frame: previous frame
@@ -609,6 +604,8 @@ def generate_MotionDifference(prev_frame, crop_frame):
     # motion_input = motion_input / np.std(motion_input)
     # TODO : do not divide each D frame, modify divide whole video's unit standard deviation
     return motion_input
+
+
 def normalize_Image(frame):
     '''
     :param frame: image
@@ -617,6 +614,8 @@ def normalize_Image(frame):
     if frame is not np.all(frame == 0):
         frame = frame / np.std(frame)
     return frame
+
+
 def preprocess_Image(prev_frame, crop_frame):
     '''
     :param prev_frame: previous frame
@@ -624,16 +623,22 @@ def preprocess_Image(prev_frame, crop_frame):
     :return: motion_differnceframe, normalized_frame
     '''
     return generate_MotionDifference(prev_frame, crop_frame), normalize_Image(prev_frame)
+
+
 def ci99(motion_diff):
     max99 = np.mean(motion_diff) + (2.58 * (np.std(motion_diff) / np.sqrt(len(motion_diff))))
     min99 = np.mean(motion_diff) - (2.58 * (np.std(motion_diff) / np.sqrt(len(motion_diff))))
     motion_diff[motion_diff > max99] = max99
     motion_diff[motion_diff < min99] = min99
     return motion_diff
+
+
 def video_normalize(channel):
     if channel is not np.all(channel == 0):
         channel /= np.std(channel)
     return channel
+
+
 class FaceMeshDetector:
 
     def __init__(self, staticMode=False, maxFaces=2, minDetectionCon=0.5, minTrackCon=0.5):
@@ -674,8 +679,11 @@ class FaceMeshDetector:
                     face.append([x, y])
                 faces.append(face)
         return img, faces
+
+
 def avg(a, b):
     return [(int)((x + y) / 2) for x, y in zip(a, b)]
+
 
 def crop_mediapipe(detector, frame):
     _, dot = detector.findFaceMesh(frame)
@@ -700,6 +708,8 @@ def crop_mediapipe(detector, frame):
         # f = frame[y_center - w_2 - 10:y_center + w_2 + 10, x_center - w_2 - 10:x_center + w_2 + 10]
         _, dot = detector.findFaceMesh(f)
         return f, dot[0]
+
+
 def make_specific_mask(bin_mask, dot):
     '''
     :param num:
@@ -925,6 +935,8 @@ def make_specific_mask(bin_mask, dot):
                     ))
 
     return mask_list
+
+
 def make_mask(dot):
     view_mask = []
     view_mask.append(np.array(
@@ -980,6 +992,8 @@ def make_mask(dot):
     ))
 
     return view_mask, remove_mask
+
+
 def generate_maks(src, view, remove):
     shape = src.shape
     view_mask = np.zeros((shape[0], shape[1], 3), np.uint8)
@@ -994,6 +1008,8 @@ def generate_maks(src, view, remove):
     rst = cv2.bitwise_and(src, img)
 
     return rst
+
+
 def divide_array(data_array, count_array, frame_total):
     interval = max(count_array)
     rst = np.empty((frame_total, interval))
@@ -1008,14 +1024,20 @@ def divide_array(data_array, count_array, frame_total):
         i += 1
 
     return rst
+
+
 def get_haarcascade():
     # haarcascade_url = "https://github.com/opencv/opencv/blob/master/data/haarcascades/haarcascade_frontalface_alt2.xml"
     haarcascade_filename = "haarcascade_frontalface_alt2.xml"
     return cv2.CascadeClassifier(cv2.data.haarcascades + haarcascade_filename)
+
+
 def get_eye_haarcascade():
     # haarcascade_url = "https://github.com/opencv/opencv/blob/master/data/haarcascades/haarcascade_frontalface_alt2.xml"
     haarcascade_filename = "haarcascade_eye.xml"
     return cv2.CascadeClassifier(cv2.data.haarcascades + haarcascade_filename)
+
+
 def get_frames_and_video_meta_data(video_path, meta_data_only=False):
     cap = cv2.VideoCapture(video_path)
     frameRate = cap.get(5)  # frame rate
@@ -1045,6 +1067,8 @@ def get_frames_and_video_meta_data(video_path, meta_data_only=False):
 
     cap.release()
     return frames, frameRate, sliding_window_stride
+
+
 def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
     frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
     num_frames = frames.shape[0]
@@ -1159,6 +1183,8 @@ def preprocess_video_to_st_maps(video_path, output_shape, clip_size=256):
     return stacked_maps, sliding_window_stride, num_frames, stacked_ptts
     # rst,bvp,sliding,frames,ptt
     # return 1,1,num_frames,1
+
+
 def chunkify(img, block_width=5, block_height=5):
     shape = img.shape
     x_len = shape[0] // block_width
@@ -1191,6 +1217,8 @@ def chunkify(img, block_width=5, block_height=5):
         #     print('End of Array')
 
     return chunks
+
+
 def preprocess_video(video_path, output_shape, clip_size=256):
     cap = cv2.VideoCapture(video_path)
     frameRate = cap.get(5)  # frame rate
@@ -1264,6 +1292,8 @@ def preprocess_video(video_path, output_shape, clip_size=256):
         map_index += 1
 
     return stacked_maps, num_maps, num_frames
+
+
 def RhythmNet_preprocessor(video_path, clip_size):
     frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
 
@@ -1389,10 +1419,11 @@ def RhythmNet_preprocessor(video_path, clip_size):
         pbar.update(1)
         pbar.close()
 
-    return { "face_detect" : True,
-             "video_data" : stacked_maps.astype(np.uint8)}
+    return {"face_detect": True,
+            "video_data": stacked_maps.astype(np.uint8)}
 
-def faceUnwrapping(frame, results, target_shape, uv_map, flip_flag = 0):
+
+def faceUnwrapping(frame, results, target_shape, uv_map, flip_flag=0):
     '''
     @param frame: input frame
     @param target_shape: target shape of the output frame
@@ -1400,7 +1431,6 @@ def faceUnwrapping(frame, results, target_shape, uv_map, flip_flag = 0):
     @param flip_flag: 0 for no flip, 1 for vertical flip, 2 for right side flip, 3 for left side flip
     @return:
     '''
-
 
     H, W, C = frame.shape
     W_new, H_new = target_shape
@@ -1412,23 +1442,21 @@ def faceUnwrapping(frame, results, target_shape, uv_map, flip_flag = 0):
     # ax.plot(keypoints[:, 0], keypoints[:, 1], '.b', markersize=2)
     # plt.show()
 
-
-    keypoints_uv = np.array([(W_new*x, H_new*y) for x,y in uv_map])
+    keypoints_uv = np.array([(W_new * x, H_new * y) for x, y in uv_map])
 
     tform = PiecewiseAffineTransform()
-    tform.estimate(keypoints_uv,keypoints)
-    texture = warp(frame, tform, output_shape=(H_new,W_new))
-    texture = (255*texture).astype(np.uint8)
+    tform.estimate(keypoints_uv, keypoints)
+    texture = warp(frame, tform, output_shape=(H_new, W_new))
+    texture = (255 * texture).astype(np.uint8)
 
     if flip_flag == 1:
         texture = cv2.flip(texture, 1)
     elif flip_flag == 2:
-        tmp = cv2.flip(texture,1)
-        texture[:,:256] = tmp[:,:256]
+        tmp = cv2.flip(texture, 1)
+        texture[:, :256] = tmp[:, :256]
     elif flip_flag == 3:
         tmp = cv2.flip(texture, 1)
-        texture[:,256:] = tmp[:,256:]
-
+        texture[:, 256:] = tmp[:, 256:]
 
     return texture
 
@@ -1438,10 +1466,12 @@ def get_face_mesh_keypoints(results, shape):
     try:
         face_landmarks = results.multi_face_landmarks[0]
         keypoints = np.array(
-            [(point.x * W, point.y * H) for point in face_landmarks.landmark[0:468]])  # after 468 is iris or something else
+            [(point.x * W, point.y * H) for point in
+             face_landmarks.landmark[0:468]])  # after 468 is iris or something else
         return keypoints
     except:
         return None
+
 
 def crop_face_with_face_mesh(frame, keypoints):
     face_x_min = min(keypoints[:, 0])
@@ -1451,6 +1481,7 @@ def crop_face_with_face_mesh(frame, keypoints):
 
     frame = frame[int(face_y_min):int(face_y_max), int(face_x_min):int(face_x_max), :]
     return frame
+
 
 def get_forward_face(frame, keypoints):
     # cv2 rotate image
@@ -1466,4 +1497,3 @@ def get_forward_face(frame, keypoints):
     M = cv2.getRotationMatrix2D((cX, cY), rotate_degree, 1.0)
     frame = cv2.warpAffine(frame, M, (w, h))
     return frame
-

@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 class PhysNetDataset(Dataset):
     def __init__(self, video_data, label_data,target_length):
         self.transform = transforms.Compose([transforms.ToTensor()])
-        self.video_data = np.reshape(video_data,(-1,target_length,64,64,3))
+        self.video_data = np.reshape(video_data,(-1,target_length,32,32,3))
         self.label_data = np.reshape(label_data,(-1,target_length))
 
     def __getitem__(self, index):

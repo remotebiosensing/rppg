@@ -7,7 +7,7 @@ preprocess:
   analyze: false
   chunk_size: 32
   datasets:
-    - name: UBFC
+    - name: PURE
       type: continuous # diff or continuous
       video_fps: 30
       fixed_position: 1
