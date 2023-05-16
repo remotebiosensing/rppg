@@ -74,11 +74,10 @@ if __name__ == "__main__":
 
             # adaptation = False
             # if adaptation:
-            #     for train in tasks[:]
+            #     for train in tasks[20:]:
             #         individual_model = meta.inner_update(tasks[:])
 
 
 
-        print("model check")
 
 
