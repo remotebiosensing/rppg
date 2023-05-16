@@ -18,33 +18,36 @@ from tqdm import tqdm
 def video_preprocess(preprocess_type, path, **kwargs):
     video_data = CONT_preprocess_Video(path, **kwargs)
     if preprocess_type == 'DIFF':
-        return DIFF_preprocess_Video(path,video_data, **kwargs)
+        return DIFF_preprocess_Video(path, video_data, **kwargs)
     else:
-        return video_data / np.std(video_data)
+        video_data -= np.mean(video_data)
+        video_data /= np.std(video_data)
+        return video_data
 
 
-
-def DIFF_preprocess_Video(path,video_data, **kwargs):
+def DIFF_preprocess_Video(path, video_data, **kwargs):
     '''
     :param path: dataset path
     :param flag: face detect flag
     :return: [:,:,:0-2] : motion diff frame
              [:,:,:,3-5] : normalized frame
     '''
-    face_detect_algorithm = kwargs['face_detect_algorithm']
-
     frame_total, h, w, c = video_data.shape
 
     raw_video = np.empty((frame_total - 1, h, w, 6))
 
     with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
-        for frame_num in range(frame_total-1):
-            raw_video[frame_num, :, :, :3], raw_video[frame_num, :, :, -3:] = preprocess_Image(video_data[frame_num], video_data[frame_num+1])
+        for frame_num in range(frame_total - 1):
+            raw_video[frame_num, :, :, :3], raw_video[frame_num, :, :, -3:] = preprocess_Image(video_data[frame_num],
+                                                                                               video_data[
+                                                                                                   frame_num + 1])
             pbar.update(1)
-        raw_video[:,:,:,:3] = raw_video[:,:,:,:3]/np.std(raw_video[:,:,:,:3])
-        raw_video[:, :, :, -3:] = raw_video[:, :, :, -3:] / np.std(raw_video[:, :, :, -3:])
-
+        raw_video[:, :, :, :3] = raw_video[:, :, :, :3] / np.std(raw_video[:, :, :, :3])
+        raw_video[:, :, :, 3:] = raw_video[:, :, :, 3:] - np.mean(raw_video[:, :, :, 3:])
+        raw_video[:, :, :, 3:] = raw_video[:, :, :, 3:] / np.std(raw_video[:, :, :, 3:])
+        raw_video[np.isnan(raw_video)] = 0
     return raw_video
+
 
 
 def CONT_preprocess_Video(path, **kwargs):
@@ -81,23 +84,23 @@ def CONT_preprocess_Video(path, **kwargs):
         with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
             while j < frame_total:
                 frame = cv2.imread(path + "/" + data[j])
-                face_locations = face_recognition.face_locations(frame,1)
-                if len(face_locations) >= 1 :
+                face_locations = face_recognition.face_locations(frame, 1)
+                if len(face_locations) >= 1:
                     face_locations = list(face_locations)
                     face_location = face_locations[0]
                     pos.append(
                         {
-                            'success' : True,
-                            'x_pos' : face_location[1::2],
-                            'y_pos' : face_location[0::2],
+                            'success': True,
+                            'x_pos': face_location[1::2],
+                            'y_pos': face_location[0::2],
                         }
                     )
                 else:
                     pos.append(
                         {
-                            'success' : False,
-                            'x_pos' : [0,0],
-                            'y_pos' : [0,0],
+                            'success': False,
+                            'x_pos': [0, 0],
+                            'y_pos': [0, 0],
                         }
                     )
                 j += 1
@@ -126,7 +129,6 @@ def CONT_preprocess_Video(path, **kwargs):
             img_size = bbox_size
 
         raw_video = np.empty((frame_total, img_size, img_size, 3))
-
 
         for frame_num in range(frame_total):
             if pos[frame_num]['success']:
@@ -175,27 +177,27 @@ def CONT_preprocess_Video(path, **kwargs):
                 ret, frame = cap.read()
                 if ret:
                     face_locations = face_recognition.face_locations(frame, 1)
-                    if len(face_locations) >= 1 :
+                    if len(face_locations) >= 1:
                         face_locations = list(face_locations)
                         face_location = face_locations[0]
                         pos.append(
                             {
-                                'success' : True,
-                                'x_pos' : face_location[1::2],
-                                'y_pos' : face_location[0::2],
+                                'success': True,
+                                'x_pos': face_location[1::2],
+                                'y_pos': face_location[0::2],
                             }
                         )
                     else:
                         pos.append(
                             {
-                                'success' : False,
-                                'x_pos' : [0,0],
-                                'y_pos' : [0,0],
+                                'success': False,
+                                'x_pos': [0, 0],
+                                'y_pos': [0, 0],
                             }
                         )
                 else:
                     break
-                #face_landmarks = face_recognition.face_landmarks(frame, face_locations)
+                # face_landmarks = face_recognition.face_landmarks(frame, face_locations)
                 pbar.update(1)
         cap.release()
 
@@ -209,14 +211,14 @@ def CONT_preprocess_Video(path, **kwargs):
                 miny = np.min(lm_y)
                 maxy = np.max(lm_y)
 
-                y_range_ext = (maxy-miny)*0.2
+                y_range_ext = (maxy - miny) * 0.2
                 miny = miny - y_range_ext
 
                 cnt_x = np.round((minx + maxx) / 2).astype('int')
                 cnt_y = np.round((maxy + miny) / 2).astype('int')
 
                 break
-        bbox_size = bbox_size=np.round(1.5*(maxy-miny)).astype('int')
+        bbox_size = bbox_size = np.round(1.5 * (maxy - miny)).astype('int')
 
         if img_size == None:
             img_size = bbox_size

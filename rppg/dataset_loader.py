@@ -205,7 +205,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             if model_type == 'DIFF':
                 appearance_data = []
                 motion_data = []
-                target_data = []
+                label_data = []
             elif model_type == 'CONT':
                 video_data = []
                 label_data = []
@@ -237,8 +237,12 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                 else:
                     appearance_data.extend(file['raw_video'][:, :, :, -3:])
                     motion_data.extend(file['raw_video'][:, :, :, :3])
-                target_data.extend(file['preprocessed_label'])
-
+                label_data.extend(file['preprocessed_label'])
+                if len(label_data) != num_frame:
+                    label_data = np.interp(
+                        np.linspace(
+                            1, len(label_data), num_frame), np.linspace(
+                            1, len(label_data), len(label_data)), label_data)
 
             elif model_name in ["APNETv2"]:
                 start = 0
@@ -247,9 +251,6 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
 
                 while end <= len(file['raw_video']):
                     video_chunk = file['raw_video'][start:end]
-                    # min_val = np.min(video_chunk, axis=(0, 1, 2), keepdims=True)
-                    # max_val = np.max(video_chunk, axis=(0, 1, 2), keepdims=True)
-                    # video_chunk = (video_chunk - min_val) / (max_val - min_val)
                     video_data.append(video_chunk)
                     keypoint_data.append(file['keypoint'][start:end])
                     tmp_label = label[start:end]
@@ -298,7 +299,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             if model_name in ["DeepPhys", "MTTS"]:
                 dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                           motion_data=np.asarray(motion_data),
-                                          target=np.asarray(target_data))
+                                          target=np.asarray(label_data))
             elif model_name in ["APNETv2"]:
                 dataset = APNETv2Dataset(video_data=np.asarray(video_data),
                                          keypoint_data=np.asarray(keypoint_data),

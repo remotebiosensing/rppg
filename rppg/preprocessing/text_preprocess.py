@@ -76,10 +76,10 @@ def Deepphys_preprocess_Label(path, **kwargs):
     delta_label -= np.mean(delta_label)
     delta_label /= np.std(delta_label)
     delta_label = np.array(delta_label).astype('float32')
-    delta_pulse = delta_label.copy()  # 이거 왜 있지?
-    split_hr_label = np.zeros(shape=delta_pulse.shape)
+    delta_label[np.isnan(delta_label)] = 0
+    split_hr_label = np.zeros(shape=delta_label.shape)
 
-    return delta_pulse,split_hr_label
+    return delta_label,split_hr_label
 def PhysNet_preprocess_Label(path, **kwargs):
     '''
     :param path: label file path

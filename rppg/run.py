@@ -9,6 +9,7 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders,model_path, wandb_
 
     best_loss = 100000
     val_loss = 0
+    eval_flag = False
     if cfg.train_flag:
         for epoch in range(cfg.train.epochs):
             train_fn(epoch, model, optimizer,lr_sch, criterion,dataloaders[0])
@@ -16,9 +17,11 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders,model_path, wandb_
             if best_loss> val_loss:
                 best_loss = val_loss
                 torch.save(model.state_dict(),model_path + cfg.model + "_" + cfg.train.dataset + ".pt")
-                if cfg.eval_flag:
-                    test_fn(epoch,model,dataloaders[2],cfg.model,cal_type=cfg.test.cal_type,
-                            metrics=cfg.test.metric, wandb_flag=wandb_flag)
+                eval_flag = True
+            if cfg.eval_flag and (eval_flag or (epoch+1)%cfg.eval_interval == 0):
+                test_fn(epoch,model,dataloaders[2],cfg.model,cal_type=cfg.test.cal_type,
+                        metrics=cfg.test.metric, wandb_flag=wandb_flag)
+                eval_flag = False
     else:
         #model = torch.load()
         print("TBD")
@@ -100,16 +103,24 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
     p = []
     t = []
 
-    for dataloader in dataloaders:
+    fs = 30
+    time = 10
 
-        with tqdm(dataloader, desc=step,total= len(dataloader)) as tepoch:
+    interval = fs * time
+
+    for dataloader in dataloaders:
+        with tqdm(dataloader, desc=step,total= len(dataloader),disable=True) as tepoch:
             _pred = []
             _target = []
             for inputs, target in tepoch:
                 _pred.extend(model(inputs).cpu().detach().numpy())
                 _target.extend(target.cpu().detach().numpy())
-        p.append(np.reshape(np.asarray(_pred),-1))
-        t.append(np.reshape(np.asarray(_target),-1))
+
+            remind = len(_pred) % interval
+            _pred = _pred[:-remind]
+            _target = _target[:-remind]
+        p.extend(np.reshape(np.reshape(np.asarray(_pred),-1),(-1,interval)))
+        t.extend(np.reshape(np.reshape(np.asarray(_target),-1),(-1,interval)))
     p = np.asarray(p)
     t = np.asarray(t)
 
@@ -121,6 +132,8 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
 
     hr_preds = np.asarray(hr_preds)
     hr_targets = np.asarray(hr_targets)
+
+    print(hr_preds.shape)
 
     if "MAE" in metrics:
         print("MAE",MAE(hr_preds,hr_targets))
