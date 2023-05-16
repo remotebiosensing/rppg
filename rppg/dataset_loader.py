@@ -224,9 +224,21 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             file = h5py.File(file_name)
             h5_tree(file)
             if model_name in ["DeepPhys", "MTTS"]:
-                appearance_data.extend(file['raw_video'][:, :, :, -3:])
-                motion_data.extend(file['raw_video'][:, :, :, :3])
+                num_frame, w, h, c = file['raw_video'][:].shape
+                if w != img_size:
+                    new_shape = (num_frame, img_size, img_size, c)
+                    resized_img = np.zeros(new_shape)
+                    for i in range(num_frame):
+                        img = file['raw_video'][i] / 255.0
+                        resized_img[i] = cv2.resize(img, (img_size, img_size))
+                    appearance_data.extend(resized_img[:, :, :, -3:])
+                    motion_data.extend(resized_img[:, :, :, :3])
+                else:
+                    appearance_data.extend(file['raw_video'][:, :, :, -3:])
+                    motion_data.extend(file['raw_video'][:, :, :, :3])
                 target_data.extend(file['preprocessed_label'])
+
+
             elif model_name in ["APNETv2"]:
                 start = 0
                 end = time_length
@@ -271,9 +283,6 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                         video_chunk = resized_img[start:end]
                     else:
                         video_chunk = file['raw_video'][start:end]
-                    # min_val = np.min(video_chunk, axis=(0, 1, 2), keepdims=True)
-                    # max_val = np.max(video_chunk, axis=(0, 1, 2), keepdims=True)
-                    # video_chunk = (video_chunk - min_val) / (max_val - min_val)
                     video_data.append(video_chunk)
                     tmp_label = label[start:end]
 

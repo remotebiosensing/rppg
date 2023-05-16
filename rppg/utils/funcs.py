@@ -77,9 +77,15 @@ def mag2db(magnitude):
     return 20. * np.log10(magnitude)
 
 def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,high=2.5):
+
     if model_type == "DIFF":
-        pred = detrend(np.cumsum(pred),100)
-        label = detrend(np.cumsum(label),100)
+        length = len(pred)
+        length = length % 128
+        if length>0:
+            pred = pred[:-length]
+            label = label[:-length]
+        pred = detrend(np.cumsum(np.reshape(pred,(-1,128)),1),100)
+        label = detrend(np.cumsum(np.reshape(label,(-1,128)),1),100)
     else:
         pred = detrend(pred,100)
         label = detrend(label,100)

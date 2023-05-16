@@ -20,7 +20,7 @@ def video_preprocess(preprocess_type, path, **kwargs):
     if preprocess_type == 'DIFF':
         return DIFF_preprocess_Video(path,video_data, **kwargs)
     else:
-        return video_data
+        return video_data / np.std(video_data)
 
 
 
@@ -37,15 +37,12 @@ def DIFF_preprocess_Video(path,video_data, **kwargs):
 
     raw_video = np.empty((frame_total - 1, h, w, 6))
 
-    video_data = video_data/255.
-
     with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
         for frame_num in range(frame_total-1):
             raw_video[frame_num, :, :, :3], raw_video[frame_num, :, :, -3:] = preprocess_Image(video_data[frame_num], video_data[frame_num+1])
             pbar.update(1)
-
-    raw_video[:,:,:,:3] = raw_video[:,:,:,:3]/np.std(raw_video[:,:,:,:3])
-    # raw_video[:, :, :, :3] = video_normalize(raw_video[:, :, :, :3])
+        raw_video[:,:,:,:3] = raw_video[:,:,:,:3]/np.std(raw_video[:,:,:,:3])
+        raw_video[:, :, :, -3:] = raw_video[:, :, :, -3:] / np.std(raw_video[:, :, :, -3:])
 
     return raw_video
 
@@ -84,7 +81,7 @@ def CONT_preprocess_Video(path, **kwargs):
         with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
             while j < frame_total:
                 frame = cv2.imread(path + "/" + data[j])
-                face_locations = face_recognition.face_locations(frame,1)
+                face_locations = face_recognition.face_locatrppgions(frame,1)
                 if len(face_locations) >= 1 :
                     face_locations = list(face_locations)
                     face_location = face_locations[0]

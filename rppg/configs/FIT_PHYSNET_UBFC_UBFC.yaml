@@ -28,7 +28,7 @@ fit:
     learning_rate: 0.001
     epochs: 100
     loss: neg_pearson
-    optimizer: adam
+    optimizer: Adam
   test:
     cal_type : FFT
     metric: ['MAE','RMSE','MAPE','Pearson']

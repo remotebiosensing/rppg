@@ -98,9 +98,10 @@ def preprocessing(
 
         # multiprocessing
         chunk_num = math.ceil(len(data_list) / chunk_size)
+        if chunk_num == 1:
+            chunk_size = len(data_list)
         for i in range(chunk_num):
             if i == chunk_num - 1:
-                break
                 chunk_data_list = data_list[i * chunk_size:]
             else:
                 chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]

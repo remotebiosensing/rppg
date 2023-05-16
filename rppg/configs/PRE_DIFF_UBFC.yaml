@@ -5,7 +5,7 @@ model_path: "/media/hdd1/dy/model/"
 preprocess:
   flag: true
   analyze: false
-  chunk_size: 2
+  chunk_size: 48
   datasets:
     - name: UBFC
       type: diff # diff or continuous

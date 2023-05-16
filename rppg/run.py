@@ -35,8 +35,8 @@ def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
             outputs = model(inputs)
-            outputs = (outputs - torch.mean(outputs)) / torch.std(outputs)
-            target = (target -  torch.mean(target)) / torch.std(target)
+            # outputs = (outputs - torch.mean(outputs)) / torch.std(outputs)
+            # target = (target -  torch.mean(target)) / torch.std(target)
             loss = criterion(outputs, target)
 
             if ~torch.isfinite(loss):
@@ -98,11 +98,15 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
         hr_targets = []
         with torch.no_grad():
             for inputs, target in tepoch:
-                tepoch.set_description(step + "%d" % epoch)
-                outputs = model(inputs)
-                hr_pred, hr_target = get_hr(outputs.detach().cpu().numpy(),target.detach().cpu().numpy(),model_type= model_type ,cal_type=cal_type)
-                hr_preds.extend(hr_pred)
-                hr_targets.extend(hr_target)
+                if model_type == 'DIFF':
+                    if len(inputs) >= 128:
+                        tepoch.set_description(step + "%d" % epoch)
+                        outputs = model(inputs)
+                        hr_pred, hr_target = get_hr(outputs.detach().cpu().numpy(),target.detach().cpu().numpy(),model_type= model_type ,cal_type=cal_type)
+                        hr_preds.extend(hr_pred)
+                        hr_targets.extend(hr_target)
+                    else:
+                        break
             hr_preds = np.asarray(hr_preds)
             hr_targets = np.asarray(hr_targets)
 
