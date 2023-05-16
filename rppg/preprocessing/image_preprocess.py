@@ -17,7 +17,6 @@ from tqdm import tqdm
 
 def video_preprocess(preprocess_type, path, **kwargs):
     video_data = CONT_preprocess_Video(path, **kwargs)
-
     if preprocess_type == 'DIFF':
         return DIFF_preprocess_Video(path,video_data, **kwargs)
     else:
@@ -38,12 +37,15 @@ def DIFF_preprocess_Video(path,video_data, **kwargs):
 
     raw_video = np.empty((frame_total - 1, h, w, 6))
 
+    video_data = video_data/255.
+
     with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
         for frame_num in range(frame_total-1):
             raw_video[frame_num, :, :, :3], raw_video[frame_num, :, :, -3:] = preprocess_Image(video_data[frame_num], video_data[frame_num+1])
             pbar.update(1)
 
-    raw_video[:, :, :, :3] = video_normalize(raw_video[:, :, :, :3])
+    raw_video[:,:,:,:3] = raw_video[:,:,:,:3]/np.std(raw_video[:,:,:,:3])
+    # raw_video[:, :, :, :3] = video_normalize(raw_video[:, :, :, :3])
 
     return raw_video
 
@@ -558,7 +560,7 @@ def generate_MotionDifference(prev_frame, crop_frame):
     :return: motion diff frame
     '''
     # motion input
-    motion_input = (crop_frame - prev_frame) / (crop_frame + prev_frame)
+    motion_input = (crop_frame - prev_frame) / (crop_frame + prev_frame + 0.000000001)
     # TODO : need to diminish outliers [ clipping ]
     # motion_input = motion_input / np.std(motion_input)
     # TODO : do not divide each D frame, modify divide whole video's unit standard deviation
