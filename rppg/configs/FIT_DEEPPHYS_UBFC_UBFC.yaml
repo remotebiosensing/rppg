@@ -15,7 +15,7 @@ fit:
   train_flag: True
   eval_flag: True
   eval_interval: 5
-  batch_size: 2048
+  batch_size: 160
   meta:
     flag: false
     inner_optim: adam
@@ -25,11 +25,11 @@ fit:
     dataset: UBFC
     shuffle: true
     fs: 30 #video fps
-    batch_size: 30
-    learning_rate: 0.009
-    epochs: 100
+    batch_size: 4
+    learning_rate: 0.0001
+    epochs: 30
     loss: MSE
-    optimizer: AdamW
+    optimizer: NAdam
   test:
     cal_type : FFT
     metric: ['MAE','RMSE','MAPE','Pearson']

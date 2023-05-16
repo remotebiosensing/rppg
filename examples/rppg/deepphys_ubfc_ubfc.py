@@ -81,8 +81,8 @@ if __name__ == "__main__":
             learning_rate=cfg.fit.train.learning_rate,
             optim=cfg.fit.train.optimizer)
         criterion = loss_fn(loss_name=cfg.fit.train.loss)
-        lr_sch = torch.optim.lr_scheduler.OneCycleLR(
-            opt, max_lr=cfg.fit.train.learning_rate, epochs=cfg.fit.train.epochs,
-            steps_per_epoch=len(datasets[0]))
+        # lr_sch = torch.optim.lr_scheduler.OneCycleLR(
+        #     opt, max_lr=cfg.fit.train.learning_rate, epochs=cfg.fit.train.epochs,
+        #     steps_per_epoch=len(datasets[0]))
 
     run(model, opt, lr_sch, criterion, cfg.fit, data_loaders, cfg.model_path, wandb_cfg.flag)

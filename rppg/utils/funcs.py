@@ -37,7 +37,7 @@ def detrend(signal, Lambda):
 def BPF(input_val, fs=30,low= 0.75, high=2.5):
     low = low / (0.5 * fs)
     high = high / (0.5 * fs)
-    [b_pulse, a_pulse] = butter(1, [low, high], btype='bandpass')
+    [b_pulse, a_pulse] = butter(6, [low, high], btype='bandpass')
     return scipy.signal.filtfilt(b_pulse, a_pulse, np.double(input_val))
 
 
@@ -106,8 +106,7 @@ def MAE(pred,label):
     return np.mean(np.abs(pred-label))
 
 def RMSE(pred,label):
-    return np.linalg.norm(pred-label)/ np.sqrt(len(label))
-    # return np.sqrt(np.mean((pred-label)**2))
+    return np.sqrt(np.mean((pred-label)**2))
 
 def MAPE(pred,label):
     return np.mean(np.abs((pred-label)/label)) *100

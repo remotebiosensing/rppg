@@ -123,7 +123,7 @@ def CONT_preprocess_Video(path, **kwargs):
                 cnt_y = np.round((maxy + miny) / 2).astype('int')
 
                 break
-        bbox_size = bbox_size = np.round(1.5 * (maxy - miny)).astype('int')
+        bbox_size = np.round(1.2 * (maxy - miny)).astype('int')
 
         if img_size == None:
             img_size = bbox_size
@@ -218,7 +218,7 @@ def CONT_preprocess_Video(path, **kwargs):
                 cnt_y = np.round((maxy + miny) / 2).astype('int')
 
                 break
-        bbox_size = bbox_size = np.round(1.5 * (maxy - miny)).astype('int')
+        bbox_size = np.round(1.2 * (maxy - miny)).astype('int')
 
         if img_size == None:
             img_size = bbox_size

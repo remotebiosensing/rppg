@@ -230,7 +230,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     new_shape = (num_frame, img_size, img_size, c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
-                        img = file['raw_video'][i] / 255.0
+                        img = file['raw_video'][i]
                         resized_img[i] = cv2.resize(img, (img_size, img_size))
                     appearance_data.extend(resized_img[:, :, :, -3:])
                     motion_data.extend(resized_img[:, :, :, :3])
@@ -277,7 +277,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     new_shape = (num_frame, img_size, img_size, c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
-                        img = file['raw_video'][i] / 255.0
+                        img = file['raw_video'][i]
                         resized_img[i] = cv2.resize(img, (img_size, img_size))
 
                 while end <= len(file['raw_video']):
