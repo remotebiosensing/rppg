@@ -44,7 +44,13 @@ def data_loader(
     if meta:
         data_loader = []
         for dataset in datasets:
-            data_loader.append(DataLoader(dataset, batch_size, shuffle=False))
+            dataset_len = len(dataset)
+            support_len = int(np.floor(dataset_len * 0.8))
+            query_len = dataset_len - support_len
+            support_dataset, query_dataset = random_split(dataset, [support_len, query_len])
+            support_loader = DataLoader(support_dataset, batch_size=batch_size, shuffle=False)
+            query_loader = DataLoader(query_dataset, batch_size=batch_size, shuffle=False)
+            data_loader.append([support_loader, query_loader])
         return data_loader
 
     if datasets.__len__() == 3:
@@ -111,11 +117,10 @@ def dataset_loader(
     dataset_memory = 0
 
     if meta:
-        rst_dataset = []
-        while True:
-            idx += 1
-            file_name = path[idx]
-
+        dataset = []
+        for file_name in path:
+            video_data = []
+            label_data = []
             if not os.path.isfile(file_name):
                 print("Stop at ", idx)
                 break
@@ -127,12 +132,57 @@ def dataset_loader(
             file = h5py.File(file_name)
             h5_tree(file)
 
-            for key in file.keys():
-                if model_name in ["DeepPhys", "MTTS"]:
+            if model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+                start = 0
+                end = time_length
+                # label = detrend(file['preprocessed_label'], 100)
+                label = file['preprocessed_label']
+                num_frame, w, h, c = file['raw_video'][:].shape
+
+                if len(label) != num_frame:
+                    label = np.interp(
+                        np.linspace(
+                            1, len(label), num_frame), np.linspace(
+                            1, len(label), len(label)), label)
+
+                if w != img_size:
+                    new_shape = (num_frame, img_size, img_size, c)
+                    resized_img = np.zeros(new_shape)
+                    for i in range(num_frame):
+                        # img = file['raw_video'][i] / 255.0
+                        img = file['raw_video'][i]
+                        resized_img[i] = cv2.resize(img, (img_size, img_size))
+
+                while end <= len(file['raw_video']):
+                    if w != img_size:
+                        video_chunk = resized_img[start:end]
+                    else:
+                        video_chunk = file['raw_video'][start:end]
+                    # min_val = np.min(video_chunk, axis=(0, 1, 2), keepdims=True)
+                    # max_val = np.max(video_chunk, axis=(0, 1, 2), keepdims=True)
+                    # video_chunk = (video_chunk - min_val) / (max_val - min_val)
+                    video_data.append(video_chunk)
+                    tmp_label = label[start:end]
+
+                    tmp_label = np.around(normalize(tmp_label, 0, 1), 2)
+                    label_data.append(tmp_label)
+                    # video_chunks.append(video_chunk)
+                    start += time_length - overlap_interval
+                    end += time_length - overlap_interval
+
+                file.close()
+
+                rst_dataset = PhysNetDataset(video_data=np.asarray(video_data),
+                                         label_data=np.asarray(label_data),
+                                         target_length=time_length)
+
+            elif model_name in ["DeepPhys", "MTTS"]:
+                for key in file.keys():
                     rst_dataset.append(DeepPhysDataset(appearance_data=np.asarray(file[key]['raw_video'][:, :, :, -3:]),
                                                        motion_data=np.asarray(file[key]['raw_video'][:, :, :, :3]),
                                                        target=np.asarray(file[key]['preprocessed_label'])))
 
+            dataset.append(rst_dataset)
 
     else:
         dataset = []

@@ -2,6 +2,7 @@ from sklearn.preprocessing import minmax_scale
 import h5py
 import csv
 import json
+import scipy.io as sio
 
 import cv2
 import h5py
@@ -13,7 +14,9 @@ from biosppy.signals import bvp
 from scipy.signal import resample_poly,resample
 from scipy.interpolate import interp1d
 from sklearn.preprocessing import minmax_scale
+from scipy.signal import stft
 import pandas as pd
+
 
 # local
 def label_preprocess(preprocess_type, path,**kwargs):
@@ -153,6 +156,13 @@ def PhysNet_preprocess_Label(path, **kwargs):
         label = list(map(float, f_read[:-1]))
         new_label = label[:length:40]
         print("A")
+    elif path.__contains__(".mat"):
+        f = sio.loadmat(path)
+        label = f['GT_ppg'][0].astype('float32')
+        # Create Pseudo HR Label using FFT method
+        label_hr, time = BVPsignal(label, 30.).getBPM()
+        # TODO : time에 맞춰 discrete하게 upsampling & compare Peak detection method
+        label_hr = resample(label_hr, len(label))
     else:
         f = open(path, 'r')
         f_read = f.read().split('\n')
@@ -278,3 +288,56 @@ def Vitamon_preprocess_Label(path, time_length):
     new_hr = new_hr[:(len(new_hr)//time_length)*time_length].reshape(-1, time_length)
     f.close()
     return new_hr
+
+class BVPsignal:
+    """
+    Manage (multi-channel, row-wise) BVP signals, and transforms them in BPMs.
+    """
+    #nFFT = 2048  # freq. resolution for STFTs
+    step = 1       # step in seconds
+
+    def __init__(self, data, fs, startTime=0, minHz=0.75, maxHz=4.):
+        if len(data.shape) == 1:
+            self.data = data.reshape(1, -1)  # 2D array raw-wise
+        else:
+            self.data = data
+        self.fs = fs                       # sample rate
+        self.startTime = startTime
+        self.minHz = minHz
+        self.maxHz = maxHz
+        nyquistF = self.fs/2
+        fRes = 0.5
+        self.nFFT = max(2048, (60*2*nyquistF) / fRes)
+
+    def spectrogram(self, winsize=5):
+        """
+        Compute the BVP signal spectrogram restricted to the
+        band 42-240 BPM by using winsize (in sec) samples.
+        """
+
+        # -- spect. Z is 3-dim: Z[#chnls, #freqs, #times]
+        F, T, Z = stft(self.data,
+                       self.fs,
+                       nperseg=self.fs*winsize,
+                       noverlap=self.fs*(winsize-self.step),
+                       boundary='even',
+                       nfft=self.nFFT)
+        Z = np.squeeze(Z, axis=0)
+
+        # -- freq subband (0.65 Hz - 4.0 Hz)
+        minHz = 0.65
+        maxHz = 4.0
+        band = np.argwhere((F > minHz) & (F < maxHz)).flatten()
+        self.spect = np.abs(Z[band, :])     # spectrum magnitude
+        self.freqs = 60*F[band]            # spectrum freq in bpm
+        self.times = T                     # spectrum times
+
+        # -- BPM estimate by spectrum
+        self.bpm = self.freqs[np.argmax(self.spect, axis=0)]
+
+    def getBPM(self, winsize=5):
+        """
+        Get the BPM signal extracted from the ground truth BVP signal.
+        """
+        self.spectrogram(winsize)
+        return self.bpm, self.times

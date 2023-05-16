@@ -4,6 +4,7 @@ import os
 import h5py
 import math
 
+
 from rppg.preprocessing.image_preprocess import video_preprocess
 from rppg.preprocessing.text_preprocess import label_preprocess
 
@@ -93,6 +94,16 @@ def preprocessing(
             data_list = os.listdir(dataset_root_path)
             vid_name = "/png"
             ground_truth_name = "/json"
+        elif dataset_name.__contains__("MMPD"):
+            data_list = []
+            subject_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+            for subject in subject_list:
+                task_list = [task for task in os.listdir(dataset_root_path + "/" + subject) if task.__contains__('.mat')]
+                for task in task_list:
+                    tmp = subject + "/" + task
+                    data_list.append(tmp)
+            vid_name = ""
+            ground_truth_name = ""
 
         ssl_flag = True
 
@@ -100,7 +111,7 @@ def preprocessing(
         chunk_num = math.ceil(len(data_list) / chunk_size)
         for i in range(chunk_num):
             if i == chunk_num - 1:
-                break
+                # break
                 chunk_data_list = data_list[i * chunk_size:]
             else:
                 chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]
@@ -154,12 +165,15 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
 
     if dataset_name == "VIPL_HR":
         add_info = path[-3] + "/" + path[-2] + "/"
+    if dataset_name == "MMPD":
+        add_info = path[-2] + "/"
+        path[-1] = path[-1][:-4]
 
     dir_path = save_root_path + "/" + dataset_name + "/" + preprocess_type + "/" + add_info
     if not os.path.isdir(dir_path):
         mkdir_p(dir_path)
 
-    data = h5py.File(dir_path +   path[-1] + ".hdf5","w")
+    data = h5py.File(dir_path + path[-1] + ".hdf5","w")
     data.create_dataset('raw_video',data=raw_video)
     data.create_dataset('preprocessed_label', data=preprocessed_label[0])
     data.create_dataset('preprocessed_hr',data=preprocessed_label[1])
