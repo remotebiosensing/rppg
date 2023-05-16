@@ -81,7 +81,7 @@ def CONT_preprocess_Video(path, **kwargs):
         with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
             while j < frame_total:
                 frame = cv2.imread(path + "/" + data[j])
-                face_locations = face_recognition.face_locatrppgions(frame,1)
+                face_locations = face_recognition.face_locations(frame,1)
                 if len(face_locations) >= 1 :
                     face_locations = list(face_locations)
                     face_location = face_locations[0]

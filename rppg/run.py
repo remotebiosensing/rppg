@@ -92,32 +92,72 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
     else:
         model_type = 'CONT'
 
-    with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
-        model.eval()
-        hr_preds = []
-        hr_targets = []
-        with torch.no_grad():
-            for inputs, target in tepoch:
-                if model_type == 'DIFF':
-                    if len(inputs) >= 128:
-                        tepoch.set_description(step + "%d" % epoch)
-                        outputs = model(inputs)
-                        hr_pred, hr_target = get_hr(outputs.detach().cpu().numpy(),target.detach().cpu().numpy(),model_type= model_type ,cal_type=cal_type)
-                        hr_preds.extend(hr_pred)
-                        hr_targets.extend(hr_target)
-                    else:
-                        break
-            hr_preds = np.asarray(hr_preds)
-            hr_targets = np.asarray(hr_targets)
+    model.eval()
 
-            if "MAE" in metrics:
-                print("MAE",MAE(hr_preds,hr_targets))
-            if "RMSE" in metrics:
-                print("RMSE",RMSE(hr_preds,hr_targets))
-            if "MAPE" in metrics:
-                print("MAPE",MAPE(hr_preds,hr_targets))
-            if "Pearson" in metrics:
-                print("Pearson",corr(hr_preds,hr_targets))
+    hr_preds = []
+    hr_targets = []
+
+    p = []
+    t = []
+
+    for dataloader in dataloaders:
+
+        with tqdm(dataloader, desc=step,total= len(dataloader)) as tepoch:
+            _pred = []
+            _target = []
+            for inputs, target in tepoch:
+                _pred.extend(model(inputs).cpu().detach().numpy())
+                _target.extend(target.cpu().detach().numpy())
+        p.append(np.reshape(np.asarray(_pred),-1))
+        t.append(np.reshape(np.asarray(_target),-1))
+    p = np.asarray(p)
+    t = np.asarray(t)
+
+
+    hr_pred, hr_target = get_hr(p, t,
+                                model_type=model_type, cal_type=cal_type)
+    hr_preds.extend(hr_pred)
+    hr_targets.extend(hr_target)
+
+    hr_preds = np.asarray(hr_preds)
+    hr_targets = np.asarray(hr_targets)
+
+    if "MAE" in metrics:
+        print("MAE",MAE(hr_preds,hr_targets))
+    if "RMSE" in metrics:
+        print("RMSE",RMSE(hr_preds,hr_targets))
+    if "MAPE" in metrics:
+        print("MAPE",MAPE(hr_preds,hr_targets))
+    if "Pearson" in metrics:
+        print("Pearson",corr(hr_preds,hr_targets))
+
+
+    # with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
+    #     model.eval()
+    #     hr_preds = []
+    #     hr_targets = []
+    #     with torch.no_grad():
+    #         for inputs, target in tepoch:
+    #             if model_type == 'DIFF':
+    #                 if len(inputs) >= 128:
+    #                     tepoch.set_description(step + "%d" % epoch)
+    #                     outputs = model(inputs)
+    #                     hr_pred, hr_target = get_hr(outputs.detach().cpu().numpy(),target.detach().cpu().numpy(),model_type= model_type ,cal_type=cal_type)
+    #                     hr_preds.extend(hr_pred)
+    #                     hr_targets.extend(hr_target)
+    #                 else:
+    #                     break
+    #         hr_preds = np.asarray(hr_preds)
+    #         hr_targets = np.asarray(hr_targets)
+    #
+    #         if "MAE" in metrics:
+    #             print("MAE",MAE(hr_preds,hr_targets))
+    #         if "RMSE" in metrics:
+    #             print("RMSE",RMSE(hr_preds,hr_targets))
+    #         if "MAPE" in metrics:
+    #             print("MAPE",MAPE(hr_preds,hr_targets))
+    #         if "Pearson" in metrics:
+    #             print("Pearson",corr(hr_preds,hr_targets))
 
 
 

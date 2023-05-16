@@ -40,6 +40,21 @@ def Deepphys_preprocess_Label(path, **kwargs):
         label = list(map(float, f_read[:-1]))
         new_label = label[:length:40]
         label = new_label
+    elif path.__contains__("json"):
+        name = path.split("/")
+        label = []
+        label_time = []
+        label_hr = []
+        time = []
+        with open(path[:-4] + name[-2] + ".json") as json_file:
+            json_data = json.load(json_file)
+            for data in json_data['/FullPackage']:
+                label.append(data['Value']['waveform'])
+                label_time.append(data['Timestamp'])
+                label_hr.append(data['Value']['pulseRate'])
+            for data in json_data['/Image']:
+                time.append(data['Timestamp'])
+
     else:
         f = open(path, 'r')
         f_read = f.read().split('\n')

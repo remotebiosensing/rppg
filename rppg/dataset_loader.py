@@ -1,8 +1,8 @@
 import os
 
+import cv2
 import h5py
 import numpy as np
-import psutil
 from torch.utils.data import ConcatDataset
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
@@ -14,8 +14,6 @@ from rppg.datasets.PhysNetDataset import PhysNetDataset
 from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
 from rppg.utils.funcs import detrend
-from rppg.preprocessing.image_preprocess import normalize_Image, generate_Floatimage
-import cv2
 
 
 def dataset_split(
@@ -50,7 +48,9 @@ def data_loader(
     if datasets.__len__() == 3:
         train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
         validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=True)
-        test_loader = DataLoader(datasets[2], batch_size=batch_size, shuffle=False)
+        test_loader = []
+        for dataset in datasets[2]:
+            test_loader.append(DataLoader(dataset,batch_size,shuffle=False))
         return [train_loader, validation_loader, test_loader]
     elif datasets.__len__() == 2:
         train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
@@ -137,12 +137,12 @@ def dataset_loader(
     else:
         dataset = []
         if train_flag:
-            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size)
+            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size,False)
             dataset.append(train_dataset)
-            val_dataset = get_dataset(val_path, model_type, model_name, time_length, overlap_interval, img_size)
+            val_dataset = get_dataset(val_path, model_type, model_name, time_length, overlap_interval, img_size,False)
             dataset.append(val_dataset)
         if eval_flag:
-            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, overlap_interval, img_size)
+            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, overlap_interval, img_size,True)
             dataset.append(eval_dataset)
 
     return dataset
@@ -194,10 +194,11 @@ def get_all_files_in_path(path):
     return files
 
 
-def get_dataset(path, model_type, model_name, time_length, overlap_interval, img_size):
+def get_dataset(path, model_type, model_name, time_length, overlap_interval, img_size, eval_flag):
     idx = 0
     round_flag = 0
     rst_dataset = None
+    datasets = []
 
     while True:
         if round_flag == 0:
@@ -319,8 +320,14 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             elif model_name in ["Vitamon", "Vitamon_phase2"]:
                 dataset = VitamonDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data))
-            datasets = [rst_dataset, dataset]
-            rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
+            if not  eval_flag:
+                datasets = [rst_dataset, dataset]
+                rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
+            else:
+                datasets.append(dataset)
             round_flag = 0
+    if not eval_flag:
+        return rst_dataset
+    else:
+        return datasets
 
-    return rst_dataset

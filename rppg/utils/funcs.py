@@ -79,20 +79,15 @@ def mag2db(magnitude):
 def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,high=2.5):
 
     if model_type == "DIFF":
-        length = len(pred)
-        length = length % 128
-        if length>0:
-            pred = pred[:-length]
-            label = label[:-length]
-        pred = detrend(np.cumsum(np.reshape(pred,(-1,128)),1),100)
-        label = detrend(np.cumsum(np.reshape(label,(-1,128)),1),100)
+        pred =[detrend(np.cumsum(p),100) for p in pred]
+        label = [detrend(np.cumsum(l),100) for l in label]
     else:
         pred = detrend(pred,100)
         label = detrend(label,100)
 
     if bpf_flag:
-        pred = BPF(pred,fs,low,high)
-        label = BPF(pred,fs,low,high)
+        pred = [BPF(p,fs,low,high) for p in pred]
+        label = [BPF(l, fs, low, high) for l in label]
 
     if cal_type != "BOTH":
         hr_pred = [calculate_hr(cal_type,p,fs,low,high) for p in pred]
@@ -111,7 +106,8 @@ def MAE(pred,label):
     return np.mean(np.abs(pred-label))
 
 def RMSE(pred,label):
-    return np.sqrt(np.mean(np.square(pred-label)))
+    return np.linalg.norm(pred-label)/ np.sqrt(len(label))
+    # return np.sqrt(np.mean((pred-label)**2))
 
 def MAPE(pred,label):
     return np.mean(np.abs((pred-label)/label)) *100
