@@ -12,7 +12,9 @@ from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import preprocessing
 # from rppg.train import train_fn, val_fn, test_fn
 from rppg.MAML import MAML
+from rppg.run import test_fn
 from tqdm import tqdm
+
 SEED = 0
 
 # for Reproducible model
@@ -70,14 +72,19 @@ if __name__ == "__main__":
                     num_updates=5)
 
         for epoch in range(cfg.fit.train.epochs):
-            meta.meta_update(tasks, epoch)
+            meta.meta_update(tasks[:20], epoch)
 
-            # adaptation = False
-            # if adaptation:
-            #     for train in tasks[20:]:
-            #         individual_model = meta.inner_update(tasks[:])
+            adaptation = True
+            if adaptation:
+                for support, query in tasks[20:]:
+                    individual_model = meta.inner_update(support)
+                    test_fn(epoch=epoch,
+                            model=individual_model,
+                            dataloaders=query,
+                            model_name=cfg.fit.model,
+                            cal_type=cfg.fit.test.cal_type,
+                            metrics=cfg.fit.test.metric,
+                            wandb_flag=False)
 
 
-
-
-
+    print("END")

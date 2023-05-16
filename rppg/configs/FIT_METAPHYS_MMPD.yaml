@@ -11,16 +11,16 @@ fit:
   model: PhysNet
   time_length: 64
   overlap_interval: 0 # default 0
-  img_size: 64
+  img_size: 128
   train_flag: False
   eval_flag: False
-  batch_size: 4
+  batch_size: 8
   meta:
     flag: True
     inner_optim: Adam # SGD
     inner_loss: neg_pearson
     inner_lr: 0.001
-    outer_optim: Adam
+    outer_optim: SGD
     outer_loss: neg_pearson
     outer_lr: 0.001
   train:
