@@ -38,8 +38,6 @@ def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
             outputs = model(inputs)
-            # outputs = (outputs - torch.mean(outputs)) / torch.std(outputs)
-            # target = (target -  torch.mean(target)) / torch.std(target)
             loss = criterion(outputs, target)
 
             if ~torch.isfinite(loss):
@@ -113,8 +111,8 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
             _pred = []
             _target = []
             for inputs, target in tepoch:
-                _pred.extend(model(inputs).cpu().detach().numpy())
-                _target.extend(target.cpu().detach().numpy())
+                _pred.extend(np.reshape(model(inputs).cpu().detach().numpy(),(-1,)))
+                _target.extend(np.reshape(target.cpu().detach().numpy(),(-1,)))
 
             remind = len(_pred) % interval
             _pred = _pred[:-remind]
@@ -143,35 +141,6 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
         print("MAPE",MAPE(hr_preds,hr_targets))
     if "Pearson" in metrics:
         print("Pearson",corr(hr_preds,hr_targets))
-
-
-    # with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
-    #     model.eval()
-    #     hr_preds = []
-    #     hr_targets = []
-    #     with torch.no_grad():
-    #         for inputs, target in tepoch:
-    #             if model_type == 'DIFF':
-    #                 if len(inputs) >= 128:
-    #                     tepoch.set_description(step + "%d" % epoch)
-    #                     outputs = model(inputs)
-    #                     hr_pred, hr_target = get_hr(outputs.detach().cpu().numpy(),target.detach().cpu().numpy(),model_type= model_type ,cal_type=cal_type)
-    #                     hr_preds.extend(hr_pred)
-    #                     hr_targets.extend(hr_target)
-    #                 else:
-    #                     break
-    #         hr_preds = np.asarray(hr_preds)
-    #         hr_targets = np.asarray(hr_targets)
-    #
-    #         if "MAE" in metrics:
-    #             print("MAE",MAE(hr_preds,hr_targets))
-    #         if "RMSE" in metrics:
-    #             print("RMSE",RMSE(hr_preds,hr_targets))
-    #         if "MAPE" in metrics:
-    #             print("MAPE",MAPE(hr_preds,hr_targets))
-    #         if "Pearson" in metrics:
-    #             print("Pearson",corr(hr_preds,hr_targets))
-
 
 
 

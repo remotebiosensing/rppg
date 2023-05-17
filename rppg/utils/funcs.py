@@ -82,8 +82,8 @@ def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,hig
         pred =[detrend(np.cumsum(p),100) for p in pred]
         label = [detrend(np.cumsum(l),100) for l in label]
     else:
-        pred = detrend(pred,100)
-        label = detrend(label,100)
+        pred = [detrend(p,100) for p in pred]
+        label = [detrend(l,100) for l in label]
 
     if bpf_flag:
         pred = [BPF(p,fs,low,high) for p in pred]

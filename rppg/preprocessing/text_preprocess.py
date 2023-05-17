@@ -16,15 +16,15 @@ from sklearn.preprocessing import minmax_scale
 import pandas as pd
 
 # local
-def label_preprocess(preprocess_type, path,**kwargs):
+def label_preprocess(preprocess_type, path, frame_total,**kwargs):
     if preprocess_type == "DIFF":
-        return Deepphys_preprocess_Label(path, **kwargs)
+        return Deepphys_preprocess_Label(path,frame_total, **kwargs)
     elif preprocess_type == 'CONT':
-        return PhysNet_preprocess_Label(path, **kwargs)
+        return PhysNet_preprocess_Label(path,frame_total, **kwargs)
     else:
         raise ValueError('model_name is not valid')
 
-def Deepphys_preprocess_Label(path, **kwargs):
+def Deepphys_preprocess_Label(path,frame_total, **kwargs):
 
     if path.__contains__("label.txt"):
         cap = cv2.VideoCapture(path[:-9] + "video.mkv")
@@ -70,6 +70,11 @@ def Deepphys_preprocess_Label(path, **kwargs):
     # TODO : need to implement piecewise cubic Hermite interpolation
     # Load input
     label = list(map(float, label))
+    if len(label) != frame_total:
+        label = np.interp(
+            np.linspace(
+                1, len(label), frame_total), np.linspace(
+                1, len(label), len(label)), label)
     delta_label = []
     for i in range(len(label) - 1):
         delta_label.append(label[i + 1] - label[i])
@@ -80,7 +85,7 @@ def Deepphys_preprocess_Label(path, **kwargs):
     split_hr_label = np.zeros(shape=delta_label.shape)
 
     return delta_label,split_hr_label
-def PhysNet_preprocess_Label(path, **kwargs):
+def PhysNet_preprocess_Label(path,frame_total, **kwargs):
     '''
     :param path: label file path
     :return: wave form
@@ -179,6 +184,12 @@ def PhysNet_preprocess_Label(path, **kwargs):
         label_hr = np.array(label_hr).astype('int')
         f.close()
 
+    label = list(map(float, label))
+    if len(label) != frame_total:
+        label = np.interp(
+            np.linspace(
+                1, len(label), frame_total), np.linspace(
+                1, len(label), len(label)), label)
 
     return label, label_hr
 def GCN_preprocess_Label(path, **kwargs):

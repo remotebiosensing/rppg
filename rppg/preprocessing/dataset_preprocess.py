@@ -139,13 +139,17 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     save_root_path = kwargs['save_root_path']
     dataset_name = kwargs['dataset_name']
 
-    preprocessed_label = label_preprocess(preprocess_type=preprocess_type,
-                                          path=path + ground_truth_name,
-                                          **kwargs)
 
     raw_video = video_preprocess(preprocess_type=preprocess_type,
                                 path=path + vid_name,
                                 **kwargs)
+
+    preprocessed_label = label_preprocess(preprocess_type=preprocess_type,
+                                          path=path + ground_truth_name,
+                                          frame_total = len(raw_video),
+                                          **kwargs)
+
+
     if None in raw_video:
         return
 
