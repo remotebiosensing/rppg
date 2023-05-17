@@ -10,6 +10,7 @@ from rppg.optim import optimizer
 from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import preprocessing
+from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr, IrrelevantPowerRatio)
 # from rppg.train import train_fn, val_fn, test_fn
 from rppg.MAML import MAML
 from rppg.run import test_fn
@@ -29,6 +30,49 @@ random.seed(SEED)
 
 generator = torch.Generator()
 generator.manual_seed(SEED)
+
+def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, wandb_flag: bool = True):
+    # To evaluate a model by subject, you can use the meta option
+    step = "Test"
+
+    if model_name in ["DeepPhys", "MTTS"]:
+        model_type = 'DIFF'
+    else:
+        model_type = 'CONT'
+
+    cost_list = []
+    with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
+        # temp_list = []
+        model.eval()
+        hr_preds = []
+        hr_targets = []
+        with torch.no_grad():
+            for inputs, target in tepoch:
+                tepoch.set_description(step + "%d" % epoch)
+                outputs = model(inputs)
+                hr_pred, hr_target = get_hr(outputs.detach().cpu().numpy(),
+                                            target.detach().cpu().numpy(),
+                                            model_type=model_type,
+                                            cal_type=cal_type)
+                hr_preds.extend(hr_pred)
+                hr_targets.extend(hr_target)
+            hr_preds = np.asarray(hr_preds)
+            hr_targets = np.asarray(hr_targets)
+
+            if "MAE" in metrics:
+                # print("MAE", MAE(hr_preds, hr_targets))
+                cost_list.append(MAE(hr_preds, hr_targets))
+            if "RMSE" in metrics:
+                # print("RMSE", RMSE(hr_preds, hr_targets))
+                cost_list.append(RMSE(hr_preds, hr_targets))
+            if "MAPE" in metrics:
+                # print("MAPE", MAPE(hr_preds, hr_targets))
+                cost_list.append(MAPE(hr_preds, hr_targets))
+            if "Pearson" in metrics:
+                # print("Pearson", corr(hr_preds, hr_targets))
+                cost_list.append(corr(hr_preds, hr_targets)[0][1])
+        # cost_list.append(temp_list)
+    return cost_list
 
 if __name__ == "__main__":
 
