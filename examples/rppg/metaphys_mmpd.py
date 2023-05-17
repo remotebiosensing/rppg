@@ -14,6 +14,7 @@ from rppg.preprocessing.dataset_preprocess import preprocessing
 from rppg.MAML import MAML
 from rppg.run import test_fn
 from tqdm import tqdm
+import os
 
 SEED = 0
 
@@ -38,7 +39,6 @@ if __name__ == "__main__":
             preprocess_cfg=cfg.preprocess
         )
 
-
     # load dataset
     if cfg.fit.meta.flag:
         dataset = dataset_loader(
@@ -51,15 +51,43 @@ if __name__ == "__main__":
             train_flag=cfg.fit.train_flag,
             eval_flag=cfg.fit.eval_flag,
             meta=cfg.fit.meta.flag
-            )
+        )
 
         tasks = data_loader(datasets=dataset,
-                              batch_size=cfg.fit.train.batch_size,
-                              meta=cfg.fit.meta.flag)
+                            batch_size=cfg.fit.train.batch_size,
+                            meta=cfg.fit.meta.flag)
 
     model = get_model(
         model_name=cfg.fit.model,
         time_length=cfg.fit.time_length)
+    if cfg.fit.meta.pretrain.flag:
+        pretrained_path = cfg.model_path + cfg.fit.model + "_" + cfg.fit.meta.pretrain.dataset + ".pt"
+        if os.path.isfile(pretrained_path):
+            model.load_state_dict(torch.load(pretrained_path))
+            print("Load pre-trained model")
+        else:
+            print("No pre-trained model exist, start training")
+            exec(open("configs/FIT_" + str(cfg.fit.model).upper() + "_UBFC_UBFC.yaml").read())
+            print("Pre-training complete, start training meta-learning model")
+            pretrained_path = cfg.model_path + cfg.fit.model + "_" + cfg.fit.meta.pretrain.dataset + ".pt"
+            model.load_state_dict(torch.load(pretrained_path))
+    else:
+        print("Cold start with no pre-trained model")
+    wandb_cfg = get_config("../../rppg/configs/WANDB_CONFG.yaml")
+
+    if wandb_cfg.flag:
+        wandb.init(project=wandb_cfg.wandb_project_name,
+                   entity=wandb_cfg.wandb_entity,
+                   name="Meta_"+cfg.fit.model + "/TRAIN_DATA:" +
+                        cfg.fit.train.dataset + "/TEST_DATA:" +
+                        cfg.fit.test.dataset + "/" +
+                        str(cfg.fit.time_length) + "/" +
+                        datetime.datetime.now().strftime('%m-%d%H:%M:%S'))
+        wandb.config = {
+            "learning_rate": cfg.fit.train.learning_rate,
+            "epochs": cfg.fit.train.epochs,
+            "batch_size": cfg.fit.batch_size
+        }
 
     if cfg.fit.meta.flag:
         meta = MAML(model=model,
@@ -71,20 +99,32 @@ if __name__ == "__main__":
                     outer_lr=cfg.fit.meta.outer_lr,
                     num_updates=5)
 
+        # cost_per_epoch = []
         for epoch in range(cfg.fit.train.epochs):
             meta.meta_update(tasks[:20], epoch)
-
-            adaptation = True
-            if adaptation:
+            cost_per_task = []
+            if cfg.fit.meta.fine_tune.flag:
                 for support, query in tasks[20:]:
                     individual_model = meta.inner_update(support)
-                    test_fn(epoch=epoch,
-                            model=individual_model,
-                            dataloaders=query,
-                            model_name=cfg.fit.model,
-                            cal_type=cfg.fit.test.cal_type,
-                            metrics=cfg.fit.test.metric,
-                            wandb_flag=False)
+                    cost_per_task.append(test_fn(epoch=epoch,
+                                                 model=individual_model,
+                                                 dataloaders=query,
+                                                 model_name=cfg.fit.model,
+                                                 cal_type=cfg.fit.test.cal_type,
+                                                 metrics=cfg.fit.test.metric,
+                                                 wandb_flag=False))
 
+                mean_cost = np.nan_to_num(np.array(cost_per_task)).mean(axis=0)
+                mae_cost_mean, rmse_cost_mean, mape_cost_mean, pearson_cost_mean = mean_cost[0], mean_cost[1], \
+                                                                                   mean_cost[2], mean_cost[3]
+                print("Epoch: {} | MAE: {:.4f} | RMSE: {:.4f} | MAPE: {:.4f} | Pearson: {:.4f}".format(epoch,
+                                                                                                       mae_cost_mean,
+                                                                                                       rmse_cost_mean,
+                                                                                                       mape_cost_mean,
+                                                                                                       pearson_cost_mean))
+                wandb.log({"MAE": mae_cost_mean,
+                           "RMSE": rmse_cost_mean,
+                           "MAPE": mape_cost_mean,
+                           "Pearson": pearson_cost_mean}, step=epoch)
 
     print("END")
