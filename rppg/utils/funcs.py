@@ -2,6 +2,8 @@ import numpy as np
 import scipy.signal
 from matplotlib import pyplot as plt
 from scipy.signal import butter
+from scipy import signal
+from scipy.fft import fft
 from scipy.sparse import spdiags
 import torch
 def detrend(signal, Lambda):
@@ -68,6 +70,7 @@ def calculate_hr(cal_type, ppg_signal, fs=60, low_pass=0.75, high_pass=2.5):
         mask_ppg = np.take(f_ppg, fmask_ppg)
         mask_pxx = np.take(pxx_ppg, fmask_ppg)
         hr = np.take(mask_ppg, np.argmax(mask_pxx, 0))[0] * 60
+
     else:
         ppg_peaks, _ = scipy.signal.find_peaks(ppg_signal)
         hr = 60 / (np.mean(np.diff(ppg_peaks)) / fs)

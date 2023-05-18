@@ -35,16 +35,16 @@ def DIFF_preprocess_Video(path, video_data, **kwargs):
     frame_total, h, w, c = video_data.shape
 
     raw_video = np.empty((frame_total - 1, h, w, 6))
-
+    padd = np.zeros( (1 , h, w, 6), dtype=np.float32)
     with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
         for frame_num in range(frame_total - 1):
-            raw_video[frame_num, :, :, :3], raw_video[frame_num, :, :, -3:] = preprocess_Image(video_data[frame_num],
-                                                                                               video_data[
-                                                                                                   frame_num + 1])
+            # raw_video[frame_num, :, :, :3], raw_video[frame_num, :, :, -3:] = preprocess_Image(video_data[frame_num],video_data[frame_num + 1])
+            raw_video[frame_num,:,:,:3] =  generate_MotionDifference(video_data[frame_num],video_data[frame_num + 1])
             pbar.update(1)
         raw_video[:, :, :, :3] = raw_video[:, :, :, :3] / np.std(raw_video[:, :, :, :3])
-        raw_video[:, :, :, 3:] = raw_video[:, :, :, 3:] - np.mean(raw_video[:, :, :, 3:])
-        raw_video[:, :, :, 3:] = raw_video[:, :, :, 3:] / np.std(raw_video[:, :, :, 3:])
+        raw_video = np.append(raw_video,padd,axis=0)
+        video_data = video_data - np.mean(video_data)
+        raw_video[:, :, :, 3:] = video_data  /np.std(video_data)
         raw_video[np.isnan(raw_video)] = 0
     return raw_video
 

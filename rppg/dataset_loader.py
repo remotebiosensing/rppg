@@ -99,7 +99,7 @@ def dataset_loader(
         path = get_all_files_in_path(root_file_path)
         path_len = len(path)
         if train_flag:
-            train_len = int(np.floor(path_len * 0.8))
+            train_len = int(np.floor(path_len * 0.9))
             train_path = path[:train_len]
             val_path = path[train_len:]
         if eval_flag:
@@ -216,7 +216,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             if idx == len(path):
                 break
             file_name = path[idx]
-
+            print(file_name)
             if not os.path.isfile(file_name):
                 print("Stop at ", idx)
                 break
