@@ -21,6 +21,8 @@ class PhysNetDataset(Dataset):
             video_data = video_data.to('cuda')
             label_data = label_data.to('cuda')
 
+        label_data = (label_data - torch.mean(label_data)) / torch.std(label_data)
+
         return video_data, label_data
 
     def __len__(self):

@@ -1,8 +1,8 @@
 import os
 
+import cv2
 import h5py
 import numpy as np
-import psutil
 from torch.utils.data import ConcatDataset
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
@@ -14,8 +14,6 @@ from rppg.datasets.PhysNetDataset import PhysNetDataset
 from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
 from rppg.utils.funcs import detrend
-from rppg.preprocessing.image_preprocess import normalize_Image, generate_Floatimage
-import cv2
 
 
 def dataset_split(
@@ -50,7 +48,9 @@ def data_loader(
     if datasets.__len__() == 3:
         train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
         validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=True)
-        test_loader = DataLoader(datasets[2], batch_size=batch_size, shuffle=False)
+        test_loader = []
+        for dataset in datasets[2]:
+            test_loader.append(DataLoader(dataset,batch_size,shuffle=False))
         return [train_loader, validation_loader, test_loader]
     elif datasets.__len__() == 2:
         train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
@@ -99,7 +99,7 @@ def dataset_loader(
         path = get_all_files_in_path(root_file_path)
         path_len = len(path)
         if train_flag:
-            train_len = int(np.floor(path_len * 0.8))
+            train_len = int(np.floor(path_len * 0.9))
             train_path = path[:train_len]
             val_path = path[train_len:]
         if eval_flag:
@@ -137,12 +137,12 @@ def dataset_loader(
     else:
         dataset = []
         if train_flag:
-            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size)
+            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size,False)
             dataset.append(train_dataset)
-            val_dataset = get_dataset(val_path, model_type, model_name, time_length, overlap_interval, img_size)
+            val_dataset = get_dataset(val_path, model_type, model_name, time_length, overlap_interval, img_size,False)
             dataset.append(val_dataset)
         if eval_flag:
-            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, overlap_interval, img_size)
+            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, overlap_interval, img_size,True)
             dataset.append(eval_dataset)
 
     return dataset
@@ -194,17 +194,18 @@ def get_all_files_in_path(path):
     return files
 
 
-def get_dataset(path, model_type, model_name, time_length, overlap_interval, img_size):
+def get_dataset(path, model_type, model_name, time_length, overlap_interval, img_size, eval_flag):
     idx = 0
     round_flag = 0
     rst_dataset = None
+    datasets = []
 
     while True:
         if round_flag == 0:
             if model_type == 'DIFF':
                 appearance_data = []
                 motion_data = []
-                target_data = []
+                label_data = []
             elif model_type == 'CONT':
                 video_data = []
                 label_data = []
@@ -215,7 +216,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             if idx == len(path):
                 break
             file_name = path[idx]
-
+            print(file_name)
             if not os.path.isfile(file_name):
                 print("Stop at ", idx)
                 break
@@ -224,9 +225,25 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             file = h5py.File(file_name)
             h5_tree(file)
             if model_name in ["DeepPhys", "MTTS"]:
-                appearance_data.extend(file['raw_video'][:, :, :, -3:])
-                motion_data.extend(file['raw_video'][:, :, :, :3])
-                target_data.extend(file['preprocessed_label'])
+                num_frame, w, h, c = file['raw_video'][:].shape
+                if w != img_size:
+                    new_shape = (num_frame, img_size, img_size, c)
+                    resized_img = np.zeros(new_shape)
+                    for i in range(num_frame):
+                        img = file['raw_video'][i]
+                        resized_img[i] = cv2.resize(img, (img_size, img_size))
+                    appearance_data.extend(resized_img[:, :, :, -3:])
+                    motion_data.extend(resized_img[:, :, :, :3])
+                else:
+                    appearance_data.extend(file['raw_video'][:, :, :, -3:])
+                    motion_data.extend(file['raw_video'][:, :, :, :3])
+                label_data.extend(file['preprocessed_label'])
+                if len(label_data) != num_frame:
+                    label_data = np.interp(
+                        np.linspace(
+                            1, len(label_data), num_frame), np.linspace(
+                            1, len(label_data), len(label_data)), label_data)
+
             elif model_name in ["APNETv2"]:
                 start = 0
                 end = time_length
@@ -234,9 +251,6 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
 
                 while end <= len(file['raw_video']):
                     video_chunk = file['raw_video'][start:end]
-                    # min_val = np.min(video_chunk, axis=(0, 1, 2), keepdims=True)
-                    # max_val = np.max(video_chunk, axis=(0, 1, 2), keepdims=True)
-                    # video_chunk = (video_chunk - min_val) / (max_val - min_val)
                     video_data.append(video_chunk)
                     keypoint_data.append(file['keypoint'][start:end])
                     tmp_label = label[start:end]
@@ -263,7 +277,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     new_shape = (num_frame, img_size, img_size, c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
-                        img = file['raw_video'][i] / 255.0
+                        img = file['raw_video'][i]
                         resized_img[i] = cv2.resize(img, (img_size, img_size))
 
                 while end <= len(file['raw_video']):
@@ -271,9 +285,6 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                         video_chunk = resized_img[start:end]
                     else:
                         video_chunk = file['raw_video'][start:end]
-                    # min_val = np.min(video_chunk, axis=(0, 1, 2), keepdims=True)
-                    # max_val = np.max(video_chunk, axis=(0, 1, 2), keepdims=True)
-                    # video_chunk = (video_chunk - min_val) / (max_val - min_val)
                     video_data.append(video_chunk)
                     tmp_label = label[start:end]
 
@@ -288,7 +299,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             if model_name in ["DeepPhys", "MTTS"]:
                 dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                           motion_data=np.asarray(motion_data),
-                                          target=np.asarray(target_data))
+                                          target=np.asarray(label_data))
             elif model_name in ["APNETv2"]:
                 dataset = APNETv2Dataset(video_data=np.asarray(video_data),
                                          keypoint_data=np.asarray(keypoint_data),
@@ -310,8 +321,14 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             elif model_name in ["Vitamon", "Vitamon_phase2"]:
                 dataset = VitamonDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data))
-            datasets = [rst_dataset, dataset]
-            rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
+            if not  eval_flag:
+                datasets = [rst_dataset, dataset]
+                rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
+            else:
+                datasets.append(dataset)
             round_flag = 0
+    if not eval_flag:
+        return rst_dataset
+    else:
+        return datasets
 
-    return rst_dataset

@@ -49,6 +49,7 @@ def preprocessing(
             print(data_list)
         elif dataset_name == "UBFC":
             data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+            # data_list = ['subject15']
             vid_name = "/vid.avi"
             ground_truth_name = "/ground_truth.txt"
         elif dataset_name == "cuff_less_blood_pressure":
@@ -98,9 +99,10 @@ def preprocessing(
 
         # multiprocessing
         chunk_num = math.ceil(len(data_list) / chunk_size)
+        if chunk_num == 1:
+            chunk_size = len(data_list)
         for i in range(chunk_num):
             if i == chunk_num - 1:
-                break
                 chunk_data_list = data_list[i * chunk_size:]
             else:
                 chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]
@@ -138,13 +140,17 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     save_root_path = kwargs['save_root_path']
     dataset_name = kwargs['dataset_name']
 
-    preprocessed_label = label_preprocess(preprocess_type=preprocess_type,
-                                          path=path + ground_truth_name,
-                                          **kwargs)
 
     raw_video = video_preprocess(preprocess_type=preprocess_type,
                                 path=path + vid_name,
                                 **kwargs)
+
+    preprocessed_label = label_preprocess(preprocess_type=preprocess_type,
+                                          path=path + ground_truth_name,
+                                          frame_total = len(raw_video),
+                                          **kwargs)
+
+
     if None in raw_video:
         return
 

@@ -5,10 +5,10 @@ model_path: "/media/hdd1/dy/model/"
 preprocess:
   flag: true
   analyze: false
-  chunk_size: 32
+  chunk_size: 48
   datasets:
     - name: UBFC
-      type: continuous # diff or continuous
+      type: diff # diff or continuous
       video_fps: 30
       fixed_position: 1
       face_detect_algorithm: 1 # 1: face recognition 2: FaceMesh
