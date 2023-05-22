@@ -18,7 +18,10 @@ class PhysNet(torch.nn.Module):
 
     def forward(self, x):
         [batch, channel, length, width, height] = x.shape
-        return self.physnet(x).view(-1, length)
+        outputs = self.physnet(x).view(-1, length)
+        outputs = (outputs - torch.mean(outputs)) / torch.std(outputs)
+        # target = (target - torch.mean(target)) / torch.std(target)
+        return outputs
 
 
 class PhysNet_2DCNN_LSTM(torch.nn.Module):

@@ -20,7 +20,7 @@ def loss_fn(loss_name):
     :return: loss function module(class)
     """
 
-    if loss_name == "mse":
+    if loss_name == "MSE":
         return loss.MSELoss()
     elif loss_name == "fft":
         return fftLoss()

@@ -3,7 +3,7 @@ import torchsummary
 
 from rppg.log import log_warning, log_info
 from nets.models.AxisNet import AxisNet, PhysiologicalGenerator
-from nets.models.DeepPhys import DeepPhys
+from rppg.nets.DeepPhys import DeepPhys
 from nets.models.DeepPhys_DA import DeepPhys_DA
 from nets.models.ETArPPGNet import ETArPPGNet
 from nets.models.PPNet import PPNet
