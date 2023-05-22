@@ -28,7 +28,7 @@ def dataset_split(
         val_len = int(np.floor(dataset_len * ratio[1]))
         test_len = dataset_len - train_len - val_len
         datasets = random_split(dataset, [train_len, val_len, test_len])
-        return datasets[0], datasets[1], datasets[2],
+        return datasets[0], datasets[1], datasets[2]
     elif ratio.__len__() == 2:
         train_len = int(np.floor(dataset_len * ratio[0]))
         val_len = dataset_len - train_len
@@ -246,7 +246,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     # video_chunks.append(video_chunk)
                     start += time_length - overlap_interval
                     end += time_length - overlap_interval
-            elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+            elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN", "PhysFormer"]:
                 start = 0
                 end = time_length
                 # label = detrend(file['preprocessed_label'], 100)
@@ -296,7 +296,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                                          target_length=time_length,
                                          img_size=img_size)
 
-            elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN"]:
+            elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN", "PhysFormer"]:
                 dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data),
                                          target_length=time_length)

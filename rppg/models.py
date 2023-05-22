@@ -12,6 +12,7 @@ from nets.models.RhythmNet import RhythmNet
 from nets.models.sub_models.VitaMon import Vitamon
 from rppg.nets.APNETv2 import APNETv2
 from rppg.nets.PhysNet import PhysNet
+from rppg.nets.PhysFormer import PhysFormer
 
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -44,6 +45,8 @@ def get_model(model_name, time_length):
     #     model = APNET()
     elif model_name == "APNETv2":
         model = APNETv2()
+    elif model_name == "PhysFormer":
+        model = PhysFormer(frame=time_length)
     else:
         log_warning("pls implemented model")
         raise NotImplementedError("implement a custom model(%s)" % model_name)
