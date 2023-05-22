@@ -63,8 +63,11 @@ You can find information about datasets at the following [link](https://github.c
 
 |   MODEL   | Train/val Dataset | Test Dataset |   lr   |  optim  |  lr-sch  | HR - MAE | HR - RMSE | HR - MAPE | HR -corr |
 |:---------:|:-----------------:|:------------:|:------:|:-------:|:--------:|:--------:|:---------:|:---------:|:--------:|
+ |  DeepPhys |       UBFC        |     UBFC     |  1e-3  |  AdamW  |   oneCycle   |   3.71  |   13.82    |   4.03    |   0.81   |
+ |  DeepPhys |       PURE        |     PURE     |  1e-3  |  AdamW  |   oneCycle   |   1.78   |   7.72    |   1.86    |   0.91   |
  |  PhysNet  |       UBFC        |     PURE     |  1e-3  |  Adam   |   None   |   1.74   |   8.40    |   1.75    |   0.92   |
  |  PhysNet  |       PURE        |     UBFC     |  1e-3  |  Adam   |   None   |   1.90   |   7.02    |   2.11    |   0.87   |
+ 
 
 - CNIBP
 
