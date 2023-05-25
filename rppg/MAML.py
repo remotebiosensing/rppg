@@ -30,21 +30,21 @@ class MAML:
 
     def meta_update(self, tasks, epoch):
         meta_grads = []
-        outter_loss = loss_fn(self.outer_loss)
-        outter_optim = optimizer(self.model.parameters(), learning_rate=self.outer_lr, optim=self.outer_optim)
+        outer_loss = loss_fn(self.outer_loss)
+        outer_optim = optimizer(self.model.parameters(), learning_rate=self.outer_lr, optim=self.outer_optim)
         with tqdm(total=len(tasks), position=0, leave=True, desc=f"epoch {epoch}") as pbar:
             for support_task, query_task in tasks:
                 loss = 0.0
                 individual_model = self.inner_update(support_task)
 
                 for x_batch, y_batch in query_task:
-                    loss += outter_loss(individual_model(x_batch), y_batch)
+                    loss += outer_loss(individual_model(x_batch), y_batch)
                 loss /= len(tasks)
                 grads = torch.autograd.grad(loss, individual_model.parameters(), retain_graph=True)
                 meta_grads.append(grads)
                 pbar.update(1)
 
-            outter_optim.zero_grad()
+            outer_optim.zero_grad()
             for (name, param), grads in zip(self.model.named_parameters(), zip(*meta_grads)):
                 grad = torch.stack([g for g in grads]).mean(dim=0)
                 if param.grad is None:
@@ -53,6 +53,6 @@ class MAML:
                     # param.grad += grad.detach()
                     param.grad += self.outer_lr * grad.detach()
 
-            outter_optim.step()
+            outer_optim.step()
 
 
