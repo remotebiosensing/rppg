@@ -1,7 +1,7 @@
 ---
 data_root_path : "/media/hdd1/dataset/"
 dataset_path: "/media/hdd1/dy_project/dataset/" # preprocessed data path
-model_path: "/media/hdd1/dy/model/"
+model_path: "//media/hdd1/dy_project/dy_project/rppg_mac/rppg/pretrain_model"
 preprocess:
   flag: false
   analyze : false
@@ -11,21 +11,19 @@ fit:
   model: PhysNet
   time_length: 128
   overlap_interval: 0 # default 0
-  img_size: 128
+  img_size: 32
   train_flag: True
   eval_flag: True
-  eval_interval: 100
-  batch_size: 10
+  batch_size: 30
   meta:
     flag: false
     inner_optim: adam
     inner_loss: mse
     inner_lr: 0.01
   train:
-    dataset: UBFC
+    dataset: PURE
     shuffle: true
     fs: 30 #video fps
-    batch_size: 4
     learning_rate: 0.001
     epochs: 100
     loss: neg_pearson
@@ -33,9 +31,8 @@ fit:
   test:
     cal_type : FFT
     metric: ['MAE','RMSE','MAPE','Pearson']
-    dataset: PURE
+    dataset: UBFC
     shuffle: false
     fs: 30 #video fps
-    batch_size: 4
 
 

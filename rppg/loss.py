@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
 import numpy as np
-from log import log_warning
+from rppg.log import log_warning
 import torch.nn.functional as F
 import scipy
 from numpy import dot
@@ -20,7 +20,7 @@ def loss_fn(loss_name):
     :return: loss function module(class)
     """
 
-    if loss_name == "mse":
+    if loss_name == "MSE":
         return loss.MSELoss()
     elif loss_name == "fft":
         return fftLoss()

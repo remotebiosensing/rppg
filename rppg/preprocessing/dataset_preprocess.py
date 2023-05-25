@@ -2,18 +2,10 @@ import multiprocessing
 import os
 
 import h5py
-import numpy as np
-from torch.utils.data import random_split
-
-import datetime
+import math
 
 from rppg.preprocessing.image_preprocess import video_preprocess
 from rppg.preprocessing.text_preprocess import label_preprocess
-
-import math
-
-from params import params
-
 
 
 def preprocessing(
@@ -46,7 +38,6 @@ def preprocessing(
         fixed_position = dataset["fixed_position"]
         img_size = dataset['image_size']
 
-
         dataset_root_path = data_root_path + dataset_name
 
         return_dict = manager.dict()
@@ -58,6 +49,7 @@ def preprocessing(
             print(data_list)
         elif dataset_name == "UBFC":
             data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+            # data_list = ['subject15']
             vid_name = "/vid.avi"
             ground_truth_name = "/ground_truth.txt"
         elif dataset_name == "cuff_less_blood_pressure":
@@ -76,7 +68,7 @@ def preprocessing(
                     source_list = [source for source in os.listdir(person_data_path + "/" + person + "/" + v)]
                     for source in source_list:
                         tmp = data_dir + "/" + person + "/" + v + "/" + source
-                        if len(os.listdir(dataset_root_path+tmp)) == 5 and source == 'source1':
+                        if len(os.listdir(dataset_root_path + tmp)) == 5 and source == 'source1':
                             data_list.append(tmp)
 
             vid_name = "/video.avi"
@@ -107,9 +99,10 @@ def preprocessing(
 
         # multiprocessing
         chunk_num = math.ceil(len(data_list) / chunk_size)
+        if chunk_num == 1:
+            chunk_size = len(data_list)
         for i in range(chunk_num):
             if i == chunk_num - 1:
-                break
                 chunk_data_list = data_list[i * chunk_size:]
             else:
                 chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]
@@ -123,7 +116,17 @@ def preprocessing(
                                 fixed_position=fixed_position, img_size=img_size,
                                 chunk_size=chunk_size, idx=i)
 
-
+def mkdir_p(directory):
+    """Like mkdir -p ."""
+    if not directory:
+        return
+    if directory.endswith("/"):
+        mkdir_p(directory[:-1])
+        return
+    if os.path.isdir(directory):
+        return
+    mkdir_p(os.path.dirname(directory))
+    os.mkdir(directory)
 
 
 def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, return_dict, **kwargs):
@@ -134,32 +137,40 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     :param return_dict: : preprocessed image, label
 
     """
+    save_root_path = kwargs['save_root_path']
+    dataset_name = kwargs['dataset_name']
+
+
+    raw_video = video_preprocess(preprocess_type=preprocess_type,
+                                path=path + vid_name,
+                                **kwargs)
 
     preprocessed_label = label_preprocess(preprocess_type=preprocess_type,
                                           path=path + ground_truth_name,
+                                          frame_total = len(raw_video),
                                           **kwargs)
 
-    rst_dict = video_preprocess(preprocess_type=preprocess_type,
-                                path=path + vid_name,
-                                **kwargs)
-    if None in rst_dict :
+
+    if None in raw_video:
         return
 
-    # ppg, sbp, dbp, hr
-    # if preprocess_type in ["DeepPhys", "PhysNet", "PhysNet_LSTM"]:
-    return_dict[path.replace('/', '') + str(kwargs['flip_flag'])] = {
-        'preprocessed_video': rst_dict["video_data"],
-        'frame_number': rst_dict["frame_number"],
-        'flip_arr': rst_dict["flip_arr"],
-        'keypoint' : rst_dict["keypoint"],
-        'raw_video' : rst_dict["raw_video"],
-        'preprocessed_label': preprocessed_label}
-    # elif preprocess_type in ["TEST"]:
-    #     return_dict[path.replace('/', '')] = {
-    #         'keypoint': rst_dict["keypoint"],
-    #         'raw_video': rst_dict["raw_video"],
-    #         'preprocessed_label': preprocessed_label }
-        # 'preprocessed_hr': preprocessed_hr}
+    path = path.split('/')
+
+    add_info = ''
+
+    if dataset_name == "VIPL_HR":
+        add_info = path[-3] + "/" + path[-2] + "/"
+
+    dir_path = save_root_path + "/" + dataset_name + "/" + preprocess_type + "/" + add_info
+    if not os.path.isdir(dir_path):
+        mkdir_p(dir_path)
+
+    data = h5py.File(dir_path +   path[-1] + ".hdf5","w")
+    data.create_dataset('raw_video',data=raw_video)
+    data.create_dataset('preprocessed_label', data=preprocessed_label[0])
+    data.create_dataset('preprocessed_hr',data=preprocessed_label[1])
+    data.close()
+
 
 
 def chunk_preprocessing(preprocess_type,
@@ -174,8 +185,6 @@ def chunk_preprocessing(preprocess_type,
                         img_size,
                         chunk_size,
                         idx):
-
-
     process = []
     save_root_path = dataset_path
 
@@ -190,6 +199,8 @@ def chunk_preprocessing(preprocess_type,
                                            ground_truth_name,
                                            return_dict)
                                        , kwargs={"face_detect_algorithm": face_detect_algorithm,
+                                                 "save_root_path": save_root_path,
+                                                 "dataset_name" : dataset_name,
                                                  "fixed_position": fixed_position,
                                                  "img_size": img_size,
                                                  "flip_flag": 0})
@@ -198,20 +209,5 @@ def chunk_preprocessing(preprocess_type,
         proc.start()
     for proc in process:
         proc.join()
-
-
-    dataset_path = h5py.File(save_root_path + preprocess_type + "_" + dataset_name + "_" + str(idx) + ".hdf5",
-                             "w")
-
-    for index, data_path in enumerate(return_dict.keys()):
-        dset = dataset_path.create_group(data_path)
-        dset['preprocessed_video'] = return_dict[data_path]['preprocessed_video']
-        dset['frame_number'] = return_dict[data_path]['frame_number']
-        dset['preprocessed_label'] = return_dict[data_path]['preprocessed_label'][0]
-        dset['preprocessed_hr'] = return_dict[data_path]['preprocessed_label'][1]
-        dset['flip_arr'] = return_dict[data_path]['flip_arr']
-        dset['keypoint'] = return_dict[data_path]['keypoint']
-        dset['raw_video'] = return_dict[data_path]['raw_video']
-    dataset_path.close()
 
     manager.shutdown()
