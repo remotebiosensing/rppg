@@ -10,6 +10,7 @@ unused/
 *.xml
 *.iml
 __pycache__/
+*.pyc
 preprocessing/__pycache__
 preprocessing/utils/__pycache__
 sample_dataset/
