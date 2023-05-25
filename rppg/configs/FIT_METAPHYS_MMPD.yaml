@@ -9,7 +9,7 @@ preprocess:
   datasets:
 fit:
   model: PhysNet
-  time_length: 128
+  time_length: 64
   overlap_interval: 0 # default 0
   img_size: 128
   train_flag: False
@@ -24,10 +24,12 @@ fit:
       flag: True
     inner_optim: Adam # SGD
     inner_loss: neg_pearson
-    inner_lr: 0.001
+    inner_lr: 0.0005
     outer_optim: SGD
     outer_loss: neg_pearson
-    outer_lr: 0.001
+    outer_lr: 0.0001
+    inner_update_num: 5
+    outer_update_num: 1
   train:
     dataset: MMPD
     shuffle: True
