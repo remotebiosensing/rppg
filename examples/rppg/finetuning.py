@@ -10,8 +10,16 @@ from rppg.optim import optimizer
 from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import preprocessing
+from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr, IrrelevantPowerRatio)
+# from rppg.train import train_fn, val_fn, test_fn
+from rppg.MAML import MAML
+# from rppg.run import test_fn
+from tqdm import tqdm
 from rppg.run import run
 
+import os
+import matplotlib.pyplot as plt
+from rppg.utils.HR_Analyze.MMPD import BVPsignal as bvp
 SEED = 0
 
 # for Reproducible model
@@ -27,16 +35,9 @@ generator = torch.Generator()
 generator.manual_seed(SEED)
 
 if __name__ == "__main__":
+    cfg = get_config("../../rppg/configs/FINETUNE.yaml")
 
-    cfg = get_config("../../rppg/configs/FIT_PHYSNET_UBFC_UBFC.yaml")
-    if cfg.preprocess.flag:
-        preprocessing(
-            dataset_root_path=cfg.data_root_path,
-            preprocess_cfg=cfg.preprocess
-        )
-
-        # load dataset
-    datasets = dataset_loader(
+    dataset = dataset_loader(
         save_root_path=cfg.dataset_path,
         model_name=cfg.fit.model,
         dataset_name=[cfg.fit.train.dataset, cfg.fit.test.dataset],
@@ -44,24 +45,40 @@ if __name__ == "__main__":
         overlap_interval=cfg.fit.overlap_interval,
         img_size=cfg.fit.img_size,
         train_flag=cfg.fit.train_flag,
-        eval_flag=cfg.fit.eval_flag
+        eval_flag=cfg.fit.eval_flag,
+        meta=True
     )
 
-    data_loaders = data_loader(
-        datasets=datasets,
-        batch_size=cfg.fit.batch_size
-    )
+    tasks = data_loader(datasets=dataset,
+                        batch_size=cfg.fit.train.batch_size,
+                        meta=True)
 
     model = get_model(
         model_name=cfg.fit.model,
         time_length=cfg.fit.time_length)
-
+    if cfg.fit.pretrain.flag:
+        if cfg.fit.meta.flag:
+            pretrained_path = cfg.temp_path +\
+                              "Meta_" + cfg.fit.model + "_" +\
+                              cfg.fit.pretrain.dataset +\
+                              str(cfg.fit.meta.outer_update_num) + "_" +\
+                              str(cfg.fit.meta.inner_update_num) + ".pt"
+        else:
+            pretrained_path = cfg.fit.pretrain.path + cfg.fit.model + "_" + cfg.fit.pretrain.dataset + ".pt"
+        if os.path.isfile(pretrained_path):
+            model.load_state_dict(torch.load(pretrained_path))
+            print("Loading pre-trained model : {}".format(pretrained_path))
+        else:
+            raise FileExistsError("No pre-trained model")
+    else:
+        print("Cold start with no pre-trained model")
     wandb_cfg = get_config("../../rppg/configs/WANDB_CONFG.yaml")
-    if wandb_cfg.flag and cfg.fit.train_flag:
+
+    if wandb_cfg.flag:
         wandb.init(project=wandb_cfg.wandb_project_name,
                    entity=wandb_cfg.wandb_entity,
-                   name=cfg.fit.model + "/TRAIN_DATA" +
-                        cfg.fit.train.dataset + "/TEST_DATA" +
+                   name="Meta_" + cfg.fit.model + "/TRAIN_DATA:" +
+                        cfg.fit.train.dataset + "/TEST_DATA:" +
                         cfg.fit.test.dataset + "/" +
                         str(cfg.fit.time_length) + "/" +
                         datetime.datetime.now().strftime('%m-%d%H:%M:%S'))
@@ -70,7 +87,6 @@ if __name__ == "__main__":
             "epochs": cfg.fit.train.epochs,
             "batch_size": cfg.fit.batch_size
         }
-        wandb.watch(model, log="all", log_freq=10)
 
     opt = None
     criterion = None
@@ -81,8 +97,5 @@ if __name__ == "__main__":
             learning_rate=cfg.fit.train.learning_rate,
             optim=cfg.fit.train.optimizer)
         criterion = loss_fn(loss_name=cfg.fit.train.loss)
-        # lr_sch = torch.optim.lr_scheduler.OneCycleLR(
-        #     opt, max_lr=cfg.fit.train.learning_rate, epochs=cfg.fit.train.epochs,
-        #     steps_per_epoch=len(datasets[0]))
 
-    run(model, opt, lr_sch, criterion, cfg.fit, data_loaders, cfg.model_path, wandb_cfg.flag)
+    run(model, opt, lr_sch, criterion, cfg.fit, tasks[0], cfg.model_path, wandb_cfg.flag)

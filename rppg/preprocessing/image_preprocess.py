@@ -1,5 +1,6 @@
 import json
 import os
+import scipy.io as sio
 
 import cv2
 import face_recognition
@@ -164,6 +165,108 @@ def CONT_preprocess_Video(path, **kwargs):
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size))
 
+    elif path.__contains__(".mat"):
+        f = sio.loadmat(path)
+        frames = f['video']
+        frame_total = len(frames)
+
+        j = 0
+        with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
+            while j < frame_total:
+                frame = frames[j]
+                face_locations = face_recognition.face_locations((frame * 255.).astype(np.uint8), 1)
+                if len(face_locations) >= 1 :
+                    face_locations = list(face_locations)
+                    face_location = face_locations[0]
+                    pos.append(
+                        {
+                            'success' : True,
+                            'x_pos' : face_location[1::2],
+                            'y_pos' : face_location[0::2],
+                        }
+                    )
+                else:
+                    pos.append(
+                        {
+                            'success' : False,
+                            'x_pos' : [0,0],
+                            'y_pos' : [0,0],
+                        }
+                    )
+                j += 1
+                pbar.update(1)
+
+        success_flag = False
+        cnt_x, cnt_y = frames.shape[2]//2, frames.shape[2]//2
+
+        for frame_num in range(frame_total):
+            if pos[frame_num]['success']:
+                success_flag = True
+                lm_x = np.array(pos[frame_num]['x_pos'])
+                lm_y = np.array(pos[frame_num]['y_pos'])
+
+                minx = np.min(lm_x)
+                maxx = np.max(lm_x)
+                miny = np.min(lm_y)
+                maxy = np.max(lm_y)
+
+                y_range_ext = (maxy - miny) * 0.2
+                miny = miny - y_range_ext
+
+                cnt_x = np.round((minx + maxx) / 2).astype('int')
+                cnt_y = np.round((maxy + miny) / 2).astype('int')
+                break
+
+        if success_flag:
+            bbox_size = bbox_size = np.round(1.5 * (maxy - miny)).astype('int')
+        else:
+            bbox_size = frames.shape[2]
+
+        if img_size == None:
+            img_size = bbox_size
+
+        raw_video = np.empty((frame_total, img_size, img_size, 3))
+
+        for frame_num in range(frame_total):
+            if success_flag:
+                if pos[frame_num]['success']:
+                    lm_x_ = np.array(pos[frame_num]['x_pos'])
+                    lm_y_ = np.array(pos[frame_num]['y_pos'])
+
+                    lm_x = 0.9 * lm_x + 0.1 * lm_x_
+                    lm_y = 0.9 * lm_y + 0.1 * lm_y_
+
+                    minx = np.min(lm_x)
+                    maxx = np.max(lm_x)
+                    miny = np.min(lm_y)
+                    maxy = np.max(lm_y)
+
+                    y_range_ext = (maxy - miny) * 0.2
+                    miny = miny - y_range_ext
+
+                    cnt_x = np.round((minx + maxx) / 2).astype('int')
+                    cnt_y = np.round((maxy + miny) / 2).astype('int')
+
+                ########## for bbox ################
+                bbox_half_size = int(bbox_size / 2)
+
+                frame = frames[frame_num]
+                face = np.take(frame, range(cnt_y - bbox_half_size, cnt_y - bbox_half_size + bbox_size), 0, mode='clip')
+                face = np.take(face, range(cnt_x - bbox_half_size, cnt_x - bbox_half_size + bbox_size), 1, mode='clip')
+
+                if img_size == bbox_size:
+                    raw_video[frame_num] = face
+                else:
+                    raw_video[frame_num] = cv2.resize(face, (img_size, img_size))
+            else:
+                frame = frames[frame_num]
+                face = np.take(frame, range(0, bbox_size), 0, mode='clip')
+                face = np.take(face, range(0, bbox_size), 1, mode='clip')
+
+                if img_size == bbox_size:
+                    raw_video[frame_num] = face
+                else:
+                    raw_video[frame_num] = cv2.resize(face, (img_size, img_size))
 
     else:
         cap = cv2.VideoCapture(path)
