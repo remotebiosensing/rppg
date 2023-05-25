@@ -1,0 +1,37 @@
+---
+dataset_path: "/hdd/hdd1/dataset/data/preprocessed/" # preprocessed data path
+model_path: "/hdd/hdd1/models/rppg/fine_tuned/"
+temp_path: "/hdd/hdd1/models/rppg/"
+pretrained_path: "/hdd/hdd1/models/rppg/retrained/"
+
+fit:
+  model: PhysNet
+  time_length: 64
+  overlap_interval: 0 # default 0
+  img_size: 128
+  train_flag: True
+  eval_flag: False
+  batch_size: 16
+  pretrain:
+    flag: True
+    dataset: MMPD
+    path: "/hdd/hdd1/models/rppg/retrained/"
+  meta:
+    flag: True
+    inner_update_num: 5
+    outer_update_num: 1
+    num_epochs: 1
+
+  train:
+    dataset: VIPL
+    shuffle: True
+    fs: 30
+    batch_size: 8
+    learning_rate: 0.0001
+    epochs: 30
+    loss: neg_pearson
+    optimizer: Adam
+  test:
+    dataset: VIPL
+    shuffle: False
+
