@@ -165,7 +165,7 @@ class PhysFormer(nn.Module):
 
         self.apply(_init)
 
-    def forward(self, x, gra_sharp):
+    def forward(self, x, gra_sharp=2.0):
 
         b, c, t, fh, fw = x.shape
 
@@ -197,7 +197,7 @@ class PhysFormer(nn.Module):
 
         rPPG = rPPG.squeeze(1)
 
-        return rPPG, Score1, Score2, Score3
+        return rPPG#, Score1, Score2, Score3
 
 
 '''
