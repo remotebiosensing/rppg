@@ -156,7 +156,7 @@ def get_segments_path(read_path: str, gen: int, encoder: str, segment_max_cnt: i
 def read_total_data(process_id: int, segments: list,
                     preprocessing_mode: str, chunk_size: int, sampling_rate: int,
                     threshold: float, ple_scale: bool, hdf_flag: bool,
-                    patient_info_df, ple_cycle: list, abp_cycle: list,
+                    patient_info_df, ple_cycle: list, ple_cycle_len: list, abp_cycle: list, abp_cycle_len: list,
                     info_total: list, ple_total: list, abp_total: list, dbp_total: list, sbp_total: list,
                     p_status_total: list, a_status_total: list):
     """
@@ -182,37 +182,17 @@ def read_total_data(process_id: int, segments: list,
         total_chunk_cnt += 1
         chunk_per_segment = 0
         segment = segment.strip('.hea')
-        # patient_id = segment.split('/')[-2].split('_')[0]
         patient_id = segment.split('/')[-2].split('_')[0][-5:]
-        ple_idx, abp_idx = wf.find_channel_idx(segment)
-        raw_ple_segment, raw_abp_segment = np.squeeze(
-            np.split(wfdb.rdrecord(segment, channels=[ple_idx, abp_idx]).p_signal, 2, axis=1))
-        if raw_abp_segment is float or raw_ple_segment is float or len(raw_ple_segment) < chunk_size or len(
-                raw_abp_segment) < chunk_size:
-            continue
-        else:
+        length_flag, raw_ple_segment, raw_abp_segment = wf.get_channel_segments(segment, chunk_size)
+
+        if length_flag:
             nan_mask = ~(np.isnan(raw_ple_segment) | np.isnan(raw_abp_segment))
-            if ple_scale:
-                ple_record = wfdb.rdrecord(segment, channels=[ple_idx])
-                ple_digital_sig = np.squeeze(ple_record.adc())
-                ple_gain = ple_record.adc_gain[0]
-                ple_baseline = ple_record.baseline[0]
-                # ple_sig_len = ple_record.sig_len
-                # ple_analogue_sig = np.squeeze(ple_record.p_signal)
-                # ple_init_value = ple_record.init_value[0]
-                # ple_adc_zero = ple_record.adc_zero[0]
-                ''' ************************************************** revert gain controller '''
-                ple_segment = (((ple_digital_sig - ple_baseline) / ple_gain) * (1023. / ple_gain))[nan_mask]
-                ''' ************************************************************************* '''
-            else:
-                ple_segment = raw_ple_segment[nan_mask]
+
+            ple_segment = raw_ple_segment[nan_mask]
             abp_segment = raw_abp_segment[nan_mask]
 
             if len(ple_segment) < chunk_size or len(abp_segment) < chunk_size:
                 continue
-            # ple_chunks = su.SignalHandler(ple_segment).list_slice(chunk_size)
-            # abp_chunks = su.SignalHandler(abp_segment).list_slice(chunk_size)
-            # ple_chunks, abp_chunks = su.shuffle_two_list(ple_chunks, abp_chunks)
             ple_chunks, abp_chunks = dsh(ple_segment, abp_segment).shuffle_lists()
             for p_chunk, a_chunk in zip(ple_chunks, abp_chunks):
                 p_flat_range = np.where(p_chunk == np.max(p_chunk))[0]
@@ -226,42 +206,31 @@ def read_total_data(process_id: int, segments: list,
                     chunk_per_segment += 1
                     if chunk_per_segment == 10:
                         break
+                    if ple_scale:
+                        ple_info.input_sig = ple_info.input_sig / np.max(ple_info.input_sig)
+                        ple_info.cycle = ple_info.cycle / np.max(ple_info.cycle)
                     ple_total.append(ple_info.input_sig)
+                    ple_cycle_len.append(len(ple_info.cycle))
                     ple_cycle.append(signal.resample(ple_info.cycle, 100))
+
                     abp_total.append(abp_info.input_sig)
+                    abp_cycle_len.append(len(abp_info.cycle))
                     abp_cycle.append(signal.resample(abp_info.cycle, 100))
                     dbp_total.append(dsh(abp_info.dbp_idx, abp_info.dbp_value).stack_sigs('vertical', resize_n=15))
                     sbp_total.append(dsh(abp_info.sbp_idx, abp_info.sbp_value).stack_sigs('vertical', resize_n=15))
+
                     info_total.append(patient_info_df[patient_id][:-1])
                     p_status_total.append(ple_info.status)
                     a_status_total.append(abp_info.status + abp_info.detail_status)
-                    # p_status_total.append(ple_info.status)
-                    # a_status_total.append(abp_info.status)
                 else:  # 분석에 사용할 데이터셋
-                    continue
-                    # invalid_pid.append(patient_id)
-                    # invalid_p_chunk.appepnd(p_chunk)
-                    # invalid_a_chunk.append(a_chunk)
-                    # p_status_total.append(np.array(ple_info.status))
-                    # a_status_total.append(np.array(abp_info.status + abp_info.detail_status))
-                    #
-                    # chunk_per_segment += 1
-                    # ''' start adding data to hdf5 file '''
-                # else:
-                #     flipped_chunk_cnt += 1
-                #     continue
-                #     p_cycle = p_sig_info.get_cycle()
-                #     a_cycle = a_sig_info.get_cycle()
-                # ple_total.append(p_chunk)
-                # abp_total.append(a_chunk)
-                # size_total.append(len(p_chunk))
-                # ohe_total.append(patient_info_total[patient_id])
-                # eliminated_total.append(0)
-            # pass
+                    p_status_total.append(ple_info.status)
+                    a_status_total.append(abp_info.status + abp_info.detail_status)
+        else:
+            continue
 
 
 def split_dataset(model_name: str, params: dict, train_segments: list, val_segments: list, test_segments: list,
-                  patient_info, patient_df, data_size: list):
+                  patient_info, patient_df, data_size: list, p_ratio: list, a_ratio: list):
     '''
     model_name : selects the length of chunks
     root_path : dataset's root path
@@ -270,8 +239,7 @@ def split_dataset(model_name: str, params: dict, train_segments: list, val_segme
     ple_scale : if True, returns restored ppg signal with gain
     '''
 
-    # len_info = []
-    g_info = gender_info[params['gender']]
+
     x = dt.datetime.now()
     date = str(x.year) + str(x.month) + str(x.day)
     dset_path = '/hdd/hdd1/dataset/bpnet/preprocessed_' + date
@@ -283,44 +251,35 @@ def split_dataset(model_name: str, params: dict, train_segments: list, val_segme
 
     if not os.path.isdir(dset_path):
         os.makedirs(dset_path)
-    # if not os.path.isdir(ssd_path):
-    #     os.mkdir(ssd_path)
-
-    # print('dataset splitting...')
-    # train_segments, val_segments, test_segments, patient_info, patient_df = get_segments_path(root_path, g_info[0],
-    #                                                                                           encoder=params['encoder'],
-    #                                                                                           segment_max_cnt=params[
-    #                                                                                               'segment_per_patient'],
-    #                                                                                           size_list=f_list)
 
     patient_df.to_csv(dset_path + 'patient_data.csv')
     # patient_df.to_csv(ssd_path + 'patient_data.csv')
     # print('dataset splitting done... signal extracting...')
 
     for (m, s) in zip(['Train', 'Val', 'Test'], [train_segments, val_segments, test_segments]):
-        print('extracting ' + m + ' data...')
-        data_len_list = mf.multi_processing_sort_by_file_size(model_name=model_name, target_function=read_total_data,
-                                                              mode=m,
-                                                              parameters=params,
-                                                              dset_path=dset_path,
-                                                              splitted_segments_by_f_size=s,
-                                                              patient_info_df=patient_info)
+        print('----- extracting ' + m + ' data -----')
+        data_len_list, ple_ratio, abp_ratio = mf.multi_processing_sort_by_file_size(model_name=model_name,
+                                                                                    target_function=read_total_data,
+                                                                                    mode=m,
+                                                                                    parameters=params,
+                                                                                    dset_path=dset_path,
+                                                                                    splitted_segments_by_f_size=s,
+                                                                                    patient_info_df=patient_info)
         data_size.append(data_len_list)
-        print('extracting ' + m + ' data done...')
-
-    # mf.multi_processing_sort_by_file_size(model_name=model_name, target_function=read_total_data, mode='Train',
-    #                                       parameters=params,
-    #                                       dset_path=dset_path,
-    #                                       segments=train_segments,
-    #                                       patient_info_df=patient_info)
+        p_ratio.append(ple_ratio)
+        a_ratio.append(abp_ratio)
+        print('----- extracting ' + m + ' data done -----')
 
 
 if __name__ == "__main__":
     len_info = []
+    p_r = []
+    a_r = []
 
-    # f_size_list = ['light0', ['light1', 'light2', 'light3', 'heavy1', 'heavy2']
-    f_size_list = ['light3', 'heavy1', 'heavy2']
-    preprocessing_mode = ['none', 'damp', 'flat', 'flip', 'total']
+    f_size_list = ['light1', 'light2' , 'light3', 'heavy1', 'heavy2']
+    # f_size_list = ['light3', 'heavy1', 'heavy2']
+    # preprocessing_mode = ['total']
+    preprocessing_mode = ['flat','flip','damp']
 
     params = {
         'sampling_rate': 125,
@@ -351,12 +310,20 @@ if __name__ == "__main__":
                       test_segments=test_segments,
                       patient_info=patient_info,
                       patient_df=patient_df,
-                      data_size=len_info)
+                      data_size=len_info,
+                      p_ratio=p_r,
+                      a_ratio=a_r)
 
         # df_col1.append(m)
-    f_size_list.append('total')
+    # f_size_list.append('total')
+    df_path = '/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/materials/csv/'
     df = pd.DataFrame(np.array(len_info).transpose(), index=f_size_list,
                       columns=[np.array([[x] * 3 for x in preprocessing_mode]).flatten(),
                                ['Train', 'Validation', 'Test'] * len(preprocessing_mode)])
-    df.to_csv('/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/csv/' + 'dataset_size.csv', sep=',', na_rep='NaN')
+    ratio_df = pd.DataFrame(np.vstack((np.append(np.mean(np.squeeze(np.array(p_r))[:,:-1],axis=0),np.zeros(4)),np.mean(np.squeeze(np.array(a_r))[:,:-1],axis=0))))
+    ratio_df.columns = ['DBP', 'SBP', 'CYCLE', 'FLAT', 'AMP', 'PULSE_PRESSURE', 'FLIP', 'UNDERDAMPED']
+    if not os.path.isdir(df_path):
+        os.mkdir(df_path)
+    df.to_csv(df_path + 'dataset_size.csv', sep=',', na_rep='NaN')
+    ratio_df.round(3).to_csv(df_path + str+'ratio.csv', sep=',', na_rep='NaN')
     print('preprocessing done...')
