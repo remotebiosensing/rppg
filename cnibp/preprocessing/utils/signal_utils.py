@@ -115,6 +115,23 @@ with open("/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/configs/parameter.js
     # chunk_size = json_data.get("parameters").get("chunk_size")
 
 
+def get_mahalanobis_dis(x):
+    """
+    to check mahalanobis distance of detected peaks intervals and values
+    """
+    x = np.diff(x)
+    # diff_check = np.where(x < 10)
+    # x = np.delete(x, diff_check)
+    mean = np.mean(x)
+    std = np.std(x)
+    maha_dis = np.abs(x - mean) / std
+    abnormal_checker = np.where(maha_dis > 2)
+    if len(abnormal_checker[0]) > 0:
+        return False
+    else:
+        return True
+
+
 class SignalHandler:
     def __init__(self, single_sig):
         self.input_sig = single_sig
