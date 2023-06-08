@@ -241,31 +241,37 @@ class SignalInfoExtractor(SignalBase):
         else:
             return False, cycle_len, bpm
 
+    # @property
     def get_cycle(self):
-        # if 3 < len(self.input_sig) // self.cycle_len < 20:
-        if len(self.dbp_idx) > 3 and len(self.sbp_idx) > 3:
-            sbp_dbp = np.append(self.sbp_idx, self.dbp_idx)
-            sbp_dbp = np.sort(sbp_dbp)
+        cycle_list = []
+        cycle_len_list = []
+        lr_check_list = []
+        if len(self.dbp_idx) >= 2:
+            for i in range(len(self.dbp_idx) - 1):
+                cycle = self.input_sig[self.dbp_idx[i]:self.dbp_idx[i + 1]]
+                cycle_list.append(cycle)
+                cycle_len_list.append(len(cycle))
+                lr_check_list.append(abs(cycle[0] - cycle[-1]))
+            avg_cycle_len = np.mean(cycle_len_list, dtype=np.int)
+            # check if cycle lengths are similar
+            if not get_mahalanobis_dis(cycle_len_list):
+                return False, np.zeros(1)
 
-            if self.input_sig[sbp_dbp[0]] > self.input_sig[sbp_dbp[1]]:
-                feature_idx = [self.dbp_idx[1], self.sbp_idx[2], self.dbp_idx[2]]
+            peak_bpm = (self.fs / avg_cycle_len) * 60
+
+            if 35 < peak_bpm < 140 or 35 < self.fft_bpm < 140:
+                length_order = np.argsort(np.abs(np.array(cycle_len_list) - avg_cycle_len))
+                diff_order = np.argsort(lr_check_list)
+                total_order = length_order[np.where((diff_order == length_order) == True)]
+                if len(total_order) > 0:
+                    most_promising_cycle_idx = total_order[0]
+                else:
+                    most_promising_cycle_idx = length_order[0]
+                return True, cycle_list[most_promising_cycle_idx]
             else:
-                feature_idx = [self.dbp_idx[1], self.sbp_idx[1], self.dbp_idx[2]]
-
-            pnt = feature_idx[:-1]
-            temp_diff = np.diff(feature_idx)
-            for idx, (d, p) in enumerate(zip(temp_diff, pnt)):
-                point_n = 5 if idx == 0 else 10
-
-                for i in range(point_n):
-                    temp_val = int(d * (1 / point_n) * (i + 1))
-                    feature_idx = np.insert(feature_idx, i + 1 + 4 * idx, p + temp_val)
-            cycle_val = self.input_sig[feature_idx[0]:feature_idx[-1]]
-            feature_delta = np.diff(self.input_sig[feature_idx]) / np.diff(feature_idx) * 0.166
-
-            return True, cycle_val, feature_idx, feature_delta
+                return False, np.zeros(1)
         else:
-            return False, np.zeros(1), np.zeros(1), np.zeros(1)
+            return False, np.zeros(1)
 
     def get_systolic(self):
         roll_mean = rolling_mean(self.input_sig, self.rolling_sec, self.fs)
