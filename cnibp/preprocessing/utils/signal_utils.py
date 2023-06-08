@@ -79,18 +79,6 @@ class DualSignalHandler:
         # return np.stack((self.sig1, self.sig2), axis=1)
 
 
-
-#
-# def shuffle_two_list(a, b):
-#     '''
-#     shuffle two lists in same order
-#     '''
-#     c = list(zip(a, b))
-#     random.shuffle(c)
-#     a, b = zip(*c)
-#     return list(a), list(b)
-
-
 def r(predictions, targets):
     # 대체로 0.3 이상이면 상관관계가 존재한다고 평가한다
     x_bar = (1 / len(predictions)) * np.sum(predictions)
@@ -203,16 +191,14 @@ class SignalInfoExtractor(SignalBase):
         self.input_sig = input_sig
         self.mode = preprocessing_mode
         self.fs = 125
-        self.freq_flag, self.cycle_len = self.get_cycle_len()
+        self.freq_flag, self.cycle_len, self.fft_bpm = self.get_cycle_len()
         self.rolling_sec = self.cycle_len / self.fs  # rolling sec is decided via cycle detection
 
-        self.sbp_flag, self.sbp_idx, self.sbp_value, self.sbp_std = self.get_systolic()
-        self.dbp_flag, self.dbp_idx, self.dbp_value, self.dbp_std = self.get_diastolic()
+        self.sbp_flag, self.sbp_idx, self.sbp_value = self.get_systolic()
+        self.dbp_flag, self.dbp_idx, self.dbp_value = self.get_diastolic()
         # self.notch = self.get_dicrotic_notch()
-        self.cycle_flag, self.cycle, self.feature_idx, self.delta_cycle = self.get_cycle()
+        self.cycle_flag, self.cycle = self.get_cycle()
 
-        if 'flip' in self.mode:
-            self.flip_flag = self.flip_detection()  # if flipped returns True
         if 'flat' in self.mode:
             self.flat_flag = self.flat_detection()
         self.status = self.return_sig_status()
@@ -336,45 +322,25 @@ class SignalInfoExtractor(SignalBase):
     #         return True
 
     def flat_detection(self):
-        if self.cycle_flag is True:  # cycle detection 이 되었을 때
-            flat_range = np.where(self.input_sig == np.max(self.cycle))[0]
-        else:
-            flat_range = np.where(self.input_sig == np.max(self.input_sig))[0]
+        flat_range = np.where(self.input_sig == np.max(self.cycle))[0]
+
         if len(flat_range) < len(self.input_sig) * 0.05:  # flat 한 부분이 5% 미만일 때
             return False
         else:
             return True
 
-    def flip_detection(self):
-        if self.cycle_flag is False:  # if cycle is not detected
-            return True
-
-        elif self.cycle_flag:  # cycle detection 이 되었을 때
-            if np.argmax(self.cycle) > len(self.cycle) / 2:  # 가장 큰 값이 cycle의 중간보다 뒤에 있을 때 ( 비정상 )
-                return True
-            else:  # 가장 큰 값이 cycle의 중간보다 앞에 있을 때 ( 정상 )
-                return False
-
     def return_sig_status(self):
-        # sig_status = [self.dbp[0], self.sbp[0], self.freq_flag, self.flat_flag, self.flip_flag]
-        sig_status = [self.dbp_flag, self.sbp_flag, self.freq_flag]
-        if 'flip' in self.mode:
-            sig_status.append(self.flip_flag)
+        sig_status = [self.dbp_flag, self.sbp_flag, self.cycle_flag]
         if 'flat' in self.mode:
             sig_status.append(self.flat_flag)
 
         return list(map(int, sig_status))
 
     def signal_validation(self):
-        if sum(self.status[2:]) == 0:
+        if sum(self.status[3:]) == 0 and sum(self.status[:3]) == 3:
             return True
         else:
             return False
-        # if self.sbp_flag and self.dbp_flag and abs(len(self.sbp_idx) - len(self.dbp_idx)) < 2 and \
-        #         not self.freq_flag and not self.flip_flag and not self.flat_flag:
-        #     return True
-        # else:
-        #     return False
 
     def plot(self):
         status_dict = {0: 'dbp', 1: 'sbp', 2: 'freq', 3: 'flat', 4: 'flip',
@@ -406,7 +372,9 @@ class ABPSignalInfoExtractor(SignalInfoExtractor):
         self.mode = preprocessing_mode
         self.amp_flag = self.amp_checker()  # True 사용
         self.pulse_pressure_flag, self.pulse_pressure = self.pulse_pressure_checker()  # True 사용
-        if 'damp' in self.mode:
+        if 'flip' in self.mode:
+            self.flip_flag = self.flip_detection()  # if flipped returns True
+        if 'underdamp' in self.mode:
             self.under_damped_flag = self.under_damped_detection()  # True 사용
         # if 'overdamp' in self.mode:
         #     self.over_damped_flag = self.over_damped_detection()  # True 사용
@@ -446,14 +414,14 @@ class ABPSignalInfoExtractor(SignalInfoExtractor):
 
     def pulse_pressure_checker(self):
         if self.sbp_flag and self.dbp_flag:
-            if len(self.dbp_idx) > len(self.sbp_idx):
+            if len(self.dbp_idx) >= len(self.sbp_idx):
                 pp = self.sbp_value - self.dbp_value[:len(self.sbp_value)]
             elif len(self.dbp_idx) < len(self.sbp_idx):
                 pp = self.sbp_value[:len(self.dbp_value)] - self.dbp_value
             else:
                 pp = self.sbp_value - self.dbp_value
         else:
-            return True, None
+            return False, None
         if np.mean(pp) < np.mean(self.sbp_value) * 0.25:
             return True, pp
         elif np.mean(pp) > 100:
@@ -462,12 +430,8 @@ class ABPSignalInfoExtractor(SignalInfoExtractor):
             return False, pp
 
     def under_damped_detection(self):
-        # oscillation_cnt = np.diff()
-        if self.cycle_flag is False:  # cycle detection이 안되었을 때
-            return True
-        elif self.cycle_flag:  # cycle detection이 되었을 때
+        if self.cycle_flag:
             start_point = np.argmax(self.cycle)
-            # end_point = start_point + 3
             end_point = start_point + int(len(self.cycle) * 0.03)
 
             diff = np.diff(self.cycle[start_point:end_point])
@@ -475,7 +439,10 @@ class ABPSignalInfoExtractor(SignalInfoExtractor):
                 return True
             else:  # 최고점에서 3 프레임의 기울기가 -5보다 크면 ( 너무 급격히 떨어지지 않으면 )
                 return False
+        else:
+            return False
 
+    # TODO : over damped signal detection
     def over_damped_detection(self):
         return False
         # if self.cycle_flag:
@@ -493,14 +460,16 @@ class ABPSignalInfoExtractor(SignalInfoExtractor):
 
     def return_abp_sig_status(self):
         sig_status = [self.amp_flag, self.pulse_pressure_flag]
-        if 'damp' in self.mode:
+        if 'flip' in self.mode:
+            sig_status.append(self.flip_flag)
+        if 'underdamp' in self.mode:
             sig_status.append(self.under_damped_flag)
         # if 'overdamp' in self.mode:
         #     sig_status.append(self.over_damped_flag)
         return list(map(int, sig_status))
 
     def abp_signal_validation(self):
-        if sum(self.detail_status) == 0:
+        if sum(self.detail_status) == 0 and self.valid_flag:
             return True
         else:
             return False
@@ -548,460 +517,3 @@ def signal_comparator(ple, abp, preprocessing_mode, threshold=0.9, sampling_rate
             return False, ple_info, abp_info
     else:
         return False, ple_info, abp_info
-
-# def signal_quality_checker(input_sig, is_abp):
-#     bp = SignalInfoExtractor(input_sig)
-#     s = bp.get_systolic()[-1]
-#     d = bp.get_diastolic
-#     # s = bp.get_systolic(input_sig)[-1]
-#     # d = bp.get_diastolic(input_sig)
-#
-#     # print('sig_quality_checker', systolic_n, diastolic_n)
-#     if is_abp:
-#         if (np.abs(len(s) - len(d)) > 2) or (np.std(s) > 5) or (np.std(d) > 5) or (
-#                 np.abs(np.mean(s) - np.mean(d)) < 20):
-#             return False
-#         else:
-#             return True
-#     else:
-#         if (np.abs(len(s) - len(d)) > 2) or (np.std(s) > 0.5) or (np.std(d) > 0.5):
-#             return False
-#         else:
-#             return True
-
-
-# def channel_spliter(multi_sig):
-#     if np.ndim(multi_sig) == 2:
-#         # for mimicdataset ( 2 channels : [ABP, PPG] )
-#         if np.shape(multi_sig)[-1] == 2:
-#             abp_split, ple_split = np.split(multi_sig, 2, axis=1)
-#         # for ucidataset ( 3 channels : [PPG, ABP, ECG] / ECG not needed )
-#         else:
-#             ple_split, abp_split, _ = np.split(multi_sig, 3, axis=1)
-#         return np.squeeze(abp_split), np.squeeze(ple_split)
-#
-#     elif np.ndim(multi_sig) == 3:  # ndim==3
-#         if np.shape(multi_sig)[-1] == 2:
-#             abp_split, ple_split = np.split(multi_sig, 2, axis=2)
-#             return np.squeeze(abp_split), np.squeeze(ple_split)
-#         else:
-#             print("not supported shape for sig_spliter() due to different length of data")
-#
-#     else:
-#         print("not supported dimension for sig_spliter()")
-
-
-# def ds_detection(ABP):
-#     raw_ABP = ABP
-#     ABP = filter_signal(np.squeeze(ABP), cutoff=3, sample_rate=60., order=2, filtertype='lowpass')
-#     rolling_sec = 0.75
-#     SBP = SBP_detection(ABP, rolling_sec)
-#     DBP = DBP_detection(ABP, rolling_sec)
-#     # SBP, DBP = SBP_DBP_filter(ABP, SBP, DBP)
-#     if len(SBP) == 0 or len(DBP) == 0:
-#         return 0, 0, 0, 0, 0
-#         # return False, None, None, None
-#     mean_sbp, mean_dbp = np.mean(raw_ABP[SBP]), np.mean(raw_ABP[DBP])
-#     mean_map = (2 * mean_dbp + mean_sbp) / 3
-#     return mean_sbp, mean_dbp, mean_map, SBP, DBP
-
-
-# def signal_respiration_checker(ABP, PPG, threshold=0.9):
-#     if np.isnan(PPG).any() or np.isnan(ABP).any() or \
-#             (np.var(ABP) < 1) or \
-#             (not (np.sign(ABP) > 0.0).all()):
-#         return False, None, None, None
-#     ABP = filter_signal(np.squeeze(ABP), cutoff=3, sample_rate=125., order=2, filtertype='lowpass')
-#     PPG = filter_signal(np.squeeze(PPG), cutoff=3, sample_rate=125., order=2, filtertype='lowpass')
-#
-#     # Normalization
-#     # Peak detection
-#     rolling_sec = 0.75
-#     r_rolling_sec = 0.5
-#     SBP = SBP_detection(ABP, rolling_sec)
-#     DBP = DBP_detection(ABP, rolling_sec)
-#     SBP, DBP = SBP_DBP_filter(ABP, SBP, DBP)
-#     if len(SBP) == 0 or len(DBP) == 0 or (abs(len(SBP) - len(DBP)) >= 2):
-#         return False, None, None, None
-#     mean_sbp, mean_dbp = np.mean(ABP[SBP]), np.mean(ABP[DBP])
-#     mean_map = (2 * mean_dbp + mean_sbp) / 3
-#     PPG_peak = SBP_detection(PPG, rolling_sec)
-#     PPG_low = DBP_detection(PPG, rolling_sec)
-#     PPG_peak, PPG_low = SBP_DBP_filter(PPG, PPG_peak, PPG_low)
-#     ABP = 2 * (ABP - np.min(ABP)) / (np.max(ABP) - np.min(ABP)) - 1
-#     PPG = 2 * (PPG - np.min(PPG)) / (np.max(PPG) - np.min(PPG)) - 1
-#     # Matching peaks
-#     if len(PPG_peak) == 0 or len(PPG_low) == 0 or len(SBP) == 0 or len(DBP) == 0:
-#         return False, None, None, None
-#     matched_ABP, matched_PPG, gap_size, SBP, DBP, PPG_peak, PPG_low = match_signal(ABP, PPG, SBP, DBP,
-#                                                                                    PPG_peak, PPG_low)
-#     # ABP, PPG Rolling mean
-#     Flag, ABP_rolling_mean, PPG_rolling_mean = signals_rolling_mean(matched_ABP, matched_PPG, r_rolling_sec)
-#
-#     if Flag is False:
-#         return False, None, None, None
-#     # Normalization
-#     ABP_rolling_mean = 2 * (ABP_rolling_mean - np.min(ABP_rolling_mean)) / (
-#             np.max(ABP_rolling_mean) - np.min(ABP_rolling_mean)) - 1
-#     PPG_rolling_mean = 2 * (PPG_rolling_mean - np.min(PPG_rolling_mean)) / (
-#             np.max(PPG_rolling_mean) - np.min(PPG_rolling_mean)) - 1
-#
-#     # correlation @rolling mean
-#     correlation = np.mean(np.corrcoef(ABP_rolling_mean, PPG_rolling_mean))
-#     if correlation >= threshold:
-#         return True, mean_dbp, mean_sbp, mean_map
-#     else:
-#         return False, None, None, None
-#
-#
-# def window_wise_heartpy_peak_detection(signal, win_start, win_end, step=0.5, fs=125):
-#     """
-#     rolling mean():
-#         windowsize : [sec], sample_rate : [Hz]
-#
-#     peak_hartpy():
-#         ma_perc : the percentage with which to raise the rolling mean, used for fitting detection solutions to data
-#     """
-#     peaks = []
-#     for window in np.arange(win_start, win_end, step=step):
-#         rol_mean = rolling_mean(signal, window, fs)
-#         peak_heartpy = hp_peak.detect_peaks(signal, rol_mean, ma_perc=20, sample_rate=fs)
-#         peaks.append(peak_heartpy)
-#     return peaks
-#
-#
-# def SBP_detection(signal, rolling_sec=0.75, fs=125):
-#     roll_mean = rolling_mean(signal, rolling_sec, fs)
-#     peak_heartpy = hp_peak.detect_peaks(signal, roll_mean, ma_perc=20, sample_rate=fs)
-#     return peak_heartpy['peaklist']
-#
-#
-# def DBP_detection(signal, rolling_sec=0.75, fs=125):
-#     signal = -signal
-#     roll_mean = rolling_mean(signal, rolling_sec, fs)
-#     peak_heartpy = hp_peak.detect_peaks(signal, roll_mean, ma_perc=20, sample_rate=fs)
-#     return peak_heartpy['peaklist']
-#
-#
-# def PPG_peak_detection(PPG, rolling_sec, fs=125):
-#     PPG_rolling_mean = rolling_mean(PPG, rolling_sec, fs)
-#     peak_heartpy = hp_peak.detect_peaks(PPG, PPG_rolling_mean, ma_perc=20, sample_rate=fs)
-#     return peak_heartpy['peaklist']
-#
-#
-# def match_signal(ABP, PPG, SBP, DBP, PPG_peak, PPG_low):
-#     if PPG_peak[0] < SBP[0]:
-#         matched_ABP = ABP[SBP[0]:]
-#         matched_PPG, gap_size = PPG[PPG_peak[0]:len(matched_ABP) + PPG_peak[0]], PPG_peak[0] - SBP[0]
-#     else:
-#         matched_PPG = PPG[PPG_peak[0]:]
-#         matched_ABP, gap_size = ABP[SBP[0]:len(matched_PPG) + SBP[0]], PPG_peak[0] - SBP[0]
-#
-#     if gap_size >= 0:
-#         gap_size = SBP[0]
-#         SBP = [SBP[x] - gap_size for x in range(len(SBP)) if
-#                0 <= SBP[x] - gap_size < len(matched_ABP)]
-#         DBP = [DBP[x] - gap_size for x in range(len(DBP)) if
-#                0 <= DBP[x] - gap_size < len(matched_ABP)]
-#         gap_size = PPG_peak[0]
-#         PPG_peak = [PPG_peak[x] - gap_size for x in range(len(PPG_peak)) if
-#                     0 <= PPG_peak[x] - gap_size < len(matched_PPG)]
-#         PPG_low = [PPG_low[x] - gap_size for x in range(len(PPG_low)) if
-#                    0 <= PPG_low[x] - gap_size < len(matched_PPG)]
-#     else:
-#         gap_size = PPG_peak[0]
-#
-#         PPG_peak = [PPG_peak[x] - gap_size for x in range(len(PPG_peak)) if
-#                     len(matched_PPG) > PPG_peak[x] - gap_size >= 0]
-#         PPG_low = [PPG_low[x] - gap_size for x in range(len(PPG_low)) if
-#                    len(matched_PPG) > PPG_low[x] - gap_size >= 0]
-#         gap_size = SBP[0]
-#         SBP = [SBP[x] - gap_size for x in range(len(SBP)) if
-#                len(matched_PPG) > SBP[x] - gap_size >= 0]
-#         DBP = [DBP[x] - gap_size for x in range(len(DBP)) if
-#                len(matched_PPG) > DBP[x] - gap_size >= 0]
-#
-#     return matched_ABP, matched_PPG, gap_size, SBP, DBP, PPG_peak, PPG_low
-#
-#
-# def signals_rolling_mean(ABP, PPG, rolling_sec, fs=125):
-#     # rolling mean for find proper trend
-#     try:
-#         ABP_rolling_mean = rolling_mean(ABP, rolling_sec, fs)
-#         PPG_rolling_mean = rolling_mean(PPG, rolling_sec, fs)
-#         return True, ABP_rolling_mean, PPG_rolling_mean
-#     except:
-#         return False, None, None
-#
-#
-# def plot_signal_with_props(ABP, PPG, SBP, DBP, PPG_peak, PPG_low, ABP_rolling_mean, PPG_rolling_mean,
-#                            title='signal with properties'):
-#     plt.figure(figsize=(20, 5))
-#     plt.plot(ABP)
-#     plt.plot(PPG)
-#     plt.plot(SBP, ABP[SBP], 'ro')
-#     plt.plot(DBP, ABP[DBP], 'bo')
-#     plt.plot(PPG_peak, PPG[PPG_peak], 'go')
-#     plt.plot(PPG_low, PPG[PPG_low], 'yo')
-#     plt.plot(ABP_rolling_mean, 'g', linestyle='--')
-#     plt.plot(PPG_rolling_mean, 'y', linestyle='--')
-#     plt.title(title)
-#     plt.legend(['ABP', 'PPG', 'SBP', 'DBP', 'PPG_peak', 'PPG_low', 'ABP_rolling_mean', 'PPG_rolling_mean'])
-#     plt.show()
-#
-#
-# def SBP_DBP_filter(ABP, SBP, DBP):
-#     i = 0
-#     total = len(SBP) - 1
-#     while i < total:
-#         flag = False
-#         # Distinguish SBP[i] < DBP < SBP[i+1]
-#         for idx_dbp in DBP:
-#             # Normal situation
-#             if (SBP[i] < idx_dbp) and (idx_dbp < SBP[i + 1]):
-#                 flag = True
-#                 break
-#             # abnormal situation
-#         if flag:
-#             i += 1
-#         else:
-#             # compare peak value
-#             # delete smaller one @SBP
-#             if ABP[SBP[i]] < ABP[SBP[i + 1]]:
-#                 SBP = np.delete(SBP, i)
-#             else:
-#                 SBP = np.delete(SBP, i + 1)
-#             total -= 1
-#
-#     i = 0
-#     total = len(DBP) - 1
-#     while i < total:
-#         flag = False
-#         # Distinguish DBP[i] < SBP < DBP[i+1]
-#         for idx_sbp in SBP:
-#             # Normal situation
-#             if (DBP[i] < idx_sbp) and (idx_sbp < DBP[i + 1]):
-#                 flag = True
-#                 break
-#         # normal situation
-#         if flag:
-#             i += 1
-#         # abnormal situation, there is no SBP between DBP[i] and DBP[i+1]
-#         else:
-#             # compare peak value
-#             # delete bigger one @DBP
-#             if ABP[DBP[i]] < ABP[DBP[i + 1]]:
-#                 DBP = np.delete(DBP, i + 1)
-#             else:
-#                 DBP = np.delete(DBP, i)
-#             total -= 1
-#
-#     return SBP, DBP
-#
-#
-# def peak_detection(in_signal):
-#     # TODO SBP, DBP 구해야 함  SBP : Done
-#     x = np.squeeze(in_signal)
-#     mean = np.mean(x)
-#     peaks, prop = signal.find_peaks(x, height=mean, distance=30)
-#
-#     return peaks, prop["peak_heights"], len(peaks)
-#
-#
-# def frequency_checker(input_sig):
-#     '''
-#     https://lifelong-education-dr-kim.tistory.com/4
-#     '''
-#     flag = False
-#     abnormal_cnt = 0
-#     cycle_len = get_cycle_len(input_sig)
-#     # print('-----------------')
-#     for i in range(int(len(input_sig) / cycle_len)):
-#         if i == 0:
-#             cycle = input_sig[i * cycle_len:(i + 1) * cycle_len]
-#         else:
-#             cycle = input_sig[(i - 1) * cycle_len:i * cycle_len]
-#         corr = r(cycle, input_sig[i * cycle_len:(i + 1) * cycle_len])
-#         if corr < 0.7:
-#             abnormal_cnt += 1
-#     if abnormal_cnt > 1:
-#         flag = True
-#
-#     return flag
-#
-#
-# def get_cycle_len(input_sig):
-#     Fs = 125
-#     T = 1 / Fs
-#     # DC_removed_signal = DC_value_removal(input_sig)
-#     s_fft = np.fft.fft(input_sig)
-#     amplitude = abs(s_fft) * (2 / len(s_fft))
-#     frequency = np.fft.fftfreq(len(s_fft), T)
-#
-#     fft_freq = frequency.copy()
-#     peak_index = amplitude[:int(len(amplitude) / 2)].argsort()[-1]
-#     peak_freq = fft_freq[peak_index]
-#     if peak_freq == 0:
-#         peak_index = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
-#         peak_freq = fft_freq[peak_index]
-#
-#     cycle_len = round(Fs / peak_freq)
-#
-#     return cycle_len
-#
-#
-# # def type_compare(new_type, exist_type):
-# #     if len(new_type) < 30:
-# #         return 1.0
-# #     else:
-# #         # new_type = signal.resample(new_type, len(exist_type)).tolist()
-# #         new_type = signal.resample(new_type, num=len(exist_type)).tolist()
-# #         # to make two lists in the same length using resample
-# #         # new_type = signal.resample_poly(new_type, len(exist_type), len(new_type)).tolist()
-# #
-# #         if len(new_type) > len(exist_type):
-# #             new_type = new_type[:len(exist_type)]
-# #         else:
-# #             exist_type = exist_type[:len(new_type)]
-# #         new_type = scaler(new_type, np.min(exist_type), np.max(exist_type))
-# #         corr = r(new_type, exist_type)
-# #         if corr < 0.5:
-# #             plt.plot(exist_type, 'r', label='exist')
-# #             plt.plot(new_type, 'b', label='new')
-# #             plt.legend()
-# #             plt.show()
-# #         else:
-# #             pass
-# #         return corr
-#
-#
-# def get_single_cycle(input_sig):
-#     idx = 2
-#     bp = SignalInfoExtractor(input_sig)
-#     sys_list = bp.get_systolic(input_sig)[0]
-#     start_index = sys_list[idx]
-#     cycle_len = sys_list[idx + 1] - sys_list[idx]
-#     single_cycle = input_sig[start_index:start_index + cycle_len]
-#     if cycle_len < 10 or (np.max(single_cycle) - np.min(single_cycle)) < 10:
-#         idx += 1
-#         for i in range(3):
-#             sys_list = bp.get_systolic(input_sig)[0]
-#             start_index = sys_list[idx]
-#             cycle_len = sys_list[idx + 1] - sys_list[idx]
-#             single_cycle = input_sig[start_index:start_index + cycle_len]
-#             if cycle_len < 10 or (np.max(single_cycle) - np.min(single_cycle)) < 10:
-#                 idx += 1
-#             else:
-#                 break
-#     return single_cycle
-#
-#
-# def chebyshev2(input_sig, low, high, sr):
-#     nyq = 0.5 * sr
-#     if high / nyq < 1:
-#         if high * 2 > 125:
-#             sos = signal.cheby2(4, 30, [low / nyq, high / nyq], btype='bandpass', output='sos')
-#         else:
-#             sos = signal.cheby2(4, 30, low / nyq, btype='highpass', output='sos')
-#         filtered = signal.sosfilt(sos, input_sig)
-#         return filtered
-#     else:
-#         print("wrong bandwidth.. ")
-#
-#
-# def signal_slicing(model_name, rawdata, chunk_size, sampling_rate, fft=True):
-#     signal_type = []
-#     abp_list = []
-#     ple_list = []
-#     size_list = []
-#
-#     if np.shape(rawdata[0]) != (chunk_size, 2):
-#         print(np.shape(rawdata))
-#         print('current shape is not the way intended. please check UCIdataset.py')
-#         rawdata = np.reshape(rawdata, (-1, chunk_size, 2))
-#         print(np.shape(rawdata))
-#     cnt = 0
-#     abnormal_cnt = 0
-#     for data in tqdm(rawdata):
-#         abp, ple = channel_spliter(data)
-#         p_abp, pro_abp = signal.find_peaks(abp, height=np.max(abp) - np.std(abp))
-#         p_ple, pro_ple = signal.find_peaks(ple, height=np.mean(ple))
-#
-#         if not ((np.mean(ple) == (0.0 or np.nan)) or
-#                 (np.mean(abp) == 80.0) or
-#                 (len(p_abp) < 5) or
-#                 (len(p_ple) < 5) or
-#                 (len(p_abp) - len(p_ple) > 1) or
-#                 (signal_quality_checker(abp, is_abp=True) is False) or
-#                 (signal_quality_checker(ple, is_abp=False) is False)):
-#             abp = SignalHandler(abp).down_sampling(sampling_rate)
-#             ple = SignalHandler(ple).down_sampling(sampling_rate)
-#             if fft is True:
-#                 if (not frequency_checker(abp)) and (not frequency_checker(ple)):
-#                     '''
-#                     signal type classification
-#                     '''
-#                     # new_type = get_single_cycle(abp)
-#                     # # 처음 type은 무조건 signal type에 추가
-#                     # if type_flag == False:
-#                     #     type_flag = True
-#                     #     plt.title('first type')
-#                     #     signal_type.append(new_type)
-#                     #     plt.plot(new_type)
-#                     #     plt.show()
-#                     #     type_cnt += 1
-#                     #     print('new signal type added!! :', len(signal_type))
-#                     # # signal_type에 있는 type들과 새로 들어온 type과의 correlation을 비교
-#                     # else:
-#                     #     # corr = type_compare(new_type, signal_type[-1])
-#                     #     # if corr < 0.5:
-#                     #     #     signal_type.append(new_type)
-#                     #     #     print('new signal type added!! :', len(signal_type))
-#                     #     for t in reversed(signal_type):
-#                     #         corr = type_compare(new_type, t)
-#                     #         if corr < 0.5:
-#                     #             signal_type.append(new_type)
-#                     #             print('new signal type added!! :', len(signal_type))
-#                     #             break
-#                     #         else:
-#                     #             continue
-#
-#                     abp = SignalHandler(abp).down_sampling(sampling_rate)
-#                     ple = SignalHandler(ple).down_sampling(sampling_rate)
-#                     # ple = down_sampling(ple, sampling_rate)
-#                     abp_list.append(abp)
-#                     ple_list.append(ple)
-#                     if model_name == "BPNet":
-#                         bp = SignalInfoExtractor(abp)
-#                         dia, sys = bp.dbp, bp.sbp[-1]
-#                         size_list.append([np.mean(dia), np.mean(sys), bp.get_mean_arterial_pressure])
-#                         cnt += 1
-#                     elif model_name == "Unet":
-#                         cnt += 1
-#                 else:
-#                     abnormal_cnt += 1
-#
-#             else:
-#                 abp = down_sampling(abp, sampling_rate)
-#                 ple = down_sampling(ple, sampling_rate)
-#                 abp_list.append(abp)
-#                 ple_list.append(ple)
-#                 if model_name == "BPNet":
-#                     bp = SignalInfoExtractor(abp)
-#                     dia, sys = bp.dbp, bp.sbp[-1]
-#                     size_list.append([np.mean(dia), np.mean(sys), bp.get_mean_arterial_pressure])
-#                     cnt += 1
-#                 elif model_name == "Unet":
-#                     cnt += 1
-#
-#     print('measuring problem data slices : ', abnormal_cnt)
-#     print('passed :', cnt, '/ total :', len(rawdata))
-#     print('-----type of signal----- : ', len(signal_type))
-#
-#     # for i in range(len(signal_type)):
-#     #     plt.plot(signal.resample(scaler(signal_type[i], 60, 120), num=100))
-#     # plt.show()
-#     if model_name == "BPNet":
-#         return abp_list, ple_list, size_list
-#     elif model_name == "Unet":
-#         return abp_list, ple_list
