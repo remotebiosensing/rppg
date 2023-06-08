@@ -10,6 +10,8 @@ from heartpy.datautils import rolling_mean
 from cnibp.preprocessing.utils.signal_utils_base import SignalBase
 import random
 
+random.seed(125)
+
 '''
 class signal handler
     def down_sampling
@@ -23,24 +25,28 @@ def select_mode(mode: str):
     select what to consider during preprocessing
     """
     if mode == 'total':
-        return ['flat', 'flip', 'damp']
+        return ['flat', 'flip', 'underdamp', 'overdamp']
     elif mode == 'flat':
         return ['flat']
     elif mode == 'flip':
         return ['flip']
+    elif mode == 'overdamp':
+        return ['overdamp']
+    elif mode == 'underdamp':
+        return ['underdamp']
     elif mode == 'damp':
-        return ['damp']
+        return ['underdamp', 'overdamp']
     elif mode == 'noflat':
-        return ['flip', 'damp']
+        return ['flip', 'underdamp', 'overdamp']
     elif mode == 'noflip':
-        return ['flat', 'damp']
+        return ['flat', 'underdamp', 'overdamp']
     elif mode == 'nodamp':
         return ['flat', 'flip']
     elif mode == 'none':
         return []
     else:
         raise ValueError(
-            'mode should be one of [total, flat, flip, damp, noflat, noflip, nodamp, none]\n see doc in signal_utils.py')
+            'mode should be one of [total, flat, flip, underdamp, overdamp, noflat, noflip, nodamp, none]\n see doc in signal_utils.py')
 
 
 class DualSignalHandler:
@@ -56,7 +62,6 @@ class DualSignalHandler:
         sig1_chunks = SignalHandler(self.sig1).list_slice(self.chunk_size)
         sig2_chunks = SignalHandler(self.sig2).list_slice(self.chunk_size)
         c = list(zip(sig1_chunks, sig2_chunks))
-        random.seed(125)
         random.shuffle(c)
         sig1_chunks, sig2_chunks = zip(*c)
         return sig1_chunks, sig2_chunks
@@ -380,6 +385,8 @@ class ABPSignalInfoExtractor(SignalInfoExtractor):
         self.pulse_pressure_flag, self.pulse_pressure = self.pulse_pressure_checker()  # True 사용
         if 'damp' in self.mode:
             self.under_damped_flag = self.under_damped_detection()  # True 사용
+        # if 'overdamp' in self.mode:
+        #     self.over_damped_flag = self.over_damped_detection()  # True 사용
         self.detail_status = self.return_abp_sig_status()  # True 사용
         self.abp_valid_flag = self.valid_flag and self.abp_signal_validation()  # True 사용
 
@@ -422,49 +429,26 @@ class ABPSignalInfoExtractor(SignalInfoExtractor):
                 return False
 
     def over_damped_detection(self):
-        # x = np.arange(0, np.pi, 0.01)
-        # y = np.sin(x)
-        # plt.plot(x, y)
-        # plt.show()
-
-        if self.cycle_flag:
-            temp_height = (np.max(self.cycle) - np.min(self.cycle)) * 0.5 + np.min(self.cycle)
-            temp_height_idx = np.where(self.cycle > temp_height)[0]
-            temp_len = temp_height_idx[-1] - temp_height_idx[0]
-            if temp_len / len(self.cycle) > 0.60 and np.min(self.cycle) > 10 and not self.flat_flag:
-                plt.title('Over damped ABP signal')
-                plt.plot(self.cycle)
-                plt.plot(temp_height_idx, np.zeros_like(temp_height_idx) + temp_height)
-                plt.show()
-                return True
-        # if abs(np.max(self.cycle) - np.min(self.cycle)) < 40 and np.min(self.cycle)>10:
-        # # sin_corr = np.corrcoef(signal.resample(self.cycle, 100), signal.resample(y, 100))[0, 1]
-        # # if sin_corr > 0.8 and np.max(self.cycle) < 100 and np.min(self.cycle) > 10:
-        #     plt.title('Over damped ABP signal')
-        #     plt.plot(self.cycle)
-        #     plt.plot(np.arange(0, len(self.cycle)), )
-        #     # plt.plot(signal.resample(self.cycle, 750))
-        #     plt.show()
-        #     return True
-        # start_point = np.argmax(self.cycle) - int(len(self.cycle) * 0.2)
-        # end_point = start_point + int(len(self.cycle) * 0.5)
-        # diff = np.diff(self.cycle[start_point:end_point])
-        # #
-        # if np.mean(abs(diff)) < .5 and np.min(self.cycle) > 10:
-        #     plt.title('Over damped ABP signal')
-        #     # plt.plot(self.input_sig)
-        #     # plt.plot(signal.resample(self.cycle, 750))
-        #     plt.plot(self.cycle)
-        #     plt.plot(np.arange(start_point, end_point), self.cycle[start_point:end_point], 'r')
-        #     plt.show()
-        #     return True
-        else:
-            return False
+        return False
+        # if self.cycle_flag:
+        #     if np.mean(self.sbp_value) < 120 and np.mean(self.dbp_value) > 80:
+        #         # plt.title('over damped signal')
+        #         # plt.plot(self.input_sig)
+        #         # plt.plot(self.dbp_idx, self.dbp_value, 'bx')
+        #         # plt.plot(self.sbp_idx, self.sbp_value, 'rx')
+        #         # plt.show()
+        #         return True
+        #     else:
+        #         return False
+        # else:
+        #     return False
 
     def return_abp_sig_status(self):
         sig_status = [self.amp_flag, self.pulse_pressure_flag]
         if 'damp' in self.mode:
             sig_status.append(self.under_damped_flag)
+        # if 'overdamp' in self.mode:
+        #     sig_status.append(self.over_damped_flag)
         return list(map(int, sig_status))
 
     def abp_signal_validation(self):
