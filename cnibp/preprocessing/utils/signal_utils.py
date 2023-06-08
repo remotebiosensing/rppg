@@ -278,25 +278,24 @@ class SignalInfoExtractor(SignalBase):
         roll_mean2 = rolling_mean(self.input_sig, self.rolling_sec * 0.8, self.fs)
         sbp_idx = hp_peak.detect_peaks(self.input_sig, roll_mean, ma_perc=20, sample_rate=self.fs)['peaklist']
         sbp_idx2 = hp_peak.detect_peaks(self.input_sig, roll_mean2, ma_perc=20, sample_rate=self.fs)['peaklist']
+
         if np.std(np.diff(sbp_idx)) > np.std(np.diff(sbp_idx2)):
             sbp_idx = sbp_idx2
-        if len(sbp_idx) != 0:
-            temp_sig = self.input_sig[sbp_idx]
-            temp_sig = (temp_sig - np.min(temp_sig)) / (np.max(temp_sig) - np.min(temp_sig))
-            sbp_std = np.std(temp_sig)
+        if self.cycle_len < 200:
+            diff_check = np.where(np.diff(sbp_idx) <= self.cycle_len * 0.5)
         else:
-            sbp_std = 10
-        # sbp_val = self.input_sig[sbp_idx]
-        if len(sbp_idx) <= 3 or len(sbp_idx) < len(self.input_sig) // np.mean(np.diff(sbp_idx)) - 1:
-            ''' meaning that there are not enough DBP detected compared to the length of the signal '''
-            return False, sbp_idx, self.input_sig[sbp_idx], sbp_std
-        elif sbp_idx[-1] - sbp_idx[-2] < np.mean(np.diff(sbp_idx)) / 2:
-            sbp_idx = np.delete(sbp_idx, -1)
-        if np.std(np.diff(sbp_idx)) > np.mean(np.diff(sbp_idx)) * 0.2:
+            diff_check = np.where(np.diff(sbp_idx) <= np.mean(np.diff(sbp_idx)) * 0.5)
+        if len(diff_check[0]) > 0:
+            sbp_idx = np.delete(sbp_idx, diff_check[0] + 1)
+
+        if len(sbp_idx) < len(self.input_sig) // self.cycle_len - 1:
+            #     ''' meaning that there are not enough DBP detected compared to the length of the signal '''
+            return False, sbp_idx, self.input_sig[sbp_idx]
+        elif not get_mahalanobis_dis(sbp_idx) and not get_mahalanobis_dis(self.input_sig[sbp_idx]):
             ''' meaning that the intervals between SBP are not consistent'''
-            return False, sbp_idx, self.input_sig[sbp_idx], sbp_std
+            return False, sbp_idx, self.input_sig[sbp_idx]
         else:
-            return True, sbp_idx, self.input_sig[sbp_idx], sbp_std
+            return True, sbp_idx, self.input_sig[sbp_idx]
 
     def get_diastolic(self):
         inverted_sig = -self.input_sig
@@ -304,26 +303,24 @@ class SignalInfoExtractor(SignalBase):
         roll_mean2 = rolling_mean(inverted_sig, self.rolling_sec * 0.8, self.fs)
         dbp_idx = hp_peak.detect_peaks(inverted_sig, roll_mean, ma_perc=20, sample_rate=self.fs)['peaklist']
         dbp_idx2 = hp_peak.detect_peaks(inverted_sig, roll_mean2, ma_perc=20, sample_rate=self.fs)['peaklist']
+
         if np.std(np.diff(dbp_idx)) > np.std(np.diff(dbp_idx2)):
             dbp_idx = dbp_idx2
-        if len(dbp_idx) != 0:
-            temp_sig = self.input_sig[dbp_idx]
-            temp_sig = (temp_sig - np.min(temp_sig)) / (np.max(temp_sig) - np.min(temp_sig))
-            dbp_std = np.std(temp_sig)
+        if self.cycle_len < 200:
+            diff_check = np.where(np.diff(dbp_idx) <= self.cycle_len * 0.5)
         else:
-            dbp_std = 10
-        # dbp_val = self.input_sig[dbp_idx]
-        if len(dbp_idx) <= 3 or len(dbp_idx) < len(self.input_sig) // np.mean(np.diff(dbp_idx)) - 1:
-            ''' meaning that there are not enough SBP detected compared to the length of the signal '''
-            return False, dbp_idx, self.input_sig[dbp_idx], dbp_std
-        elif dbp_idx[-1] - dbp_idx[-2] < np.mean(np.diff(dbp_idx)) / 2:
-            dbp_idx = np.delete(dbp_idx, -1)
-        if np.std(np.diff(dbp_idx)) > np.mean(np.diff(dbp_idx)) * 0.2:
+            diff_check = np.where(np.diff(dbp_idx) <= np.mean(np.diff(dbp_idx)) * 0.5)
+        if len(diff_check[0]) > 0:
+            dbp_idx = np.delete(dbp_idx, diff_check[0] + 1)
+        if len(dbp_idx) < len(self.input_sig) // self.cycle_len - 1:
+            #     ''' meaning that there are not enough SBP detected compared to the length of the signal '''
+            return False, dbp_idx, self.input_sig[dbp_idx]
+        elif not get_mahalanobis_dis(dbp_idx) and not get_mahalanobis_dis(self.input_sig[dbp_idx]):
             ''' meaning that the intervals between DBP is not consistent'''
-            return False, dbp_idx, self.input_sig[dbp_idx], dbp_std
+            return False, dbp_idx, self.input_sig[dbp_idx]
         else:
+            return True, dbp_idx, self.input_sig[dbp_idx]
 
-            return True, dbp_idx, self.input_sig[dbp_idx], dbp_std
 
     # def get_dicrotic_notch(self):
     #     if self.dbp[0] == True and self.sbp[0] == True:
