@@ -25,9 +25,9 @@ class SignalBase(metaclass=ABCMeta):
     def flat_detection(self):
         pass
 
-    @abstractmethod
-    def flip_detection(self):
-        pass
+    # @abstractmethod
+    # def flip_detection(self):
+    #     pass
 
     @abstractmethod
     def return_sig_status(self):
