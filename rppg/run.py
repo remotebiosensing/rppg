@@ -30,11 +30,14 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders,model_path, wandb_
 def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag: bool = True):
     # TODO : Implement multiple loss
     step = "Train"
+
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.train()
         running_loss = 0.0
 
         for inputs, target in tepoch:
+            if inputs[0].shape[0] < dataloaders.batch_size:
+                continue
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
             outputs = model(inputs)
@@ -69,6 +72,8 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
         running_loss = 0.0
         with torch.no_grad():
             for inputs, target in tepoch:
+                if inputs[0].shape[0] < dataloaders.batch_size:
+                    continue
                 tepoch.set_description(step + "%d" % epoch)
                 outputs = model(inputs)
                 loss = criterion(outputs, target)
@@ -111,12 +116,15 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
             _pred = []
             _target = []
             for inputs, target in tepoch:
+                if inputs[0].shape[0] < dataloader.batch_size:
+                    continue
                 _pred.extend(np.reshape(model(inputs).cpu().detach().numpy(),(-1,)))
                 _target.extend(np.reshape(target.cpu().detach().numpy(),(-1,)))
 
             remind = len(_pred) % interval
-            _pred = _pred[:-remind]
-            _target = _target[:-remind]
+            if remind >0:
+                _pred = _pred[:-remind]
+                _target = _target[:-remind]
         p.extend(np.reshape(np.reshape(np.asarray(_pred),-1),(-1,interval)))
         t.extend(np.reshape(np.reshape(np.asarray(_target),-1),(-1,interval)))
     p = np.asarray(p)
