@@ -220,23 +220,26 @@ class SignalInfoExtractor(SignalBase):
 
     def get_cycle_len(self):
         s_fft = np.fft.fft(self.input_sig)
-        amplitude = abs(s_fft) * (2 / len(s_fft))
+        amplitude = (abs(s_fft) * (2 / len(s_fft)))[1:]
         frequency = np.fft.fftfreq(len(s_fft), 1 / self.fs)
 
-        fft_freq = frequency.copy()
-        peak_index = amplitude[:int(len(amplitude) / 2)].argsort()[-1]
-        peak_freq = fft_freq[peak_index]
-        if peak_freq == 0:
-            peak_index = amplitude[:int(len(amplitude) / 2)].argsort()[-2]
-            peak_freq = fft_freq[peak_index]
+        # fft_freq = frequency.copy()
+        peak_index = amplitude[:int(len(amplitude) / 2)].argsort()[::-1][:2]
+        peak_freq = frequency[peak_index[0]]
+        if peak_freq <= 0:
+            peak_freq = frequency[peak_index[1]]
+
+        # fft_1x = s_fft.copy()
+        # fft_1x[fft_freq != peak_freq] = 0
+        # filtered_data = 2*np.fft.ifft(fft_1x)
 
         cycle_len = round(self.fs / peak_freq)
         bpm = peak_freq * 60
         if bpm > 140 or bpm < 35:
             # self.valid_flag = False
-            return True, cycle_len
+            return True, cycle_len, bpm
         else:
-            return False, cycle_len
+            return False, cycle_len, bpm
 
     def get_cycle(self):
         # if 3 < len(self.input_sig) // self.cycle_len < 20:
