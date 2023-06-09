@@ -56,18 +56,8 @@ def CONT_preprocess_Video(path, **kwargs):
     :param flag: face detect flag
     :return:
     '''
-    # "0: position with first detected face",
-    # "1: position with largest detected face",
-    # "2: position with face tracking"
-    # "3: position with fixed position"
-    # "4: face unwrapping with uv map"
+    crop_before_detect = False
 
-    # file description check # png, jpg, jpeg, mp4
-    # divide flag check  # subject or percent
-    # face detect flag check # mediapipe or dlib
-    # fixed position check # 0,1,2
-    face_detect_algorithm = kwargs['face_detect_algorithm']
-    fixed_position = kwargs['fixed_position']
     img_size = kwargs['img_size']
     flip_flag = kwargs['flip_flag']  # 0,1,2,3
     if flip_flag == None:
@@ -84,6 +74,9 @@ def CONT_preprocess_Video(path, **kwargs):
         with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
             while j < frame_total:
                 frame = cv2.imread(path + "/" + data[j])
+                height,width,c = frame.shape
+                if height <= width:
+                    frame = frame[:, round((width - height) / 2):round((width - height) / 2) + height]
                 face_locations = face_recognition.face_locations(frame, 1)
                 if len(face_locations) >= 1:
                     face_locations = list(face_locations)
@@ -150,7 +143,9 @@ def CONT_preprocess_Video(path, **kwargs):
                 cnt_y = np.round((maxy + miny) / 2).astype('int')
 
             frame = cv2.imread(path + "/" + data[frame_num])
-
+            height, width, c = frame.shape
+            if height <= width:
+                frame = frame[:, round((width - height) / 2):round((width - height) / 2) + height]
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             ########## for bbox ################
@@ -171,11 +166,17 @@ def CONT_preprocess_Video(path, **kwargs):
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+        if height <= width:
+            crop_before_detect = True
+
+
         with tqdm(total=frame_total, position=0, leave=True, desc=path) as pbar:
             while cap.isOpened():
                 # top, right, bottom, left = face_location[0]
                 ret, frame = cap.read()
                 if ret:
+                    if crop_before_detect:
+                        frame = frame[:, round((width - height) / 2):round((width - height) / 2) + height]
                     face_locations = face_recognition.face_locations(frame, 1)
                     if len(face_locations) >= 1:
                         face_locations = list(face_locations)
@@ -246,7 +247,10 @@ def CONT_preprocess_Video(path, **kwargs):
                 cnt_x = np.round((minx + maxx) / 2).astype('int')
                 cnt_y = np.round((maxy + miny) / 2).astype('int')
             ret, frame = cap.read()
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            if ret:
+                if crop_before_detect:
+                    frame = frame[:, round((width - height) / 2):round((width - height) / 2) + height]
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             if not ret:
                 print("Can't receive frame (stream end?). Exiting ...")

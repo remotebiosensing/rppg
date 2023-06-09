@@ -93,7 +93,7 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
     # To evaluate a model by subject, you can use the meta option
     step = "Test"
 
-    if model_name in ["DeepPhys", "MTTS"]:
+    if model_name in ["DeepPhys", "MTTS","BigSmall"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'

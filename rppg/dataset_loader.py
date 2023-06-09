@@ -232,8 +232,8 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                 if model_name =="BigSmall":
                     for i in range(num_frame):
                         img = file['raw_video'][i]
-                        appearance_data.append(cv2.resize(img[:,:,3:],(144,144)))
-                        motion_data.append(cv2.resize(img[:,:,:3],(9,9)))
+                        appearance_data.append(cv2.resize(img[:,:,3:],(144,144),interpolation=cv2.INTER_AREA))
+                        motion_data.append(cv2.resize(img[:,:,:3],(9,9),interpolation=cv2.INTER_AREA))
 
                 elif w != img_size:
                     new_shape = (num_frame, img_size, img_size, c)
