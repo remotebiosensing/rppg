@@ -327,7 +327,7 @@ def CONT_preprocess_Video(path, **kwargs):
         if img_size == None:
             img_size = bbox_size
 
-        raw_video = np.empty((frame_total, img_size, img_size, 3))
+        raw_video = np.empty((frame_total, img_size, img_size, 3), dtype=np.float32)
 
         cap = cv2.VideoCapture(path)
 
@@ -368,7 +368,7 @@ def CONT_preprocess_Video(path, **kwargs):
             if img_size == bbox_size:
                 raw_video[frame_num] = face
             else:
-                raw_video[frame_num] = cv2.resize(face, (img_size, img_size))
+                raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
 
         cap.release()
 
