@@ -1,5 +1,9 @@
 import wfdb
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
+
+
 def find_channel_idx(path):
     """
     param: path: path of a segment (e.g. /hdd/hdd0/dataset/bpnet/adults/physionet.org/files/mimic3wdb/1.0/30/3001937_11)
@@ -15,8 +19,26 @@ def find_channel_idx(path):
 
     ple_idx = [p for p in range(len(channel_names)) if channel_names[p] == 'PLETH'][0]
     abp_idx = [a for a in range(len(channel_names)) if channel_names[a] == 'ABP'][0]
+    # try:
+    #     ecg_idx = [e for e in range(len(channel_names)) if channel_names[e] == 'II'][0]
+    # except:
+    #     ecg_idx = -1
 
-    return ple_idx, abp_idx
+    return [ple_idx, abp_idx]
+
+
+def get_channel_segments(path: str, chunk_size):
+    channel_idx = find_channel_idx(path)
+
+    # if channel_idx[-1] == -1:
+    #     return False, None, None, None
+    segments = np.squeeze(np.split(wfdb.rdrecord(path, channels=channel_idx).p_signal, len(channel_idx), axis=1))
+    nan_mask = ~(np.isnan(segments).any(axis=0))
+    segments = segments[:, nan_mask]
+    if np.shape(segments)[-1] < chunk_size:
+        return False, None, None
+    else:
+        return True, segments[0], segments[1]
 
 
 def get_channel_record(segment_path: str, channel_idx: int):

@@ -48,18 +48,17 @@ def multi_processing_sort_by_file_size(model_name, target_function, mode: str,
     print(f'[{model_name} {mode} dataset]')
     print('dataset name : MIMIC-III')
     # print(f'number of segments: {len(splitted_segments_by_f_size)}')
-    print(f'save to: {dset_path}')
-    # split_by_size = []
+    # print(f'save to: {dset_path}')
     data_len_list = []
-    acc_len_list = []
-
+    survived_ple_ratio_list = []
+    survived_abp_ratio_list = []
     # if get_process_num(len(segments)) > os.cpu_count():
     #     process_num = os.cpu_count()
     # else:
     #     process_num = get_process_num(len(segments))
-    # process_num = 1
-    process_num = 96
-    print(f'number of processes: {process_num}')
+    process_num = 1
+    # process_num = 48
+    # print(f'number of processes: {process_num}')
 
     # ''' Model selection '''
     # if model_name == 'BPNet':
@@ -68,74 +67,44 @@ def multi_processing_sort_by_file_size(model_name, target_function, mode: str,
     #     sig_len, samp_rate = 3000, 300
 
     print('Sorting data by file size...')
-    # sorted_by_fsize = sorted(segments, key=lambda fs: os.stat(fs.replace('.hea', '.dat')).st_size)
 
-    # if 'light0' in size_list:
-    #     split_by_size.append(sorted_by_fsize[:int(len(sorted_by_fsize) * 0.25)])
-    # if 'light1' in size_list:
-    #     split_by_size.append(sorted_by_fsize[int(len(sorted_by_fsize) * 0.25):int(len(sorted_by_fsize) * 0.4)])
-    # if 'light2' in size_list:
-    #     split_by_size.append(sorted_by_fsize[int(len(sorted_by_fsize) * 0.4):int(len(sorted_by_fsize) * 0.55)])
-    # if 'light3' in size_list:
-    #     split_by_size.append(sorted_by_fsize[int(len(sorted_by_fsize) * 0.55):int(len(sorted_by_fsize) * 0.70)])
-    # if 'heavy1' in size_list:
-    #     split_by_size.append(sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.85)])
-    # if 'heavy2' in size_list:
-    #     split_by_size.append(sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)])
-    # light0 = sorted_by_fsize[:int(len(sorted_by_fsize) * 0.25)]  # not used having no valid data
-    # light1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.25):int(len(sorted_by_fsize) * 0.4)]
-    # light2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.4):int(len(sorted_by_fsize) * 0.55)]
-    # light3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.55):int(len(sorted_by_fsize) * 0.70)]  # htop best
-    # heavy1 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.70):int(len(sorted_by_fsize) * 0.85)]
-    # heavy2 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.80):int(len(sorted_by_fsize) * 0.95)]
-    # heavy3 = sorted_by_fsize[int(len(sorted_by_fsize) * 0.95):] # eliminated due to long time consumption
-    # split_by_size = [heavy1]  # for real data inspection
-    # split_by_size = [light3]  # for debugging
-    # split_by_size = [light2, light3]  # for fast test
-    # split_by_size = [light0, light1]  #, light2, light3, heavy1, heavy2]  # for total data
-    # split_by_size = {'light0': sorted_by_fsize[:int(len(sorted_by_fsize) * 0.25)]}
-
-    # def multi_processing(sort_list, process_num, target_function)
     print('reading_total_data...')
     ple_tot = np.zeros((1, 750))
+    ple_cyc_len = np.zeros(1)
     ple_cyc = np.zeros((1, 100))
     abp_tot = np.zeros((1, 750))
+    abp_cyc_len = np.zeros(1)
     abp_cyc = np.zeros((1, 100))
     dbp_tot = np.zeros((1, 2, 15))
     sbp_tot = np.zeros((1, 2, 15))
-    info_tot = np.zeros((1, 5))
+    info_tot = np.zeros((1, 6))
     if parameters['mode'] == 'total':
-        p_status_tot = np.zeros((1, 5))
+        p_status_tot = np.zeros((1, 4))
         a_status_tot = np.zeros((1, 8))
     elif parameters['mode'] == 'none':
         p_status_tot = np.zeros((1, 3))
         a_status_tot = np.zeros((1, 5))
-    elif parameters['mode'] == 'damp':
+    elif parameters['mode'] in ['underdamp', 'overdamp', 'flip']:
         p_status_tot = np.zeros((1, 3))
         a_status_tot = np.zeros((1, 6))
-    else:
+    else:  # for flat
         p_status_tot = np.zeros((1, 4))
         a_status_tot = np.zeros((1, 6))
 
-    # ple_tot = np.zeros((1, 3, 750))
-    # size_tot = np.zeros((1, 2))
-    # ohe_tot = np.zeros((1, 7))
-
-    # invalid_ple_tot = np.zeros((1, 750))
-    # invalid_abp_tot = np.zeros((1, 750))
-    # eliminated_tot = np.zeros(7)
     '''get patient info'''
 
     for s in splitted_segments_by_f_size:
         segments_per_process = np.array_split(s, process_num)
-        print(f'number of segments per process: {len(segments_per_process[0])}')
+        # print(f'number of segments per process: {len(segments_per_process[0])}')
         with mp.Manager() as manager:
             start_time = time.time()
 
             info_total = manager.list()
             ple_total = manager.list()
+            ple_cycle_len = manager.list()
             ple_cycle = manager.list()
             abp_total = manager.list()
+            abp_cycle_len = manager.list()
             abp_cycle = manager.list()
             dbp_total = manager.list()
             sbp_total = manager.list()
@@ -147,7 +116,7 @@ def multi_processing_sort_by_file_size(model_name, target_function, mode: str,
                                         su.select_mode(parameters['mode']), parameters['chunk_size'],
                                         parameters['sampling_rate'],
                                         parameters['corr_threshold'], parameters['ple_scale'], parameters['hdf_flag'],
-                                        patient_info_df, ple_cycle, abp_cycle,
+                                        patient_info_df, ple_cycle, ple_cycle_len, abp_cycle, abp_cycle_len,
                                         info_total, ple_total, abp_total, dbp_total, sbp_total,
                                         p_status_total, a_status_total,
                                         )) for process_i in range(process_num)]
@@ -160,18 +129,26 @@ def multi_processing_sort_by_file_size(model_name, target_function, mode: str,
             if len(info_total) != 0:
                 info_tot = np.concatenate((info_tot, np.array(info_total, dtype=float)), axis=0)
                 ple_tot = np.concatenate((ple_tot, np.array(ple_total)), axis=0)
+                ple_cyc_len = np.concatenate((ple_cyc_len, np.array(ple_cycle_len)), axis=0)
                 ple_cyc = np.concatenate((ple_cyc, np.array(ple_cycle)), axis=0)
                 abp_tot = np.concatenate((abp_tot, np.array(abp_total)), axis=0)
+                abp_cyc_len = np.concatenate((abp_cyc_len, np.array(abp_cycle_len)), axis=0)
                 abp_cyc = np.concatenate((abp_cyc, np.array(abp_cycle)), axis=0)
                 dbp_tot = np.concatenate((dbp_tot, np.array(dbp_total)), axis=0)
                 sbp_tot = np.concatenate((sbp_tot, np.array(sbp_total)), axis=0)
                 p_status_tot = np.concatenate((p_status_tot, np.array(p_status_total)), axis=0)
                 a_status_tot = np.concatenate((a_status_tot, np.array(a_status_total)), axis=0)
-                print('data added {}'.format(len(info_total)))
+                # print('total inspected data: {}'.format(len(p_status_total) - 1))
+                print('data added : {} / {}'.format(len(info_total), len(p_status_total)))
+                # print('ple:', np.round(np.array(p_status_total).sum(axis=0) / len(p_status_total), 3))
+                # print('abp:', np.round(np.array(a_status_total).sum(axis=0) / len(a_status_total), 3))
                 data_len_list.append(len(info_total))
+                # survived_ratio_list.append()
 
             else:
                 print('no data added')
+                # print('ple:', np.round(np.array(p_status_total).sum(axis=0) / len(p_status_total), 3))
+                # print('abp:', np.round(np.array(a_status_total).sum(axis=0) / len(a_status_total), 3))
                 data_len_list.append(len(info_total))
 
             manager.shutdown()
@@ -179,6 +156,10 @@ def multi_processing_sort_by_file_size(model_name, target_function, mode: str,
     data_len_list.append(len(info_tot) - 1)
     dset = h5py.File(
         dset_path + str(mode) + '_' + parameters['gender'] + '_' + str(parameters['corr_threshold']) + '.hdf5', 'w')
+
+    analysis_dset = h5py.File(
+        dset_path + str(mode) + '_' + parameters['gender'] + '_' + str(parameters['corr_threshold']) + '_status.hdf5',
+        'w')
 
     # if gender == 0:
     #     dset = h5py.File(dset_path + str(dataset) + '_total_' + str(threshold) + '.hdf5', 'w')
@@ -188,17 +169,22 @@ def multi_processing_sort_by_file_size(model_name, target_function, mode: str,
     #     dset = h5py.File(dset_path + str(dataset) + '_female_' + str(threshold) + '.hdf5', 'w')
 
     # dset['info'] = np.array(info_tot[1:], dtype='str')
-    dset['info'] = info_tot[1:]
     dset['ple'] = ple_tot[1:]
-    dset['ple_cycle'] = ple_cyc[1:]
     dset['abp'] = abp_tot[1:]
-    dset['abp_cycle'] = abp_cyc[1:]
     dset['dbp'] = dbp_tot[1:]
     dset['sbp'] = sbp_tot[1:]
-    dset['p_status'] = p_status_tot[1:]
-    dset['a_status'] = a_status_tot[1:]
 
+    analysis_dset['info'] = info_tot[1:]
+    analysis_dset['ple_cycle'] = ple_cyc[1:]
+    analysis_dset['ple_cycle_len'] = ple_cyc_len[1:]
+    analysis_dset['abp_cycle'] = abp_cyc[1:]
+    analysis_dset['abp_cycle_len'] = abp_cyc_len[1:]
+    analysis_dset['p_status'] = p_status_tot[1:]
+    analysis_dset['a_status'] = a_status_tot[1:]
+    survived_ple_ratio_list.append(np.round(np.append(np.array(p_status_tot).sum(axis=0) / len(p_status_tot),(len(p_status_tot))), 3))
+    survived_abp_ratio_list.append(np.round(np.append(np.array(a_status_tot).sum(axis=0) / len(a_status_tot),(len(a_status_tot))), 3))
     dset.close()
+    analysis_dset.close()
     manager.shutdown()
 
-    return data_len_list
+    return data_len_list, survived_ple_ratio_list, survived_abp_ratio_list

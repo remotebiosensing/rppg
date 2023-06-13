@@ -9,16 +9,15 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from scipy import signal
+import matplotlib.pyplot as plt
 
 from cnibp.preprocessing.utils.signal_utils import signal_comparator
 from cnibp.preprocessing.utils.signal_utils import DualSignalHandler as dsh
 from cnibp.preprocessing.utils import mp_functions as mf, wfdb_functions as wf
 import cnibp.preprocessing.mimiciii_matched as match_prep
 
-
 warnings.filterwarnings("ignore", message='Degrees of freedom <= 0 for slice')
 warnings.filterwarnings("ignore", message='Mean of empty slice')
-
 
 '''
 Dataset Structure
@@ -186,29 +185,21 @@ def read_total_data(process_id: int, segments: list,
         length_flag, raw_ple_segment, raw_abp_segment = wf.get_channel_segments(segment, chunk_size)
 
         if length_flag:
-            nan_mask = ~(np.isnan(raw_ple_segment) | np.isnan(raw_abp_segment))
 
-            ple_segment = raw_ple_segment[nan_mask]
-            abp_segment = raw_abp_segment[nan_mask]
+            ple_chunks, abp_chunks = dsh(raw_ple_segment, raw_abp_segment).shuffle_lists()
 
-            if len(ple_segment) < chunk_size or len(abp_segment) < chunk_size:
-                continue
-            ple_chunks, abp_chunks = dsh(ple_segment, abp_segment).shuffle_lists()
             for p_chunk, a_chunk in zip(ple_chunks, abp_chunks):
                 p_flat_range = np.where(p_chunk == np.max(p_chunk))[0]
                 a_flat_range = np.where(a_chunk == np.max(a_chunk))[0]
-                if len(p_flat_range) > len(p_chunk) * 0.3 or len(a_flat_range) > len(p_chunk) * 0.3:
+                if len(p_flat_range) > chunk_size * 0.3 or len(a_flat_range) > chunk_size * 0.3:
                     continue
                 '''-----------------------------------------'''
-                confirm_flag, ple_info, abp_info = signal_comparator(p_chunk, a_chunk,
+                confirm_flag, ple_info, abp_info = signal_comparator(p_chunk, a_chunk, ple_scale,
                                                                      preprocessing_mode, threshold, sampling_rate)
                 if confirm_flag is hdf_flag:  # 학습에 사용할 데이터셋 # ple_info.valid_flag and abp_info.valid_flag and corr > 0.9
                     chunk_per_segment += 1
-                    if chunk_per_segment == 10:
+                    if chunk_per_segment == 30:
                         break
-                    if ple_scale:
-                        ple_info.input_sig = ple_info.input_sig / np.max(ple_info.input_sig)
-                        ple_info.cycle = ple_info.cycle / np.max(ple_info.cycle)
                     ple_total.append(ple_info.input_sig)
                     ple_cycle_len.append(len(ple_info.cycle))
                     ple_cycle.append(signal.resample(ple_info.cycle, 100))
@@ -238,7 +229,6 @@ def split_dataset(model_name: str, params: dict, train_segments: list, val_segme
     threshold : correlation between ppg signal and abp signal
     ple_scale : if True, returns restored ppg signal with gain
     '''
-
 
     x = dt.datetime.now()
     date = str(x.year) + str(x.month) + str(x.day)
@@ -276,10 +266,10 @@ if __name__ == "__main__":
     p_r = []
     a_r = []
 
-    f_size_list = ['light1', 'light2' , 'light3', 'heavy1', 'heavy2']
-    # f_size_list = ['light3', 'heavy1', 'heavy2']
-    # preprocessing_mode = ['total']
-    preprocessing_mode = ['flat','flip','damp']
+    # f_size_list = ['light1', 'light2', 'light3', 'heavy1', 'heavy2']
+    f_size_list = ['light3', 'heavy1', 'heavy2']
+    preprocessing_mode = ['total']
+    # preprocessing_mode = ['flat', 'flip', 'damp']
 
     params = {
         'sampling_rate': 125,
@@ -290,7 +280,7 @@ if __name__ == "__main__":
         'corr_threshold': 0.9,
         'gender': 'Total',
         'encoder': 'DIAGNOSIS',
-        'segment_per_patient': 15,
+        'segment_per_patient': 20,
         'chunk_per_segment': 20}
     root_path = '/hdd/hdd1/dataset/mimiciiisubset/physionet.org/files/mimic3wdb-matched/1.0'
     g_info = gender_info[params['gender']]
@@ -317,13 +307,14 @@ if __name__ == "__main__":
         # df_col1.append(m)
     # f_size_list.append('total')
     df_path = '/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/materials/csv/'
-    df = pd.DataFrame(np.array(len_info).transpose(), index=f_size_list,
+    df = pd.DataFrame(np.array(len_info).transpose(), index=f_size_list.append('total'),
                       columns=[np.array([[x] * 3 for x in preprocessing_mode]).flatten(),
                                ['Train', 'Validation', 'Test'] * len(preprocessing_mode)])
-    ratio_df = pd.DataFrame(np.vstack((np.append(np.mean(np.squeeze(np.array(p_r))[:,:-1],axis=0),np.zeros(4)),np.mean(np.squeeze(np.array(a_r))[:,:-1],axis=0))))
+    ratio_df = pd.DataFrame(np.vstack((np.append(np.mean(np.squeeze(np.array(p_r))[:, :-1], axis=0), np.zeros(4)),
+                                       np.mean(np.squeeze(np.array(a_r))[:, :-1], axis=0))))
     ratio_df.columns = ['DBP', 'SBP', 'CYCLE', 'FLAT', 'AMP', 'PULSE_PRESSURE', 'FLIP', 'UNDERDAMPED']
     if not os.path.isdir(df_path):
         os.mkdir(df_path)
     df.to_csv(df_path + 'dataset_size.csv', sep=',', na_rep='NaN')
-    ratio_df.round(3).to_csv(df_path + str+'ratio.csv', sep=',', na_rep='NaN')
+    ratio_df.round(3).to_csv(df_path + 'ratio.csv', sep=',', na_rep='NaN')
     print('preprocessing done...')

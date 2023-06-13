@@ -12,7 +12,7 @@ from cnibp.dataset_loader import dataset_loader
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
-from cnibp.utils.visualization.visualization import graph_plot as gp
+from cnibp.utils.visualization import graph_plot as gp
 
 # mixer.init()
 # sound = mixer.Sound('bell-ringing-01c.wav')
@@ -165,7 +165,8 @@ def cluster_by_abp_shape(in_dataset, is_abp, test_n=100, check_point_n=10):
                 total_cnt += 1
 
     shape_info = np.array(shape_info)
-    cluster_n = get_cluster_n(shape_info)
+    # cluster_n = get_cluster_n(shape_info)
+    cluster_n = 10
     kmeans = KMeans(n_clusters=cluster_n, init='k-means++', random_state=0).fit(shape_info)
 
     plt.figure(figsize=(10, 10))

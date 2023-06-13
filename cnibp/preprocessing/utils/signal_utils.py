@@ -54,6 +54,7 @@ class DualSignalHandler:
         self.chunk_size = chunk_size
         self.sig1 = sig1
         self.sig2 = sig2
+        # self.sig3 = sig3
 
     def shuffle_lists(self):
         '''
@@ -61,6 +62,7 @@ class DualSignalHandler:
         '''
         sig1_chunks = SignalHandler(self.sig1).list_slice(self.chunk_size)
         sig2_chunks = SignalHandler(self.sig2).list_slice(self.chunk_size)
+        # sig3_chunks = SignalHandler(self.sig3).list_slice(self.chunk_size)
         c = list(zip(sig1_chunks, sig2_chunks))
         random.shuffle(c)
         sig1_chunks, sig2_chunks = zip(*c)
@@ -100,24 +102,6 @@ with open("/home/paperc/PycharmProjects/Pytorch_rppgs/cnibp/configs/parameter.js
     json_data = json.load(f)
     param = json_data.get("parameters")
     sr = json_data.get("parameters").get("sampling_rate")
-    # chunk_size = json_data.get("parameters").get("chunk_size")
-
-
-def get_mahalanobis_dis(x):
-    """
-    to check mahalanobis distance of detected peaks intervals and values
-    """
-    x = np.diff(x)
-    # diff_check = np.where(x < 10)
-    # x = np.delete(x, diff_check)
-    mean = np.mean(x)
-    std = np.std(x)
-    maha_dis = np.abs(x - mean) / std
-    abnormal_checker = np.where(maha_dis > 2)
-    if len(abnormal_checker[0]) > 0:
-        return False
-    else:
-        return True
 
 
 class SignalHandler:
@@ -149,11 +133,12 @@ class SignalHandler:
             print("not supported sampling rate.. check parameter.json")
             return None
 
-    def scaler(self, min_val=min, max_val=max):
-        input_sig = np.reshape(self.input_sig, (-1, 1))
-        scaled_output = preprocessing.MinMaxScaler(feature_range=(min_val, max_val)).fit_transform(input_sig)
-        return np.squeeze(scaled_output)
-
+    def normalize(self):
+        min = np.min(self.input_sig)
+        max = np.max(self.input_sig)
+        return (self.input_sig - min) / (max - min)
+    def zscorenorm(self):
+        return (self.input_sig - np.mean(self.input_sig)) / np.std(self.input_sig)
     def savitzky_golay_filter(self, window_size=21, poly_order=3, mode='nearest'):
         return signal.savgol_filter(self.input_sig, window_size, poly_order, mode=mode)
 
@@ -184,11 +169,20 @@ class SignalInfoExtractor(SignalBase):
     valid_flag : all(above flags) should be True for valid signal
     '''
 
-    def __init__(self, input_sig, preprocessing_mode):
+    def __init__(self, input_sig, normalize, preprocessing_mode):
         super().__init__(input_sig)
         # self.input_sig = SignalHandler(input_sig).savitzky_golay_filter(15, 2, 'nearest')
         # self.input_sig = SignalHandler.savitzky_golay_filter(input_sig)
-        self.input_sig = input_sig
+        # self.ple_flag = np.max(input_sig) < 10
+        if normalize:
+            # self.input_sig = SignalHandler(input_sig).normalize()
+            plt.plot(input_sig)
+            self.input_sig = SignalHandler(input_sig).zscorenorm()
+            plt.plot(self.input_sig)
+            plt.show()
+            print('ppg')
+        else:
+            self.input_sig = input_sig
         self.mode = preprocessing_mode
         self.fs = 125
         self.freq_flag, self.cycle_len, self.fft_bpm = self.get_cycle_len()
@@ -203,6 +197,19 @@ class SignalInfoExtractor(SignalBase):
             self.flat_flag = self.flat_detection()
         self.status = self.return_sig_status()
         self.valid_flag = self.signal_validation()  # check if signal is valid with sbp, dbp, flip, flat flags
+
+    def get_mahalanobis_dis(self, x):
+        """
+        to check mahalanobis distance of detected peaks intervals and values
+        """
+        x = np.diff(x)
+
+        maha_dis = np.abs(x - np.mean(x)) / np.std(x)
+        abnormal_checker = np.where(maha_dis > 2)
+        if len(abnormal_checker[0]) > 0:
+            return False
+        else:
+            return True
 
     def get_cycle_len(self):
         s_fft = np.fft.fft(self.input_sig)
@@ -240,7 +247,7 @@ class SignalInfoExtractor(SignalBase):
                 lr_check_list.append(abs(cycle[0] - cycle[-1]))
             avg_cycle_len = np.mean(cycle_len_list, dtype=np.int)
             # check if cycle lengths are similar
-            if not get_mahalanobis_dis(cycle_len_list):
+            if not self.get_mahalanobis_dis(cycle_len_list):
                 return False, np.zeros(1)
 
             peak_bpm = (self.fs / avg_cycle_len) * 60
@@ -277,7 +284,7 @@ class SignalInfoExtractor(SignalBase):
         if len(sbp_idx) < len(self.input_sig) // self.cycle_len - 1:
             #     ''' meaning that there are not enough DBP detected compared to the length of the signal '''
             return False, sbp_idx, self.input_sig[sbp_idx]
-        elif not get_mahalanobis_dis(sbp_idx) and not get_mahalanobis_dis(self.input_sig[sbp_idx]):
+        elif not self.get_mahalanobis_dis(sbp_idx) or not self.get_mahalanobis_dis(self.input_sig[sbp_idx]):
             ''' meaning that the intervals between SBP are not consistent'''
             return False, sbp_idx, self.input_sig[sbp_idx]
         else:
@@ -301,25 +308,24 @@ class SignalInfoExtractor(SignalBase):
         if len(dbp_idx) < len(self.input_sig) // self.cycle_len - 1:
             #     ''' meaning that there are not enough SBP detected compared to the length of the signal '''
             return False, dbp_idx, self.input_sig[dbp_idx]
-        elif not get_mahalanobis_dis(dbp_idx) and not get_mahalanobis_dis(self.input_sig[dbp_idx]):
+        elif not self.get_mahalanobis_dis(dbp_idx) or not self.get_mahalanobis_dis(self.input_sig[dbp_idx]):
             ''' meaning that the intervals between DBP is not consistent'''
             return False, dbp_idx, self.input_sig[dbp_idx]
         else:
             return True, dbp_idx, self.input_sig[dbp_idx]
 
-
-    # def get_dicrotic_notch(self):
-    #     if self.dbp[0] == True and self.sbp[0] == True:
-    #         sb_list = sorted(np.append(self.sbp[1], self.dbp[1]))
-    #         if self.input_sig[sb_list[0]] > self.input_sig[sb_list[1]]:
-    #             start_idx, end_idx = sb_list[0], sb_list[1]
-    #         else:
-    #             start_idx, end_idx = sb_list[1], sb_list[2]
-    #         detect_range = self.input_sig[start_idx:end_idx]
-    #         plt.plot(self.input_sig)
-    #         plt.plot(np.arange(start_idx, end_idx), detect_range)
-    #         plt.show()
-    #         return True
+    def get_dicrotic_notch(self):
+        if self.dbp_flag is True and self.sbp_flag is True:
+            sb_list = sorted(np.append(self.sbp_flag, self.dbp_flag))
+            if self.input_sig[sb_list[0]] > self.input_sig[sb_list[1]]:
+                start_idx, end_idx = sb_list[0], sb_list[1]
+            else:
+                start_idx, end_idx = sb_list[1], sb_list[2]
+            detect_range = self.input_sig[start_idx:end_idx]
+            plt.plot(self.input_sig)
+            plt.plot(np.arange(start_idx, end_idx), detect_range)
+            plt.show()
+            return True
 
     def flat_detection(self):
         flat_range = np.where(self.input_sig == np.max(self.cycle))[0]
@@ -367,8 +373,8 @@ class SignalInfoExtractor(SignalBase):
 
 
 class ABPSignalInfoExtractor(SignalInfoExtractor):
-    def __init__(self, input_sig, preprocessing_mode):
-        super().__init__(input_sig, preprocessing_mode)
+    def __init__(self, input_sig, normalize, preprocessing_mode):
+        super().__init__(input_sig, normalize, preprocessing_mode)
         self.mode = preprocessing_mode
         self.amp_flag = self.amp_checker()  # True 사용
         self.pulse_pressure_flag, self.pulse_pressure = self.pulse_pressure_checker()  # True 사용
@@ -500,9 +506,9 @@ class ABPSignalInfoExtractor(SignalInfoExtractor):
             plt.close()
 
 
-def signal_comparator(ple, abp, preprocessing_mode, threshold=0.9, sampling_rate=125):
-    ple_info = SignalInfoExtractor(ple, preprocessing_mode)
-    abp_info = ABPSignalInfoExtractor(abp, preprocessing_mode)
+def signal_comparator(ple, abp, ple_normalize, preprocessing_mode, threshold=0.9, sampling_rate=125):
+    ple_info = SignalInfoExtractor(ple, ple_normalize, preprocessing_mode)
+    abp_info = ABPSignalInfoExtractor(abp, not ple_normalize, preprocessing_mode)
     if not ple_info.valid_flag:
         return False, ple_info, abp_info
     if not abp_info.abp_valid_flag:
