@@ -17,6 +17,12 @@ non-invasive blood pressure measurement algorithms (CNIBP) technology.
 We aim to implement a deep learning-based remote photoplethysmography (rPPG) model and continuous non-invasive blood
 pressure (CNIBP) using PyTorch.
 
+### Quick Environment Setting with ANACONDA
+
+`conda env create -f rppg.yaml`
+
+`conda activate rppg`
+
 ### Quick Start with our examples
  
 - #### rPPG( remote PPG) models
