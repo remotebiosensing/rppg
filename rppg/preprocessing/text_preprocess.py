@@ -9,11 +9,11 @@ import math
 # from __future__ import absolute_import, division, print_function
 # 3rd party
 import numpy as np
-from biosppy.signals import bvp
+# from biosppy.signals import bvp
 from scipy.signal import resample_poly,resample
 from scipy.interpolate import interp1d
 from sklearn.preprocessing import minmax_scale
-import pandas as pd
+# import pandas as pd
 
 # local
 def label_preprocess(preprocess_type, path, frame_total,**kwargs):

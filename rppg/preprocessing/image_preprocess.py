@@ -4,7 +4,7 @@ import os
 import cv2
 import face_recognition
 import math
-import mediapipe as mp
+# import mediapipe as mp
 import numpy as np
 from PIL import Image
 from face_recognition import face_locations, face_landmarks
@@ -602,48 +602,48 @@ def video_normalize(channel):
         channel /= np.std(channel)
     return channel
 
-
-class FaceMeshDetector:
-
-    def __init__(self, staticMode=False, maxFaces=2, minDetectionCon=0.5, minTrackCon=0.5):
-
-        self.staticMode = staticMode
-        self.maxFaces = maxFaces
-        self.minDetectionCon = minDetectionCon
-        self.minTrackCon = minTrackCon
-
-        self.mpDraw = mp.solutions.drawing_utils
-
-        self.mpFaceDetection = mp.solutions.face_detection
-        self.faceDetection = self.mpFaceDetection.FaceDetection()
-
-        self.mpFaceMesh = mp.solutions.face_mesh
-        self.faceMesh = self.mpFaceMesh.FaceMesh(self.staticMode, self.maxFaces,
-                                                 self.minDetectionCon, self.minTrackCon)
-        self.drawSpec = self.mpDraw.DrawingSpec(thickness=1, circle_radius=2)
-
-    def findFaceMesh(self, img, draw=True):
-        self.imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        self.results = self.faceMesh.process(img)
-        # self.faces = self.faceDetection.process(img)
-
-        faces = []
-        if self.results.multi_face_landmarks:
-            for faceLms in self.results.multi_face_landmarks:
-
-                face = []
-                for id, lm in enumerate(faceLms.landmark):
-                    # print(lm)
-                    ih, iw, ic = img.shape
-                    x, y = int(lm.x * iw), int(lm.y * ih)
-                    # cv2.putText(img, str(id), (x, y), cv2.FONT_HERSHEY_PLAIN,
-                    #           0.7, (0, 255, 0), 1)
-
-                    # print(id,x,y)
-                    face.append([x, y])
-                faces.append(face)
-        return img, faces
-
+#
+# class FaceMeshDetector:
+#
+#     def __init__(self, staticMode=False, maxFaces=2, minDetectionCon=0.5, minTrackCon=0.5):
+#
+#         self.staticMode = staticMode
+#         self.maxFaces = maxFaces
+#         self.minDetectionCon = minDetectionCon
+#         self.minTrackCon = minTrackCon
+#
+#         self.mpDraw = mp.solutions.drawing_utils
+#
+#         self.mpFaceDetection = mp.solutions.face_detection
+#         self.faceDetection = self.mpFaceDetection.FaceDetection()
+#
+#         self.mpFaceMesh = mp.solutions.face_mesh
+#         self.faceMesh = self.mpFaceMesh.FaceMesh(self.staticMode, self.maxFaces,
+#                                                  self.minDetectionCon, self.minTrackCon)
+#         self.drawSpec = self.mpDraw.DrawingSpec(thickness=1, circle_radius=2)
+#
+#     def findFaceMesh(self, img, draw=True):
+#         self.imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+#         self.results = self.faceMesh.process(img)
+#         # self.faces = self.faceDetection.process(img)
+#
+#         faces = []
+#         if self.results.multi_face_landmarks:
+#             for faceLms in self.results.multi_face_landmarks:
+#
+#                 face = []
+#                 for id, lm in enumerate(faceLms.landmark):
+#                     # print(lm)
+#                     ih, iw, ic = img.shape
+#                     x, y = int(lm.x * iw), int(lm.y * ih)
+#                     # cv2.putText(img, str(id), (x, y), cv2.FONT_HERSHEY_PLAIN,
+#                     #           0.7, (0, 255, 0), 1)
+#
+#                     # print(id,x,y)
+#                     face.append([x, y])
+#                 faces.append(face)
+#         return img, faces
+#
 
 def avg(a, b):
     return [(int)((x + y) / 2) for x, y in zip(a, b)]
