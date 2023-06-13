@@ -74,7 +74,7 @@ def dataset_loader(
         meta=False
 ):
     model_type = ''
-    if model_name in ["DeepPhys", "MTTS"]:
+    if model_name in ["DeepPhys", "MTTS","BigSmall"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'
@@ -83,7 +83,10 @@ def dataset_loader(
         root_file_path = save_root_path + "/" + dataset_name[0] + "/" + model_type
 
         path = get_all_files_in_path(root_file_path)
+        # path = path[:10]
         path_len = len(path)
+        #for test
+
         test_len = 0
         if eval_flag:
             test_len = int(np.floor(path_len * 0.1))
@@ -224,9 +227,15 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             idx += 1
             file = h5py.File(file_name)
             h5_tree(file)
-            if model_name in ["DeepPhys", "MTTS"]:
+            if model_type == 'DIFF':
                 num_frame, w, h, c = file['raw_video'][:].shape
-                if w != img_size:
+                if model_name =="BigSmall":
+                    for i in range(num_frame):
+                        img = file['raw_video'][i]
+                        appearance_data.append(cv2.resize(img[:,:,3:],(144,144),interpolation=cv2.INTER_AREA))
+                        motion_data.append(cv2.resize(img[:,:,:3],(9,9),interpolation=cv2.INTER_AREA))
+
+                elif w != img_size:
                     new_shape = (num_frame, img_size, img_size, c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
@@ -296,7 +305,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             file.close()
             round_flag = 2
         elif round_flag == 2:
-            if model_name in ["DeepPhys", "MTTS"]:
+            if model_type == 'DIFF':
                 dataset = DeepPhysDataset(appearance_data=np.asarray(appearance_data),
                                           motion_data=np.asarray(motion_data),
                                           target=np.asarray(label_data))

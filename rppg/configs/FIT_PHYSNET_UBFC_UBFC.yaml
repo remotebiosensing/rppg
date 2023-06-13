@@ -33,7 +33,7 @@ fit:
   test:
     cal_type : FFT
     metric: ['MAE','RMSE','MAPE','Pearson']
-    dataset: PURE
+    dataset: UBFC
     shuffle: false
     fs: 30 #video fps
     batch_size: 4

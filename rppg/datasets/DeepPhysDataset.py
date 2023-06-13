@@ -19,13 +19,15 @@ class DeepPhysDataset(Dataset):
         motion_data = torch.tensor(np.transpose(self.m[index], (2, 0, 1)), dtype=torch.float32)
         target = torch.tensor(self.label[index], dtype=torch.float32)
 
-        inputs = torch.stack([appearance_data,motion_data],dim=0)
+        # inputs = torch.stack([appearance_data,motion_data],dim=0)
 
         if torch.cuda.is_available():
-            inputs = inputs.to('cuda')
+            # inputs = inputs.to('cuda')
+            appearance_data = appearance_data.to('cuda')
+            motion_data = motion_data.to('cuda')
             target = target.to('cuda')
 
-        return inputs, target
+        return (appearance_data,motion_data), target
 
     def __len__(self):
         return len(self.label)

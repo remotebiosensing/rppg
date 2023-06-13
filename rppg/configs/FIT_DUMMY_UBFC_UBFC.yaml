@@ -1,41 +1,38 @@
 ---
 data_root_path : "/media/hdd1/dataset/"
 dataset_path: "/media/hdd1/dy_project/dataset/" # preprocessed data path
-model_path: "/media/hdd1/dy/model/"
+model_path: "//media/hdd1/dy_project/dy_project/rppg_mac/rppg/pretrain_model"
 preprocess:
   flag: false
   analyze : false
   chunk_size: 4
   datasets:
 fit:
-  model: DeepPhys
-  time_length: 1
+  model: BigSmall
+  time_length: 64
   overlap_interval: 0 # default 0
-  img_size: 72
+  img_size: 128
   train_flag: True
   eval_flag: True
   eval_interval: 100
-  batch_size: 160
+  batch_size: 360
   meta:
     flag: false
     inner_optim: adam
-    inner_loss: MSE
+    inner_loss: mse
     inner_lr: 0.01
   train:
     dataset: UBFC
     shuffle: true
     fs: 30 #video fps
-    batch_size: 160
-    learning_rate: 0.009
+    learning_rate: 0.003
     epochs: 30
     loss: MSE
-    optimizer: AdamW
+    optimizer: Adam
   test:
     cal_type : FFT
     metric: ['MAE','RMSE','MAPE','Pearson']
-    dataset: UBFC
+    dataset: PURE
     shuffle: false
     fs: 30 #video fps
-    batch_size: 10
-
-
+    batch_size: 4
