@@ -1,7 +1,7 @@
 import torch.optim as opt
 
-from log import log_warning
-import os
+from rppg.log import log_warning
+
 
 def optimizer(model_params, learning_rate: float = 1, optim: str = "mse", log_flag: bool = True):
     '''
@@ -12,31 +12,31 @@ def optimizer(model_params, learning_rate: float = 1, optim: str = "mse", log_fl
     :return: selected optimizer object
     '''
 
-    if optim == "adam":
-        return opt.Adam(model_params, learning_rate,weight_decay=0.00005)
-    elif optim == "sgd":
+    if optim == "Adam":
+        return opt.Adam(model_params, learning_rate, weight_decay=5e-5)
+    elif optim == "SGD":
         return opt.SGD(model_params, learning_rate)
-    elif optim == "rms_prop":
+    elif optim == "RMSprop":
         return opt.RMSprop(model_params, learning_rate)
-    elif optim == "ada_delta":
+    elif optim == "Adadelta":
         return opt.Adadelta(model_params, learning_rate)
-    elif optim == "ada_grad":
+    elif optim == "Adagrad":
         return opt.Adagrad(model_params, learning_rate)
-    elif optim == "ada_max":
+    elif optim == "Adamax":
         return opt.Adamax(model_params, learning_rate)
-    elif optim == "ada_mw":
+    elif optim == "AdamW":
         return opt.AdamW(model_params, learning_rate)
-    elif optim == "a_sgd":
+    elif optim == "ASGD":
         return opt.ASGD(model_params, learning_rate)
-    elif optim == "lbfgs":
+    elif optim == "LBFGS":
         return opt.LBFGS(model_params, learning_rate)
-    elif optim == "n_adam":
+    elif optim == "NAdam":
         return opt.NAdam(model_params, learning_rate)
-    elif optim == "r_adam":
+    elif optim == "RAdam":
         return opt.RAdam(model_params, learning_rate)
-    elif optim == "rprop":
+    elif optim == "Rprop":
         return opt.Rprop(model_params, learning_rate)
-    elif optim == "sparse_adam":
+    elif optim == "SparseAdam":
         return opt.SparseAdam(model_params, learning_rate)
     else:
         log_warning("use implemented optimizer")

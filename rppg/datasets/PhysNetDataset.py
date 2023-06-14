@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 class PhysNetDataset(Dataset):
     def __init__(self, video_data, label_data,target_length):
         self.transform = transforms.Compose([transforms.ToTensor()])
-        self.video_data = np.reshape(video_data,(-1,target_length,64,64,3))
+        self.video_data = np.reshape(video_data,(-1,target_length,video_data.shape[2],video_data.shape[3],3))
         self.label_data = np.reshape(label_data,(-1,target_length))
 
     def __getitem__(self, index):
@@ -20,6 +20,8 @@ class PhysNetDataset(Dataset):
         if torch.cuda.is_available():
             video_data = video_data.to('cuda')
             label_data = label_data.to('cuda')
+
+        label_data = (label_data - torch.mean(label_data)) / torch.std(label_data)
 
         return video_data, label_data
 

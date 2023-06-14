@@ -28,11 +28,12 @@ generator.manual_seed(SEED)
 
 if __name__ == "__main__":
 
-    cfg = get_config("../../rppg/configs/FIT_PHYSNET_UBFC_UBFC.yaml")
+    cfg = get_config("../../rppg/configs/FIT_DUMMY_UBFC_UBFC.yaml")
     if cfg.preprocess.flag:
         preprocessing(
-            dataset_root_path=cfg.data_root_path,
-            preprocess_cfg=cfg.preprocess
+            data_root_path=cfg.data_root_path,
+            preprocess_cfg=cfg.preprocess,
+            dataset_path=cfg.dataset_path
         )
 
         # load dataset

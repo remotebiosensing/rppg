@@ -2,8 +2,10 @@ import numpy as np
 import scipy.signal
 from matplotlib import pyplot as plt
 from scipy.signal import butter
+from scipy import signal
+from scipy.fft import fft
 from scipy.sparse import spdiags
-
+import torch
 def detrend(signal, Lambda):
     """detrend(signal, Lambda) -> filtered_signal
     This function applies a detrending filter.
@@ -37,7 +39,7 @@ def detrend(signal, Lambda):
 def BPF(input_val, fs=30,low= 0.75, high=2.5):
     low = low / (0.5 * fs)
     high = high / (0.5 * fs)
-    [b_pulse, a_pulse] = butter(1, [low, high], btype='bandpass')
+    [b_pulse, a_pulse] = butter(6, [low, high], btype='bandpass')
     return scipy.signal.filtfilt(b_pulse, a_pulse, np.double(input_val))
 
 
@@ -68,6 +70,7 @@ def calculate_hr(cal_type, ppg_signal, fs=60, low_pass=0.75, high_pass=2.5):
         mask_ppg = np.take(f_ppg, fmask_ppg)
         mask_pxx = np.take(pxx_ppg, fmask_ppg)
         hr = np.take(mask_ppg, np.argmax(mask_pxx, 0))[0] * 60
+
     else:
         ppg_peaks, _ = scipy.signal.find_peaks(ppg_signal)
         hr = 60 / (np.mean(np.diff(ppg_peaks)) / fs)
@@ -77,16 +80,17 @@ def mag2db(magnitude):
     return 20. * np.log10(magnitude)
 
 def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,high=2.5):
+
     if model_type == "DIFF":
-        pred = detrend(np.cumsum(pred),100)
-        label = detrend(np.cumsum(label),100)
+        pred =[detrend(np.cumsum(p),100) for p in pred]
+        label = [detrend(np.cumsum(l),100) for l in label]
     else:
-        pred = detrend(pred,100)
-        label = detrend(label,100)
+        pred = [detrend(p,100) for p in pred]
+        label = [detrend(l,100) for l in label]
 
     if bpf_flag:
-        pred = BPF(pred,fs,low,high)
-        label = BPF(pred,fs,low,high)
+        pred = [BPF(p,fs,low,high) for p in pred]
+        label = [BPF(l, fs, low, high) for l in label]
 
     if cal_type != "BOTH":
         hr_pred = [calculate_hr(cal_type,p,fs,low,high) for p in pred]
@@ -105,7 +109,7 @@ def MAE(pred,label):
     return np.mean(np.abs(pred-label))
 
 def RMSE(pred,label):
-    return np.sqrt(np.mean(np.square(pred-label)))
+    return np.sqrt(np.mean((pred-label)**2))
 
 def MAPE(pred,label):
     return np.mean(np.abs((pred-label)/label)) *100
@@ -113,3 +117,32 @@ def MAPE(pred,label):
 def corr(pred,label):
     return np.corrcoef(pred,label)
 
+
+
+
+class IrrelevantPowerRatio(torch.nn.Module):
+    # we reuse the code in Gideon2021 to get irrelevant power ratio
+    # Gideon, John, and Simon Stent. "The way to my heart is through contrastive learning: Remote photoplethysmography from unlabelled video." Proceedings of the IEEE/CVF international conference on computer vision. 2021.
+    def __init__(self, Fs, high_pass, low_pass):
+        super(IrrelevantPowerRatio, self).__init__()
+        self.Fs = Fs
+        self.high_pass = high_pass
+        self.low_pass = low_pass
+
+    def forward(self, preds):
+        # Get PSD
+        X_real = torch.view_as_real(torch.fft.rfft(preds, dim=-1, norm='forward'))
+
+        # Determine ratio of energy between relevant and non-relevant regions
+        Fn = self.Fs / 2
+        freqs = torch.linspace(0, Fn, X_real.shape[-2])
+        use_freqs = torch.logical_and(freqs >= self.high_pass / 60, freqs <= self.low_pass / 60)
+        zero_freqs = torch.logical_not(use_freqs)
+        use_energy = torch.sum(torch.linalg.norm(X_real[:,use_freqs], dim=-1), dim=-1)
+        zero_energy = torch.sum(torch.linalg.norm(X_real[:,zero_freqs], dim=-1), dim=-1)
+        denom = use_energy + zero_energy
+        energy_ratio = torch.ones_like(denom)
+        for ii in range(len(denom)):
+            if denom[ii] > 0:
+                energy_ratio[ii] = zero_energy[ii] / denom[ii]
+        return energy_ratio

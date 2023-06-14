@@ -4,13 +4,11 @@ import numpy as np
 import torch
 import wandb
 import datetime
-from rppg.loss import loss_fn
 from rppg.models import get_model
 from rppg.optim import optimizer
 from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import preprocessing
-from rppg.train import train_fn, val_fn
 
 SEED = 0
 
@@ -28,7 +26,7 @@ generator.manual_seed(SEED)
 
 if __name__ == "__main__":
 
-    cfg = get_config("../configs/PRE_CONT_UBFC.yaml")
+    cfg = get_config("../../rppg/configs/PRE_CONT_UBFC.yaml")
     if cfg.preprocess.flag:
         preprocessing(
             data_root_path=cfg.data_root_path,
