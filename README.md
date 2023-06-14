@@ -17,6 +17,12 @@ non-invasive blood pressure measurement algorithms (CNIBP) technology.
 We aim to implement a deep learning-based remote photoplethysmography (rPPG) model and continuous non-invasive blood
 pressure (CNIBP) using PyTorch.
 
+### Quick Environment Setting with ANACONDA
+
+`conda env create -f rppg.yaml`
+
+`conda activate rppg`
+
 ### Quick Start with our examples
  
 - #### rPPG( remote PPG) models
@@ -37,6 +43,7 @@ pressure (CNIBP) using PyTorch.
 | 2019 |  DL  |     RhythmNet     |                                                                                                   |                                                                                                       |                                                                     [paper](https://arxiv.org/abs/1910.11515)                                                                     |
 | 2022 |  DL  |      JAMSNet      |                                                                                                   |                                                                                                       |       [paper](https://ieeexplore.ieee.org/abstract/document/9973323/?casa_token=YE0aZV2EVRcAAAAA:s8ShA85zLSSZgZq9nmsa2imtZc8HbvOdhHfReYYg5_hEG6HPTYBcnjwj6yTRibCngr80hkI-)        |
 | 2023 |  DL  |     CRGB rPPG     |                                                                                                   |                                                                                                       |                                                                 [paper](https://www.mdpi.com/2306-5354/10/2/243)                                                                  |
+| 2023 | DL | LSTC-rPPG | | |[paper](https://openaccess.thecvf.com/content/CVPR2023W/CVPM/papers/Lee_LSTC-rPPG_Long_Short-Term_Convolutional_Network_for_Remote_Photoplethysmography_CVPRW_2023_paper.pdf) |
 | 2008 |  TR  |       GREEN       |                                                                                                   |                                                                                                       |                                                           [paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2717852)                                                           |
 | 2010 |  TR  |        ICA        |                                                                                                   |                                                                                                       |                                                                [paper](https://pubmed.ncbi.nlm.nih.gov/20588929/)                                                                 |
 | 2011 |  TR  |        PCA        |                                                                                                   |                                                                                                       |               [paper](https://www.researchgate.net/publication/220726433_Measuring_Pulse_Rate_with_a_Webcam_-_a_Non-contact_Method_for_Evaluating_Cardiac_Activity)               |
@@ -47,6 +54,8 @@ pressure (CNIBP) using PyTorch.
 | 2018 |  TR  |        LGI        |                                                                                                   |                                                                                                       |                           [paper](https://openaccess.thecvf.com/content_cvpr_2018_workshops/papers/w27/Pilz_Local_Group_Invariance_CVPR_2018_paper.pdf)                           |
 | 2023 |  TR  |  EEMD + FastICA   |                                                                                                   |                                                                                                       | [paper](https://iopscience.iop.org/article/10.1088/1361-6579/accefd/meta?casa_token=EVo9N2t0kekAAAAA:rUcw8D-6qGzT0dQZtBfgW0w2dVy-6p7kyHT3RV1q0YZMmEvQXpUoA-HaaO-K4m0aqiW-twzWWfmwXw) |
 
+- #### rPPG 
+2023/CVPRW/Real-Time Estimation of Heart Rate in Situations Characterized by Dynamic Illumination using Remote Photoplethysmography/[paper](https://openaccess.thecvf.com/content/CVPR2023W/CVPM/papers/Hansen_Real-Time_Estimation_of_Heart_Rate_in_Situations_Characterized_by_Dynamic_CVPRW_2023_paper.pdf)
 
 - #### CNIBP (Continuous non-invasive blood pressure)
 - [ ] PP-Net exmaple [paper](https://ieeexplore.ieee.org/document/9082808)

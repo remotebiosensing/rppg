@@ -1,5 +1,4 @@
 import torchinfo
-import torchsummary
 
 from rppg.log import log_warning, log_info
 from nets.models.AxisNet import AxisNet, PhysiologicalGenerator
@@ -13,6 +12,7 @@ from nets.models.sub_models.VitaMon import Vitamon
 from rppg.nets.APNETv2 import APNETv2
 from rppg.nets.PhysNet import PhysNet
 from rppg.nets.PhysFormer import PhysFormer
+from rppg.nets.BigSmall import BigSmall
 
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -41,6 +41,8 @@ def get_model(model_name, time_length):
         model = ETArPPGNet()
     elif model_name == "Vitamon":
         model = Vitamon()
+    elif model_name =="BigSmall":
+        model = BigSmall()
     # elif model_name == "TEST":
     #     model = APNET()
     elif model_name == "APNETv2":
@@ -64,7 +66,8 @@ def summary(model_name, model):
     log_info(model_name)
     log_info("=========================================")
     if model_name == "DeepPhys" or model_name == DeepPhys_DA:
-        torchsummary.summary(model, (2, 3, 36, 36))
+        # torchsummary.summary(model, (2, 3, 36, 36))
+        print("TBD")
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":
         torchinfo.summary(model, (1, 3, 32, 128, 128))
     elif model_name in "PPNet":

@@ -28,7 +28,7 @@ class DeepPhys(torch.nn.Module):
         :return:
         original 2d model
         """
-        inputs = torch.chunk(inputs,2,dim=1)
+
         self.attention_mask1, self.attention_mask2 = self.appearance_model(inputs[0].squeeze())
         motion_output = self.motion_model(inputs[1].squeeze(), self.attention_mask1, self.attention_mask2)
         out = self.linear_model(motion_output)
