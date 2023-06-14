@@ -30,14 +30,14 @@ def test(model, dataset, loss_list, epoch, scaler=True, plot_scaled=False, patie
 
     with tqdm(dataset, desc='Test-{}'.format(str(epoch)), total=len(dataset), leave=True) as test_epoch:
         with torch.no_grad():
-            for idx, (X_test, Y_test, d, s, m, info, ohe) in enumerate(test_epoch):
-                hypothesis, dbp, sbp, amp = model(X_test)
-                cost = loss_list[0](hypothesis, Y_test)
-                dbp_cost, sbp_cost, scale_cost = loss_list[-1](dbp, sbp, amp, d, s, amp)
+            for idx, (ppg, _, abp, _, d, s, info) in enumerate(test_epoch):
+                pred_abp, dbp, sbp = model(ppg)
 
-                # amp_cost = loss_list[-1](dbp, sbp, mbp, d, s, m)
-                total_cost = cost + dbp_cost + sbp_cost + scale_cost
-                # total_cost = cost + dbp_cost + sbp_cost + scale_cost# + amp_cost_sum
+                cost = loss_list[0](pred_abp, abp)
+                dbp_cost = loss_list[1](dbp, d)
+                sbp_cost = loss_list[2](sbp, s)
+
+                total_cost = cost + dbp_cost + sbp_cost  # + scale_cost
 
                 cost_sum += cost.item()
                 avg_cost = cost_sum / (idx + 1)
@@ -45,10 +45,6 @@ def test(model, dataset, loss_list, epoch, scaler=True, plot_scaled=False, patie
                 dbp_avg_cost = dbp_cost_sum / (idx + 1)
                 sbp_cost_sum += sbp_cost.item()
                 sbp_avg_cost = sbp_cost_sum / (idx + 1)
-                scale_cost_sum += scale_cost.item()
-                scale_avg_cost = scale_cost_sum / (idx + 1)
-                # amp_cost_sum += amp_cost.item()
-                # amp_avg_cost = amp_cost_sum / (idx + 1)
                 total_cost_sum += total_cost.item()
                 total_avg_cost = total_cost_sum / (idx + 1)
 
@@ -58,41 +54,40 @@ def test(model, dataset, loss_list, epoch, scaler=True, plot_scaled=False, patie
                 # postfix_dict['amp'] = round(amp_avg_cost, 3)
                 postfix_dict['dbp'] = round(dbp_avg_cost, 3)
                 postfix_dict['sbp'] = round(sbp_avg_cost, 3)
-                postfix_dict['scale'] = round(scale_avg_cost, 3)
+                # postfix_dict['scale'] = round(scale_avg_cost, 3)
                 postfix_dict['total'] = round(total_avg_cost, 3)
 
                 test_epoch.set_postfix(losses=postfix_dict)
 
                 if plot_flag:
-                    sub = torch.abs(dbp - d)
-                    x = np.array(range(30, 220))
-                    plt.figure(figsize=(10, 10))
-                    plt.xlim(30, 220)
-                    plt.ylim(30, 220)
-                    plt.title('Predicted ABP Scatter Plot')
-                    plt.scatter(torch.squeeze(d).detach().cpu(), torch.squeeze(dbp).detach().cpu(), c='blue',
-                                marker='x', alpha=0.2, label='DBP')
-                    plt.scatter(torch.squeeze(s).detach().cpu(), torch.squeeze(sbp).detach().cpu(), c='red',
-                                alpha=0.2, label='SBP')
-                    plt.plot(x, x, color='k', label='y=x')
-                    plt.grid(color='gray', alpha=.5, linestyle='--')
-                    plt.xlabel('Target BP')
-                    plt.ylabel('Predicted BP')
-                    plt.legend()
-                    plt.show()
+                    # sub = torch.abs(dbp - d)
+                    # x = np.array(range(30, 220))
+                    # plt.figure(figsize=(10, 10))
+                    # plt.xlim(30, 220)
+                    # plt.ylim(30, 220)
+                    # plt.title('Predicted ABP Scatter Plot')
+                    # plt.scatter(torch.squeeze(d).detach().cpu(), torch.squeeze(dbp).detach().cpu(), c='blue',
+                    #             marker='x', alpha=0.2, label='DBP')
+                    # plt.scatter(torch.squeeze(s).detach().cpu(), torch.squeeze(sbp).detach().cpu(), c='red',
+                    #             alpha=0.2, label='SBP')
+                    # plt.plot(x, x, color='k', label='y=x')
+                    # plt.grid(color='gray', alpha=.5, linestyle='--')
+                    # plt.xlabel('Target BP')
+                    # plt.ylabel('Predicted BP')
+                    # plt.legend()
+                    # plt.show()
+                    # scatter_plot = plt
                     # plt.close()
-                    scatter_plot = plt
-                    # plt.close()
-                    plot = plot_prediction(X_test[0][0], Y_test[0], [d[0], s[0]],
-                                           hypothesis[0], dbp[0], sbp[0], epoch, plot_scaled, info[0],
+                    plot = plot_prediction(ppg[0][0], abp[0], [d[0], s[0]],
+                                           pred_abp[0], dbp[0], sbp[0], epoch, plot_scaled, info[0],
                                            patient_information, 1 - postfix_dict['corr'])
                     plot_flag = False
 
-        return total_avg_cost, plot, scatter_plot
+        return total_avg_cost, plot#, scatter_plot
 
 
 def plot_prediction(ple, abp, dsm, hypothesis, d, s, epoch, scaled, p_info, patient_information, corr):
-    t = np.arange(0, 6, 1 / 60)
+    t = np.arange(0, 6, 1 / 125)
     h = np.squeeze(hypothesis.cpu().detach())
     x = ple.detach().cpu().numpy()
     y = abp.detach().cpu().numpy()

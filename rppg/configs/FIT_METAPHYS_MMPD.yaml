@@ -1,0 +1,49 @@
+---
+data_root_path : "/home/jh/ext_hdd4000/data/"
+dataset_path: "/hdd/hdd1/dataset/data/preprocessed/" # preprocessed data path
+model_path: "/hdd/hdd1/models/rppg/"
+preprocess:
+  flag: false
+  analyze : false
+  chunk_size: 4
+  datasets:
+fit:
+  model: PhysNet
+  time_length: 64
+  overlap_interval: 0 # default 0
+  img_size: 128
+  train_flag: False
+  eval_flag: False
+  batch_size: 8
+  meta:
+    flag: True
+    pretrain:
+      flag: True
+      dataset: UBFC
+    fine_tune:
+      flag: True
+    inner_optim: Adam # SGD
+    inner_loss: neg_pearson
+    inner_lr: 0.0005
+    outer_optim: SGD
+    outer_loss: neg_pearson
+    outer_lr: 0.0001
+    inner_update_num: 5
+    outer_update_num: 1
+  train:
+    dataset: MMPD
+    shuffle: True
+    fs: 30 #video fps
+    batch_size: 32
+    learning_rate: 0.001
+    epochs: 10
+    loss: neg_pearson
+    optimizer: Adam
+  test:
+    cal_type : FFT
+    metric: ['MAE','RMSE','MAPE','Pearson']
+    dataset: MMPD
+    shuffle: false
+    fs: 30 #video fps
+    batch_size: 4
+

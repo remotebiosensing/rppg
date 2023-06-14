@@ -11,6 +11,7 @@ from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import preprocessing
 from rppg.run import run
+import os
 
 SEED = 0
 
@@ -28,7 +29,7 @@ generator.manual_seed(SEED)
 
 if __name__ == "__main__":
 
-    cfg = get_config("../../rppg/configs/FIT_PHYSNET_UBFC_UBFC.yaml")
+    cfg = get_config("../../rppg/configs/FIT_PHYSNET.yaml")
     if cfg.preprocess.flag:
         preprocessing(
             dataset_root_path=cfg.data_root_path,
@@ -55,6 +56,20 @@ if __name__ == "__main__":
     model = get_model(
         model_name=cfg.fit.model,
         time_length=cfg.fit.time_length)
+
+    if cfg.fit.pretrain.flag:
+        pretrained_path = cfg.fit.pretrain.path + cfg.fit.model + "_" + cfg.fit.pretrain.dataset + ".pt"
+        if os.path.isfile(pretrained_path):
+            model.load_state_dict(torch.load(pretrained_path))
+            print("Load pre-trained model")
+        else:
+            print("No pre-trained model exist, start training")
+            exec(open(str(cfg.fit.model) + ("_" + cfg.fit.meta.pretrain.dataset)*2 + ".yaml").read())
+            print("Pre-training complete, start training meta-learning model")
+            pretrained_path = cfg.model_path + cfg.fit.model + "_" + cfg.fit.meta.pretrain.dataset + ".pt"
+            model.load_state_dict(torch.load(pretrained_path))
+    else:
+        print("Cold start with no pre-trained model")
 
     wandb_cfg = get_config("../../rppg/configs/WANDB_CONFG.yaml")
     if wandb_cfg.flag and cfg.fit.train_flag:

@@ -1,28 +1,17 @@
 from cnibp.nets.blocks.conv_blocks import conv1d_1x1
 from cnibp.nets.modules.Linear_module import *
-from cnibp.nets.MobileNet1D import MobileNet
+from cnibp.nets.blocks.MobileNet1D import MobileNet
+from cnibp.nets.blocks.FILM_2D import Film1Dto2D
 from torchsummary import summary
-# from cnibp.nets.modules.sub_modules.Trend_module import Trend_module_1D
-# from cnibp.nets.modules.sub_modules.Detail_module import Detail_module_1D
-# from cnibp.nets.modules.sub_modules.Linear_module import Linear_module_1D
-# from cnibp.nets.modules.sub_modules.Amplitude_module import DBP_module, SBP_module, AMP_module, DBP_2D_Module, \
-#     SBP_2D_Module
-# from cnibp.nets.modules.sub_modules.residual_block import ResBlock_1D
-# from torch.nn.functional import cosine_similarity
-# from cnibp.nets.modules.sub_modules.Frequency_block import frequency_block
-# from cnibp.nets.modules.ver2.Detail_module import DetailFeatureExtractor2D
-# from cnibp.nets.modules.ver2.Trend_module import TrendFeatureExtractor2D
-# from cnibp.nets.modules.ver2.Amplifier import PleAmplifier
-# from cnibp.nets.modules.ver2.PositionalEncoding import PositionalEncoding
 
 
-# 맥스풀을 에버리지풀로 바꿔야함 <- 딥파이즈에서 다른 거 합칠 특성 때 이상해진다고
 class bvp2abp(nn.Module):
     def __init__(self, in_channels, out_channels=1, target_samp_rate=60):
         super(bvp2abp, self).__init__()
         self.in_channel = in_channels
 
         # feature extractor with kernel size 3 and 5
+        self.film = Film1Dto2D(width=25)
         self.small_feature_extractor = MobileNet(ch_in=in_channels, kernel_size=3)
         self.large_feature_extractor = MobileNet(ch_in=in_channels, kernel_size=5)
         # feature squeeze
@@ -66,10 +55,13 @@ class bvp2abp(nn.Module):
         if torch.Tensor.dim(x) == 2:
             x = x.view(x.shape[0], 1, -1)
         # batchN, channelN, seqN = x.shape
+        feature_2d = self.film(x)
         small_feature = self.small_feature_extractor(x)
         large_feature = self.large_feature_extractor(x)
         feature = torch.cat((small_feature, large_feature), dim=1)
         feature = self.feature_squeeze(feature)
+
+        feature = torch.mul(feature, feature_2d[:, 0].view(-1, 1, 1)) + feature_2d[:, 1].view(-1, 1, 1)
 
         expanded = self.sigmoid(self.expansion(feature))
         dbp = self.projection_dbp(feature)

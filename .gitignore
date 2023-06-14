@@ -1,7 +1,8 @@
 checkpoint_train.pth
 runs/*
+*.pyc
 __pycache__/*
 .idea/*
 minari/*
 .gitignore
-*.pyc
+.repo

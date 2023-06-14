@@ -18,8 +18,8 @@ from test import test
 from pygame import mixer
 import pandas as pd
 
-mixer.init()
-sound = mixer.Sound('bell-ringing-01c.wav')
+# mixer.init()
+# sound = mixer.Sound('bell-ringing-01c.wav')
 
 ''' warning: do not turn on set_detect_anomaly(True) when training, only for debugging '''
 # torch.autograd.set_detect_anomaly(True)
@@ -103,8 +103,8 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, wandb_on, gen
         val_cost_arr.append(validation(model, dataset[1], loss, epoch))
         if epoch % 1 == 0:
             ''' test model for each n epochs'''
-            test_cost, plot_img, scatter_img = test(model, dataset[2], loss, epoch, plot_scaled=False,
-                                                    patient_information=patient_info)
+            test_cost, plot_img = test(model, dataset[2], loss, epoch, plot_scaled=False,
+                                       patient_information=patient_info)
             test_cost_arr.append(test_cost)
             img_flag = True
         if epoch != 0:
@@ -130,8 +130,8 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, wandb_on, gen
             if img_flag:
                 wandb.log({"Prediction": wandb.Image(plot_img)}, step=epoch)
                 plot_img.close()
-                wandb.log({"Scatter": wandb.Image(scatter_img)}, step=epoch)
-                scatter_img.close()
+                # wandb.log({"Scatter": wandb.Image(scatter_img)}, step=epoch)
+                # scatter_img.close()
         # else:
         #     print("model is not learning, stop training..")
         #     print("best model path : {}".format(best_model_path))
@@ -146,7 +146,7 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, wandb_on, gen
     plt.ylabel('Loss')
     plt.legend()
     plt.show()
-    sound.play()
+    # sound.play()
     print("training stage 1 is done")
     print("best model path : {}".format(best_model_path))
     wandb.finish()
@@ -159,11 +159,11 @@ def main(model_name, dataset_name, in_channel, epochs, batch_size, wandb_on, gen
 if __name__ == '__main__':
     batch = [2048]
     # gender = [0, 1, 2]
-    gender_list = ["Total", "Male", "Female"]
+    gender_list = ["Total"]  # , "Male", "Female"]
     # ch = ['P', 'V', 'A', 'PV', 'PA', 'VA', 'PVA']
     # ch = ['PV', 'PA', 'PVA']
     # ch = ['P', 'PV', 'PA', 'PVA']
-    ch = ['PVA']
+    ch = ['P']
 
     # 0 zeroth, 0 first, 0 second, 1 zeroth, 1 first, 1 second, 2 zeroth, 2 first, 2 second
     # for g in gender:

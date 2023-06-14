@@ -17,10 +17,10 @@ import cnibp.preprocessing.utils.math_functions as mm
 import heartpy.peakdetection as hp_peak
 from heartpy.datautils import rolling_mean
 from heartpy.filtering import filter_signal
-import cnibp.unused.signal_cleaner as sc
+import cnibp.unused.preprocessing.signal_cleaner as sc
 # from scipy.ndimage import gaussian_filter1d
 import cnibp.preprocessing.mimiciii_matched as match
-import cnibp.unused.normalize_preprocessing as add_preprocessing
+import cnibp.unused.preprocessing.normalize_preprocessing as add_preprocessing
 import json
 
 # from cnibp.preprocessing.softdtw import sdtw

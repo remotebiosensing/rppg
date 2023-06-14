@@ -12,9 +12,7 @@ class BPNetDataset(Dataset):
         self.abp_cycle = torch.FloatTensor(a_cycle).to(device, non_blocking=True)
         self.dbp = torch.FloatTensor(dbp_label).to(device, non_blocking=True)
         self.sbp = torch.FloatTensor(sbp_label).to(device, non_blocking=True)
-        # self.size = torch.FloatTensor(size_factor).to(device, non_blocking=True)
         self.info = torch.FloatTensor(np.array(p_info, dtype=float)).to(device, non_blocking=True)
-        # self.ohe = torch.FloatTensor(ohe).to(device, non_blocking=True)
         self.len = self.y_data.shape[0]
 
     def __getitem__(self, index):
@@ -28,14 +26,10 @@ class BPNetDataset(Dataset):
         '''
         d = self.dbp[index][-1]
         s = self.sbp[index][-1]
-        # d = self.size[index][0]
-        # s = self.size[index][1]
-        # m = self.size[index][2]
         info = self.info[index]
-        # o = self.ohe[index]
-        # m = self.size[index][2].to('cuda')
 
-        return x, x_cycle, y, y_cycle, d, s, info  # returns 7 args
+
+        return x, x_cycle, y, y_cycle, d, s, info
 
     def __len__(self):
         return self.len
