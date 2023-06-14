@@ -133,12 +133,16 @@ class SignalHandler:
             print("not supported sampling rate.. check parameter.json")
             return None
 
-    def normalize(self):
-        min = np.min(self.input_sig)
-        max = np.max(self.input_sig)
-        return (self.input_sig - min) / (max - min)
-    def zscorenorm(self):
-        return (self.input_sig - np.mean(self.input_sig)) / np.std(self.input_sig)
+    def normalize(self, mode='minmax'):
+        if mode == 'minmax':
+            min = np.min(self.input_sig)
+            max = np.max(self.input_sig)
+            return (self.input_sig - min) / (max - min)
+        elif mode == 'zscore':
+            return (self.input_sig - np.mean(self.input_sig)) / np.std(self.input_sig)
+        else:
+            raise ValueError('mode should be one of [minmax, zscore]')
+
     def savitzky_golay_filter(self, window_size=21, poly_order=3, mode='nearest'):
         return signal.savgol_filter(self.input_sig, window_size, poly_order, mode=mode)
 
@@ -169,18 +173,10 @@ class SignalInfoExtractor(SignalBase):
     valid_flag : all(above flags) should be True for valid signal
     '''
 
-    def __init__(self, input_sig, normalize, preprocessing_mode):
+    def __init__(self, input_sig, normalize, preprocessing_mode='total'):
         super().__init__(input_sig)
-        # self.input_sig = SignalHandler(input_sig).savitzky_golay_filter(15, 2, 'nearest')
-        # self.input_sig = SignalHandler.savitzky_golay_filter(input_sig)
-        # self.ple_flag = np.max(input_sig) < 10
         if normalize:
-            # self.input_sig = SignalHandler(input_sig).normalize()
-            plt.plot(input_sig)
-            self.input_sig = SignalHandler(input_sig).zscorenorm()
-            plt.plot(self.input_sig)
-            plt.show()
-            print('ppg')
+            self.input_sig = SignalHandler(input_sig).normalize('minmax')
         else:
             self.input_sig = input_sig
         self.mode = preprocessing_mode
@@ -246,23 +242,22 @@ class SignalInfoExtractor(SignalBase):
                 cycle_len_list.append(len(cycle))
                 lr_check_list.append(abs(cycle[0] - cycle[-1]))
             avg_cycle_len = np.mean(cycle_len_list, dtype=np.int)
-            # check if cycle lengths are similar
-            if not self.get_mahalanobis_dis(cycle_len_list):
-                return False, np.zeros(1)
 
             peak_bpm = (self.fs / avg_cycle_len) * 60
-
+            length_order = np.argsort(np.abs(np.array(cycle_len_list) - avg_cycle_len))
+            diff_order = np.argsort(lr_check_list)
+            total_order = length_order[np.where((diff_order == length_order) == True)]
+            if len(total_order) > 0:
+                most_promising_cycle_idx = total_order[0]
+            else:
+                most_promising_cycle_idx = length_order[0]
+            # check if cycle lengths are similar
+            if not self.get_mahalanobis_dis(cycle_len_list):
+                return False, cycle_list[most_promising_cycle_idx]
             if 35 < peak_bpm < 140 or 35 < self.fft_bpm < 140:
-                length_order = np.argsort(np.abs(np.array(cycle_len_list) - avg_cycle_len))
-                diff_order = np.argsort(lr_check_list)
-                total_order = length_order[np.where((diff_order == length_order) == True)]
-                if len(total_order) > 0:
-                    most_promising_cycle_idx = total_order[0]
-                else:
-                    most_promising_cycle_idx = length_order[0]
                 return True, cycle_list[most_promising_cycle_idx]
             else:
-                return False, np.zeros(1)
+                return False, cycle_list[most_promising_cycle_idx]
         else:
             return False, np.zeros(1)
 
