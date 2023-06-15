@@ -24,7 +24,8 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders,model_path, wandb_
                 eval_flag = False
     else:
         #model = torch.load()
-        print("TBD")
+        test_fn(0, model, dataloaders[0], cfg.model, cal_type=cfg.test.cal_type,
+                metrics=cfg.test.metric, wandb_flag=wandb_flag)
 
 
 def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag: bool = True):
@@ -131,20 +132,17 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
 
     hr_pred, hr_target = get_hr(p, t,
                                 model_type=model_type, cal_type=cal_type)
-    hr_preds.extend(hr_pred)
-    hr_targets.extend(hr_target)
-
-    hr_preds = np.asarray(hr_preds)
-    hr_targets = np.asarray(hr_targets)
+    hr_pred = np.asarray(hr_pred)
+    hr_target = np.asarray(hr_target)
 
     if "MAE" in metrics:
-        print("MAE",MAE(hr_preds,hr_targets))
+        print("MAE",MAE(hr_pred,hr_target))
     if "RMSE" in metrics:
-        print("RMSE",RMSE(hr_preds,hr_targets))
+        print("RMSE",RMSE(hr_pred,hr_target))
     if "MAPE" in metrics:
-        print("MAPE",MAPE(hr_preds,hr_targets))
+        print("MAPE",MAPE(hr_pred,hr_target))
     if "Pearson" in metrics:
-        print("Pearson",corr(hr_preds,hr_targets))
+        print("Pearson",corr(hr_pred,hr_target))
 
 
 
