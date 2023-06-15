@@ -21,8 +21,8 @@ def video_preprocess(preprocess_type, path, **kwargs):
     if preprocess_type == 'DIFF':
         return DIFF_preprocess_Video(path, video_data, **kwargs)
     else:
-        video_data -= np.mean(video_data)
-        video_data /= np.std(video_data)
+        # video_data -= np.mean(video_data)
+        # video_data /= np.std(video_data)
         return video_data
 
 
@@ -322,7 +322,7 @@ def CONT_preprocess_Video(path, **kwargs):
                 cnt_y = np.round((maxy + miny) / 2).astype('int')
 
                 break
-        bbox_size = np.round(1.2 * (maxy - miny)).astype('int')
+        bbox_size = np.round(1.6 * (maxy - miny)).astype('int')
 
         if img_size == None:
             img_size = bbox_size
