@@ -57,7 +57,9 @@ def data_loader(
         test_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=False)
         return [train_loader, test_loader]
     elif datasets.__len__() == 1:
-        data_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=False)
+        data_loader = []
+        for dataset in datasets[0]:
+            data_loader.append(DataLoader(dataset, batch_size, shuffle=False))
         return [data_loader]
 
 
@@ -88,9 +90,12 @@ def dataset_loader(
         #for test
 
         test_len = 0
-        if eval_flag:
+        if eval_flag and train_flag:
             test_len = int(np.floor(path_len * 0.1))
             eval_path = path[-test_len:]
+        else:
+            eval_path = path
+
         if train_flag:
             train_len = int(np.floor(path_len * 0.8))
             train_path = path[:train_len]
@@ -282,12 +287,12 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                             1, len(label), num_frame), np.linspace(
                             1, len(label), len(label)), label)
 
-                if w != img_size:
-                    new_shape = (num_frame, img_size, img_size, c)
+                if w != img_size[0] and h != img_size[1]:
+                    new_shape = (num_frame, img_size[1], img_size[0], c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
                         img = file['raw_video'][i]/255.
-                        resized_img[i] = cv2.resize(img, (img_size, img_size))
+                        resized_img[i] = cv2.resize(img, (img_size[0], img_size[1]))
 
                 while end <= len(file['raw_video']):
                     if w != img_size:
