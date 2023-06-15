@@ -30,7 +30,7 @@ def preprocessing(
     manager = multiprocessing.Manager()
     for dataset in preprocess_cfg.datasets:
         dataset_name = dataset['name']
-        if dataset['type'] == 'continuous':
+        if dataset['type'] == 'CONT':
             preprocess_type = 'CONT'
         else:
             preprocess_type = 'DIFF'

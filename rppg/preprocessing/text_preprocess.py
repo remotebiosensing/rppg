@@ -189,8 +189,8 @@ def PhysNet_preprocess_Label(path,frame_total, **kwargs):
             np.linspace(
                 1, len(label), frame_total), np.linspace(
                 1, len(label), len(label)), label)
-    label = label - np.mean(label)
-    label = label / np.std(label)
+    # label = label - np.mean(label)
+    # label = label / np.std(label)
 
 
     return label, label_hr

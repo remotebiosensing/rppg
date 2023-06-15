@@ -142,10 +142,10 @@ def dataset_loader(
         if train_flag:
             train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size,False)
             dataset.append(train_dataset)
-            val_dataset = get_dataset(val_path, model_type, model_name, time_length, overlap_interval, img_size,False)
+            val_dataset = get_dataset(val_path, model_type, model_name, time_length, 0, img_size,False)
             dataset.append(val_dataset)
         if eval_flag:
-            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, overlap_interval, img_size,True)
+            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, 0, img_size,True)
             dataset.append(eval_dataset)
 
     return dataset
@@ -269,7 +269,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     # video_chunks.append(video_chunk)
                     start += time_length - overlap_interval
                     end += time_length - overlap_interval
-            elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN", "PhysFormer"]:
+            else:
                 start = 0
                 end = time_length
                 # label = detrend(file['preprocessed_label'], 100)
@@ -286,7 +286,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     new_shape = (num_frame, img_size, img_size, c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
-                        img = file['raw_video'][i]
+                        img = file['raw_video'][i]/255.
                         resized_img[i] = cv2.resize(img, (img_size, img_size))
 
                 while end <= len(file['raw_video']):
@@ -294,10 +294,11 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                         video_chunk = resized_img[start:end]
                     else:
                         video_chunk = file['raw_video'][start:end]
+                    video_chunk = (video_chunk - np.mean(video_chunk))/np.std(video_chunk)
                     video_data.append(video_chunk)
                     tmp_label = label[start:end]
 
-                    tmp_label = np.around(normalize(tmp_label, 0, 1), 2)
+                    # tmp_label = np.around(normalize(tmp_label, 0, 1), 2)
                     label_data.append(tmp_label)
                     # video_chunks.append(video_chunk)
                     start += time_length - overlap_interval
@@ -316,7 +317,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                                          target_length=time_length,
                                          img_size=img_size)
 
-            elif model_name in ["PhysNet", "PhysNet_LSTM", "GCN", "PhysFormer"]:
+            elif model_type == 'CONT':
                 dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data),
                                          target_length=time_length)

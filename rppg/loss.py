@@ -10,6 +10,7 @@ import scipy
 from numpy import dot
 from numpy.linalg import norm
 
+import torch.fft as fft
 import torch.utils.checkpoint as cp
 from scipy.signal import find_peaks
 from scipy.signal import butter, sosfiltfilt
@@ -24,6 +25,8 @@ def loss_fn(loss_name):
         return loss.MSELoss()
     elif loss_name == "fft":
         return fftLoss()
+    elif loss_name == "LSTCrPPG":
+        return LSTCrPPGLoss()
     elif loss_name == "L1":
         return loss.L1Loss()
     elif loss_name == "neg_pearson":
@@ -496,3 +499,48 @@ def bandpass_filter(data, lowcut=0.8, highcut=2.5, fs=30, order=5):
     # Apply bandpass filter
     y = sosfiltfilt(sos, data)
     return y
+
+class LSTCrPPGLoss(nn.Module):
+    def __init__(self):
+        super(LSTCrPPGLoss, self).__init__()
+        self.timeLoss = nn.MSELoss()
+        self.lambda_value = 0.2
+        self.alpha = 1.0
+        self.beta = 0.5
+    def forward(self, predictions, targets):
+
+        if len(predictions.shape) == 1:
+            predictions = predictions.view(1, -1)
+
+        # predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
+        # targets = (targets - torch.mean(targets)) / torch.std(targets)
+
+        targets = torch.nn.functional.normalize(targets,dim=1)
+        predictions = torch.nn.functional.normalize(predictions,dim=1)
+
+        l_time = self.timeLoss(predictions,targets)
+        l_frequency = self.frequencyLoss(predictions,targets)
+        return self.alpha*l_time + self.beta*l_frequency
+
+    def frequencyLoss(self,predictions, target):
+
+        batch, n = predictions.shape
+        predictions = self.calculate_rppg_psd(predictions)
+        target = self.calculate_rppg_psd(target)
+        di = torch.log(predictions) - torch.log(target)
+        sum_di_squared = torch.sum(di ** 2 , dim = -1)
+        sum_di = torch.sum(di, dim = -1)
+
+        hybrid_loss = (1 / n) * sum_di_squared - (self.lambda_value / (n ** 2)) * sum_di ** 2
+        loss = torch.sum(hybrid_loss)/batch
+        return loss
+
+    def calculate_rppg_psd(self,rppg_signal):
+        spectrum = fft.fft(rppg_signal)
+        # 복소 곱을 사용하여 PSD 계산
+        psd = torch.abs(spectrum) ** 2
+
+        return psd
+
+
+
