@@ -16,6 +16,9 @@ from rppg.nets.BigSmall import BigSmall
 from rppg.nets.LSTCrPPG import LSTCrPPG
 from rppg.nets.GREEN import GREEN
 from rppg.nets.POS import POS
+from rppg.nets.CHROM import CHROM
+from rppg.nets.LGI import LGI
+from rppg.nets.PBV import PBV
 
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -52,6 +55,12 @@ def get_model(model_name, time_length):
         model = GREEN()
     elif model_name == "POS":
         model = POS()
+    elif model_name == "CHROM":
+        model = CHROM()
+    elif model_name == "LGI":
+        model = LGI()
+    elif model_name == "PBV":
+        model = PBV()
     # elif model_name == "TEST":
     #     model = APNET()
     elif model_name == "APNETv2":
