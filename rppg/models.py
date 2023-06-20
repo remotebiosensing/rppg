@@ -19,6 +19,7 @@ from rppg.nets.POS import POS
 from rppg.nets.CHROM import CHROM
 from rppg.nets.LGI import LGI
 from rppg.nets.PBV import PBV
+from rppg.nets.SSR import SSR
 
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -61,6 +62,8 @@ def get_model(model_name, time_length):
         model = LGI()
     elif model_name == "PBV":
         model = PBV()
+    elif model_name == "SSR":
+        model = SSR()
     # elif model_name == "TEST":
     #     model = APNET()
     elif model_name == "APNETv2":

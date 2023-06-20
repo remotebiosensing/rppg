@@ -50,7 +50,7 @@ pressure (CNIBP) using PyTorch.
 | 2013 |  TR  |       CHROM       |       O        |                                                               [paper](https://ieeexplore.ieee.org/document/6523142)                                                               |
 | 2014 |  TR  |        PBV        |       O        |                                                                [paper](https://pubmed.ncbi.nlm.nih.gov/25159049/)                                                                 |
 | 2016 |  TR  |        POS        |       O        |                                                               [paper](https://ieeexplore.ieee.org/document/7565547)                                                               |
-| 2015 |  TR  |        SSR        |                |                                                               [paper](https://ieeexplore.ieee.org/document/7355301)                                                               |
+| 2015 |  TR  |        SSR        |       O        |                                                               [paper](https://ieeexplore.ieee.org/document/7355301)                                                               |
 | 2018 |  TR  |        LGI        |       O        |                           [paper](https://openaccess.thecvf.com/content_cvpr_2018_workshops/papers/w27/Pilz_Local_Group_Invariance_CVPR_2018_paper.pdf)                           |
 | 2023 |  TR  |  EEMD + FastICA   |                | [paper](https://iopscience.iop.org/article/10.1088/1361-6579/accefd/meta?casa_token=EVo9N2t0kekAAAAA:rUcw8D-6qGzT0dQZtBfgW0w2dVy-6p7kyHT3RV1q0YZMmEvQXpUoA-HaaO-K4m0aqiW-twzWWfmwXw) |
 
