@@ -7,6 +7,7 @@ class SSR(nn.Module):
 
     It is based on the work published in "A Novel Algorithm for Remote Photoplethysmography - Spatial Subspace Rotation",
     Wenjin Wang, Sander Stuijk, and Gerard de Haan, IEEE TRANSACTIONS ON BIOMEDICAL ENGINEERING, VOL. 63, NO. 9, SEPTEMBER 2016
+    Source code for bob.rppg.ssr.ssr_utils
     """
 
     def __init__(self):

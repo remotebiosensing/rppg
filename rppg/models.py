@@ -1,6 +1,7 @@
 import torchinfo
 
 from rppg.log import log_warning, log_info
+# DNN Method
 from nets.models.AxisNet import AxisNet, PhysiologicalGenerator
 from rppg.nets.DeepPhys import DeepPhys
 from nets.models.DeepPhys_DA import DeepPhys_DA
@@ -14,6 +15,7 @@ from rppg.nets.PhysNet import PhysNet
 from rppg.nets.PhysFormer import PhysFormer
 from rppg.nets.BigSmall import BigSmall
 from rppg.nets.LSTCrPPG import LSTCrPPG
+# Non-DNN Method
 from rppg.nets.GREEN import GREEN
 from rppg.nets.POS import POS
 from rppg.nets.CHROM import CHROM
