@@ -52,8 +52,8 @@ def data_loader(
         return data_loader
 
     if datasets.__len__() == 3:
-        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
-        validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=False)
+        validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=False)
         test_loader = []
         for dataset in datasets[2]:
             test_loader.append(DataLoader(dataset,batch_size,shuffle=False))
