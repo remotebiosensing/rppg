@@ -1,0 +1,42 @@
+---
+data_root_path : "/home/jh/data/"
+dataset_path: "/home/jh/dataset/" # preprocessed data path
+model_path: ""
+preprocess:
+  flag: true
+  analyze: false
+  chunk_size: 10
+  datasets:
+    - name: PURE
+      type: continuous # diff or continuous
+      video_fps: 30
+      fixed_position: 1
+      image_size: 128
+      large_box_coef: 1.5
+      label_sampling_rate: 30
+fit:
+  flag: false
+  model:
+  train:
+    flag: false
+    dataset:
+    fs: #video fps
+    batch_size:
+    learning_rate:
+    epochs:
+    loss:
+    optimizer:
+  val:
+    flag: false
+    dataset:
+    fs: #video fps
+    batch_size:
+  test:
+    flag: false
+    metric: ['MAE','RMSE','MAPE','Pearson']
+    dataset:
+    interval:
+    fs: #video fps
+    batch_size:
+
+
