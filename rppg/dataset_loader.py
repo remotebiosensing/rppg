@@ -85,7 +85,7 @@ def dataset_loader(
         root_file_path = save_root_path + "/" + dataset_name[0] + "/" + model_type
 
         path = get_all_files_in_path(root_file_path)
-        # path = path[:10]
+        # path = path[:2]
         path_len = len(path)
         #for test
 
@@ -291,7 +291,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     new_shape = (num_frame, img_size[1], img_size[0], c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
-                        img = file['raw_video'][i]/255.
+                        img = file['raw_video'][i]#/255.
                         resized_img[i] = cv2.resize(img, (img_size[0], img_size[1]))
 
                 while end <= len(file['raw_video']):
@@ -299,7 +299,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                         video_chunk = resized_img[start:end]
                     else:
                         video_chunk = file['raw_video'][start:end]
-                    video_chunk = (video_chunk - np.mean(video_chunk))/np.std(video_chunk)
+                    # video_chunk = (video_chunk - np.mean(video_chunk))/np.std(video_chunk)
                     video_data.append(video_chunk)
                     tmp_label = label[start:end]
 
