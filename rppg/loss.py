@@ -94,7 +94,7 @@ def neg_Pearson_Loss(predictions, targets):
     '''
     rst = 0
     targets = targets[:, :]
-    predictions = torch.squeeze(predictions)
+    # predictions = torch.squeeze(predictions)
     # Pearson correlation can be performed on the premise of normalization of input data
     predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
     targets = (targets - torch.mean(targets)) / torch.std(targets)
@@ -125,6 +125,10 @@ class NegPearsonLoss(nn.Module):
         super(NegPearsonLoss, self).__init__()
 
     def forward(self, predictions, targets):
+        if len(predictions.shape) == 1:
+            predictions = predictions.view(1, -1)
+        if len(targets.shape) == 1:
+            targets = targets.view(1, -1)
         return neg_Pearson_Loss(predictions, targets)
 
 

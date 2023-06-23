@@ -15,6 +15,7 @@ from rppg.nets.PhysNet import PhysNet
 from rppg.nets.PhysFormer import PhysFormer
 from rppg.nets.BigSmall import BigSmall
 from rppg.nets.LSTCrPPG import LSTCrPPG
+from rppg.nets.JAMSNet import JAMSNet
 # Non-DNN Method
 from rppg.nets.GREEN import GREEN
 from rppg.nets.POS import POS
@@ -55,6 +56,8 @@ def get_model(model_name, time_length):
         model = BigSmall()
     elif model_name == "LSTCrPPG":
         model = LSTCrPPG()
+    elif model_name == "JAMSNet":
+        model = JAMSNet()
     elif model_name == "GREEN":
         model = GREEN()
     elif model_name == "POS":
