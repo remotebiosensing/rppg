@@ -43,6 +43,7 @@ if __name__ == "__main__":
         model_name=cfg.fit.model,
         dataset_name=[cfg.fit.train.dataset, cfg.fit.test.dataset],
         time_length=cfg.fit.time_length,
+        batch_size=cfg.fit.batch_size,
         overlap_interval=cfg.fit.overlap_interval,
         img_size=cfg.fit.img_size,
         train_flag=cfg.fit.train_flag,
@@ -56,7 +57,8 @@ if __name__ == "__main__":
 
     model = get_model(
         model_name=cfg.fit.model,
-        time_length=cfg.fit.time_length)
+        time_length=cfg.fit.time_length,
+        img_size=cfg.fit.img_size)
 
     wandb_cfg = get_config("../../rppg/configs/WANDB_CONFG.yaml")
     if wandb_cfg.flag and cfg.fit.train_flag:

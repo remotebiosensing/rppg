@@ -13,6 +13,7 @@ from rppg.datasets.ETArPPGNetDataset import ETArPPGNetDataset
 from rppg.datasets.PhysNetDataset import PhysNetDataset
 from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
+from rppg.datasets.EfficientPhysDataset import EfficientPhysDataset
 from rppg.utils.funcs import detrend
 
 
@@ -52,11 +53,11 @@ def data_loader(
         return data_loader
 
     if datasets.__len__() == 3:
-        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
-        validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=False)
+        validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=False)
         test_loader = []
         for dataset in datasets[2]:
-            test_loader.append(DataLoader(dataset,batch_size,shuffle=False))
+            test_loader.append(DataLoader(dataset, batch_size, shuffle=False))
         return [train_loader, validation_loader, test_loader]
     elif datasets.__len__() == 2:
         train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
@@ -70,19 +71,19 @@ def data_loader(
 
 
 def dataset_loader(
-
         save_root_path: str,
         model_name: str,
         dataset_name: [],
         time_length: int,
         overlap_interval: int,
         img_size: int,
+        batch_size: int,
         train_flag: bool,
         eval_flag: bool,
         meta=False
 ):
     model_type = ''
-    if model_name in ["DeepPhys", "MTTS","BigSmall"]:
+    if model_name in ["DeepPhys", "MTTS", "BigSmall"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'
@@ -93,7 +94,7 @@ def dataset_loader(
         path = get_all_files_in_path(root_file_path)
         # path = path[:10]
         path_len = len(path)
-        #for test
+        # for test
 
         test_len = 0
         if eval_flag and train_flag:
@@ -182,8 +183,8 @@ def dataset_loader(
                 file.close()
 
                 rst_dataset = PhysNetDataset(video_data=np.asarray(video_data),
-                                         label_data=np.asarray(label_data),
-                                         target_length=time_length)
+                                             label_data=np.asarray(label_data),
+                                             target_length=time_length)
 
             elif model_name in ["DeepPhys", "MTTS"]:
                 for key in file.keys():
@@ -196,12 +197,13 @@ def dataset_loader(
     else:
         dataset = []
         if train_flag:
-            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size,False)
+            train_dataset = get_dataset(train_path, model_type, model_name, time_length, batch_size, overlap_interval,
+                                        img_size, False)
             dataset.append(train_dataset)
-            val_dataset = get_dataset(val_path, model_type, model_name, time_length, 0, img_size,False)
+            val_dataset = get_dataset(val_path, model_type, model_name, time_length, batch_size, 0, img_size, False)
             dataset.append(val_dataset)
         if eval_flag:
-            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, 0, img_size,True)
+            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, batch_size, 0, img_size, True)
             dataset.append(eval_dataset)
 
     return dataset
@@ -233,7 +235,6 @@ def normalize(arr, t_min, t_max):
     for i in arr:
         tmp = (((i - min(arr) * diff) / diff_arr)) + t_min
         norm_arr.append(tmp)
-
     return norm_arr
 
 
@@ -253,7 +254,7 @@ def get_all_files_in_path(path):
     return files
 
 
-def get_dataset(path, model_type, model_name, time_length, overlap_interval, img_size, eval_flag):
+def get_dataset(path, model_type, model_name, time_length, batch_size, overlap_interval, img_size, eval_flag):
     idx = 0
     round_flag = 0
     rst_dataset = None
@@ -285,11 +286,11 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             h5_tree(file)
             if model_type == 'DIFF':
                 num_frame, w, h, c = file['raw_video'][:].shape
-                if model_name =="BigSmall":
+                if model_name == "BigSmall":
                     for i in range(num_frame):
                         img = file['raw_video'][i]
-                        appearance_data.append(cv2.resize(img[:,:,3:],(144,144),interpolation=cv2.INTER_AREA))
-                        motion_data.append(cv2.resize(img[:,:,:3],(9,9),interpolation=cv2.INTER_AREA))
+                        appearance_data.append(cv2.resize(img[:, :, 3:], (144, 144), interpolation=cv2.INTER_AREA))
+                        motion_data.append(cv2.resize(img[:, :, :3], (9, 9), interpolation=cv2.INTER_AREA))
 
                 elif w != img_size:
                     new_shape = (num_frame, img_size, img_size, c)
@@ -325,6 +326,29 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     # video_chunks.append(video_chunk)
                     start += time_length - overlap_interval
                     end += time_length - overlap_interval
+
+            elif model_name in ["EfficientPhys"]:
+                label = file['preprocessed_label']
+                diff_norm_label = np.diff(label, axis=0)
+                diff_norm_label /= np.std(diff_norm_label)
+                diff_norm_label = np.array(diff_norm_label)
+                diff_norm_label[np.isnan(diff_norm_label)] = 0
+
+                num_frame, w, h, c = file['raw_video'][:].shape
+                if w != img_size and h != img_size:
+                    new_shape = (num_frame, img_size, img_size, c)
+                    resized_img = np.zeros(new_shape, dtype=np.float32)
+                    for i in range(num_frame):
+                        img = file['raw_video'][i]  # / 255.
+                        resized_img[i] = cv2.resize(img, (img_size, img_size))
+                    diff_video = np.diff(resized_img, axis=0)
+                else:
+                    diff_video = np.diff(file['raw_video'][:], axis=0)
+
+                num_frame = ((num_frame-1)//batch_size) * batch_size
+                label_data.extend(diff_norm_label[:num_frame])
+                video_data.extend(diff_video[:num_frame])
+
             else:
                 start = 0
                 end = time_length
@@ -338,19 +362,19 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                             1, len(label), num_frame), np.linspace(
                             1, len(label), len(label)), label)
 
-                if w != img_size[0] and h != img_size[1]:
-                    new_shape = (num_frame, img_size[1], img_size[0], c)
+                if w != img_size and h != img_size:
+                    new_shape = (num_frame, img_size, img_size, c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
-                        img = file['raw_video'][i]/255.
-                        resized_img[i] = cv2.resize(img, (img_size[0], img_size[1]))
+                        img = file['raw_video'][i]  # / 255.
+                        resized_img[i] = cv2.resize(img, (img_size, img_size))
 
                 while end <= len(file['raw_video']):
                     if w != img_size:
                         video_chunk = resized_img[start:end]
                     else:
                         video_chunk = file['raw_video'][start:end]
-                    video_chunk = (video_chunk - np.mean(video_chunk))/np.std(video_chunk)
+                    video_chunk = (video_chunk - np.mean(video_chunk)) / np.std(video_chunk)
                     video_data.append(video_chunk)
                     tmp_label = label[start:end]
 
@@ -359,6 +383,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     # video_chunks.append(video_chunk)
                     start += time_length - overlap_interval
                     end += time_length - overlap_interval
+
             file.close()
             round_flag = 2
         elif round_flag == 2:
@@ -372,7 +397,9 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                                          label_data=np.asarray(label_data),
                                          target_length=time_length,
                                          img_size=img_size)
-
+            elif model_name in ["EfficientPhys"]:
+                dataset = EfficientPhysDataset(video_data=np.asarray(video_data),
+                                               label_data=np.asarray(label_data))
             elif model_type == 'CONT':
                 dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data),
@@ -387,7 +414,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             elif model_name in ["Vitamon", "Vitamon_phase2"]:
                 dataset = VitamonDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data))
-            if not  eval_flag:
+            if not eval_flag:
                 datasets = [rst_dataset, dataset]
                 rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
             else:
@@ -397,4 +424,3 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
         return rst_dataset
     else:
         return datasets
-

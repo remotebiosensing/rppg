@@ -44,7 +44,7 @@ class TSM(nn.Module):
 
 class EfficientPhys(nn.Module):
     def __init__(self, in_channels=3, nb_filters1=32, nb_filters2=64, kernel_size=3, dropout_rate1=0.25,
-                 dropout_rate2=0.5, pool_size=(2, 2), nb_dense=128, frame_depth=20, img_size=36, channel='raw'):
+                 dropout_rate2=0.5, pool_size=(2, 2), nb_dense=128, frame_depth=20, img_size=36, channel='diff'):
         super(EfficientPhys, self).__init__()
         self.in_channels = in_channels
         self.kernel_size = kernel_size
@@ -54,8 +54,9 @@ class EfficientPhys(nn.Module):
         self.nb_filters1 = nb_filters1
         self.nb_filters2 = nb_filters2
         self.nb_dense = nb_dense
+
         # TSM layers
-        self.TSM_1 = TSM(n_segment=frame_depth)
+        self.TSM_1 = TSM(n_segment=frame_depth)  # frame_depth = 20
         self.TSM_2 = TSM(n_segment=frame_depth)
         self.TSM_3 = TSM(n_segment=frame_depth)
         self.TSM_4 = TSM(n_segment=frame_depth)
@@ -94,7 +95,6 @@ class EfficientPhys(nn.Module):
         self.channel = channel
 
     def forward(self, inputs, params=None):
-        inputs = torch.diff(inputs, dim=0)
         inputs = self.batch_norm(inputs)
 
         network_input = self.TSM_1(inputs)

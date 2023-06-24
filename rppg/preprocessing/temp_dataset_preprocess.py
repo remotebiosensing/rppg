@@ -29,10 +29,13 @@ def preprocessing(data_root_path, preprocess_cfg, dataset_path):
     manager = multiprocessing.Manager()
     for dataset in preprocess_cfg.datasets:
         dataset_name = dataset['name']
-        if dataset['type'] == 'CONT':
+        if dataset['type'] in ['continuous', 'CONT']:
             preprocess_type = 'CONT'
-        else:
+        elif dataset['type'] in ['diff', 'DIFF']:
             preprocess_type = 'DIFF'
+        else:
+            preprocess_type = 'CUSTOM'
+
         img_size = dataset['image_size']
         large_box_coef = dataset['large_box_coef']
 
@@ -181,7 +184,7 @@ def chunk_preprocessing(preprocess_type, data_list, dataset_root_path, vid_name,
     for index, data_path in enumerate(data_list):
         proc = multiprocessing.Process(target=preprocess_Dataset,
                                        args=(preprocess_type, dataset_root_path + "/" + data_path, vid_name,
-                                           ground_truth_name, return_dict)
+                                             ground_truth_name, return_dict)
                                        , kwargs={"save_root_path": save_root_path,
                                                  "dataset_name": dataset_name,
                                                  "img_size": img_size,
@@ -206,6 +209,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         path = video_path[:-4]
         data = sorted(os.listdir(path))[1:]
         frame_total = len(data)
+        raw_label = get_label(label_path, frame_total)
 
         for i in tqdm(range(frame_total), position=0, leave=True, desc=path):
             frame = cv2.imread(path + "/" + data[i])
@@ -218,7 +222,9 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         valid_fr_idx = xy_points[xy_points['top'].notnull()].index.tolist()
         front_idx = valid_fr_idx[0]
         rear_idx = valid_fr_idx[-1]
+
         xy_points = xy_points[front_idx:rear_idx + 1]
+        raw_label = raw_label[front_idx:rear_idx + 1]
 
         y_x_w = get_CntYX_Width(xy_points=xy_points, large_box_coef=large_box_coef)
 
@@ -230,16 +236,16 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
                                         y_x_w[i][0] + y_x_w[i][2]), 0, mode='clip')
             face = np.take(face, range(y_x_w[i][1] - y_x_w[i][2],
                                        y_x_w[i][1] + y_x_w[i][2]), 1, mode='clip')
-            face = face.astype(np.float32)
+            face = (face / 255.).astype(np.float32)
             if img_size == y_x_w[frame_num][2] * 2:
                 raw_video[frame_num] = face
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
-        raw_video = (raw_video / 255.).astype(np.float32)
 
     elif video_path.__contains__(".mat"):
         f = sio.loadmat(video_path)
         frames = f['video']
+        raw_label = f['GT_ppg']
         frame_total = len(frames)
 
         for i in tqdm(range(frame_total), position=0, leave=True, desc=video_path):
@@ -253,28 +259,29 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         valid_fr_idx = xy_points[xy_points['top'].notnull()].index.tolist()
         front_idx = valid_fr_idx[0]
         rear_idx = valid_fr_idx[-1]
+
         xy_points = xy_points[front_idx:rear_idx + 1]
+        raw_label = raw_label[front_idx:rear_idx + 1]
+        frames = frames[front_idx:rear_idx + 1]
 
         y_x_w = get_CntYX_Width(xy_points=xy_points, large_box_coef=large_box_coef)
 
-        frames = frames[front_idx:rear_idx + 1]
         raw_video = np.empty((xy_points.__len__(), img_size, img_size, 3), dtype=np.float32)
         for frame_num, frame in enumerate(frames):
             face = np.take(frame, range(y_x_w[frame_num][0] - y_x_w[frame_num][2],
                                         y_x_w[frame_num][0] + y_x_w[frame_num][2]), 0, mode='clip')
             face = np.take(face, range(y_x_w[frame_num][1] - y_x_w[frame_num][2],
                                        y_x_w[frame_num][1] + y_x_w[frame_num][2]), 1, mode='clip')
-            face = face.astype(np.float32)
             if img_size == y_x_w[frame_num][2] * 2:
                 raw_video[frame_num] = face
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
-        raw_video = raw_video.astype(np.float32)
 
     else:
         cap = cv2.VideoCapture(video_path)
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        xy_points = pd.DataFrame(columns=['bottom', 'right', 'top', 'left'])
+        raw_label = get_label(label_path, frame_total)
+
         for i in tqdm(range(frame_total), position=0, leave=True, desc=video_path):
             ret, frame = cap.read()
             if ret:
@@ -290,7 +297,9 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         valid_fr_idx = xy_points[xy_points['top'].notnull()].index.tolist()
         front_idx = valid_fr_idx[0]
         rear_idx = valid_fr_idx[-1]
+
         xy_points = xy_points[front_idx:rear_idx + 1]
+        raw_label = raw_label[front_idx:rear_idx + 1]
 
         y_x_w = get_CntYX_Width(xy_points=xy_points, large_box_coef=large_box_coef)
 
@@ -310,27 +319,26 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
                                         y_x_w[frame_num][0] + y_x_w[frame_num][2]), 0, mode='clip')
             face = np.take(face, range(y_x_w[frame_num][1] - y_x_w[frame_num][2],
                                        y_x_w[frame_num][1] + y_x_w[frame_num][2]), 1, mode='clip')
-            face = face.astype(np.float32)
+            face = (face / 255.).astype(np.float32)
             if img_size == y_x_w[frame_num][2] * 2:
                 raw_video[frame_num] = face
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
-        raw_video = (raw_video / 255.).astype(np.float32)
         cap.release()
 
-    raw_label = get_label(label_path, frame_total)
-    raw_label = raw_label[front_idx:rear_idx + 1]
     if preprocess_type == 'DIFF':
-        raw_video = diff_video(raw_video)
-        raw_label = diff_label(raw_label)
+        raw_video = diff_normalize_label(raw_video)
+        raw_label = diff_normalize_video(raw_label)
+    elif preprocess_type == 'CUSTOM':
+        pass
 
     return raw_video, raw_label
 
 
-def get_label(path, frame_total):
+def get_label(label_path, frame_total):
     # Load input
-    if path.__contains__("hdf5"):
-        f = h5py.File(path, 'r')
+    if label_path.__contains__("hdf5"):
+        f = h5py.File(label_path, 'r')
         label = np.asarray(f['pulse'])
 
         # label = decimate(label,int(len(label)/frame_total))
@@ -351,13 +359,13 @@ def get_label(path, frame_total):
         label /= np.std(label)
         start = math.ceil(start / 32)
         end = math.floor(end / 32)
-    elif path.__contains__("json"):
-        name = path.split("/")
+    elif label_path.__contains__("json"):
+        name = label_path.split("/")
         label = []
         label_time = []
         label_hr = []
         time = []
-        with open(path[:-4] + name[-2] + ".json") as json_file:
+        with open(label_path[:-4] + name[-2] + ".json") as json_file:
             json_data = json.load(json_file)
             for data in json_data['/FullPackage']:
                 label.append(data['Value']['waveform'])
@@ -367,8 +375,8 @@ def get_label(path, frame_total):
                 time.append(data['Timestamp'])
 
 
-    elif path.__contains__("csv"):
-        f = open(path, 'r')
+    elif label_path.__contains__("csv"):
+        f = open(label_path, 'r')
         rdr = csv.reader(f)
         fr = list(rdr)
         label = np.asarray(fr[1:]).reshape((-1)).astype(np.float32)
@@ -376,7 +384,7 @@ def get_label(path, frame_total):
         # print("label length" + str(len(label)))
         f.close()
 
-        f_time = open(path[:-8] + "time.txt", 'r')
+        f_time = open(label_path[:-8] + "time.txt", 'r')
         fr_time = f_time.read().split('\n')
         time = np.asarray(fr_time[:-1]).astype(np.float32)  ## 동영상 시간
         f_time.close()
@@ -386,29 +394,29 @@ def get_label(path, frame_total):
         f = interp1d(x, label)
         label = f(new_x)
 
-        f_hr = open(path[:-8] + "gt_HR.csv", 'r')
+        f_hr = open(label_path[:-8] + "gt_HR.csv", 'r')
         rdr = csv.reader(f_hr)
         fr = list(rdr)
         label_hr = np.asarray(fr[1:]).reshape((-1)).astype(np.float32)
         f_hr.close()
 
         # print("Check")
-    elif path.__contains__("label.txt"):
-        cap = cv2.VideoCapture(path[:-9] + "video.mkv")
+    elif label_path.__contains__("label.txt"):
+        cap = cv2.VideoCapture(label_path[:-9] + "video.mkv")
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = int(cap.get(cv2.CAP_PROP_FPS))
         cap.release()
 
         length = int(frame_total / fps * 1000)
 
-        f = open(path, 'r')
+        f = open(label_path, 'r')
         f_read = f.read().split('\n')
         f.close()
         label = list(map(float, f_read[:-1]))
         new_label = label[:length:40]
         print("A")
     else:
-        f = open(path, 'r')
+        f = open(label_path, 'r')
         f_read = f.read().split('\n')
         label = ' '.join(f_read[0].split()).split()
         label_hr = ' '.join(f_read[1].split()).split()
@@ -428,7 +436,7 @@ def get_label(path, frame_total):
     return np.array(label, dtype=np.float32)
 
 
-def diff_label(label):
+def diff_normalize_label(label):
     delta_label = np.diff(label, axis=0)
     delta_label /= np.std(delta_label)
     delta_label = np.array(delta_label).astype(np.float32)
@@ -437,7 +445,7 @@ def diff_label(label):
     return delta_label
 
 
-def diff_video(video_data):
+def diff_normalize_video(video_data):
     frame_total, h, w, c = video_data.shape
 
     raw_video = np.empty((frame_total - 1, h, w, 6), dtype=np.float32)
@@ -496,12 +504,11 @@ def create_debug_video(raw_video, save_path, video_name, fps=30.):
         out.write(frame)
     out.release()
 
-
 # dataPath = '/home/jh/dataset/PURE/DIFF/01-06.hdf5'
 # ubfc_h5 = h5py.File(dataPath, 'r')
 # raw_video = np.array(ubfc_h5['raw_video'])
 # raw_video = raw_video[:,:,:,3:]
 # save_path = '/home/jh/prep_test'
-# video_name = 'test_PURE.mp4'
+# video_name = 'test_UBFC.mp4'
 # create_debug_video(raw_video, save_path, video_name, fps=30.)
 # A = raw_video[:,:,:,3:]

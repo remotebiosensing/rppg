@@ -13,6 +13,7 @@ from nets.models.sub_models.VitaMon import Vitamon
 from rppg.nets.APNETv2 import APNETv2
 from rppg.nets.PhysNet import PhysNet
 from rppg.nets.PhysFormer import PhysFormer
+from rppg.nets.EfficientPhys import EfficientPhys
 from rppg.nets.BigSmall import BigSmall
 from rppg.nets.LSTCrPPG import LSTCrPPG
 from rppg.nets.JAMSNet import JAMSNet
@@ -28,7 +29,7 @@ from rppg.nets.PCA import PCA
 NUM_FEATURES = 5
 NUM_CLASSES = 10
 
-def get_model(model_name, time_length):
+def get_model(model_name, time_length, img_size):
     """
     :param model_name: model name
     :return: model
@@ -52,6 +53,8 @@ def get_model(model_name, time_length):
         model = ETArPPGNet()
     elif model_name == "Vitamon":
         model = Vitamon()
+    elif model_name == "EfficientPhys":
+        model = EfficientPhys(frame_depth=10, img_size=img_size)
     elif model_name =="BigSmall":
         model = BigSmall()
     elif model_name == "LSTCrPPG":

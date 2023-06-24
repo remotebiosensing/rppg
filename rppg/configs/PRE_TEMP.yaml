@@ -10,8 +10,7 @@ preprocess:
     - name: PURE
       type: continuous # diff or continuous
       video_fps: 30
-      fixed_position: 1
-      image_size: 128
+      image_size: 144
       large_box_coef: 1.5
       label_sampling_rate: 30
 fit:

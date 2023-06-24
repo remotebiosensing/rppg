@@ -92,7 +92,7 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
     # To evaluate a model by subject, you can use the meta option
     step = "Test"
 
-    if model_name in ["DeepPhys", "MTTS","BigSmall"]:
+    if model_name in ["DeepPhys", "MTTS", "BigSmall", "EfficientPhys"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'
@@ -111,38 +111,36 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
     interval = fs * time
 
     for dataloader in dataloaders:
-        with tqdm(dataloader, desc=step,total= len(dataloader),disable=True) as tepoch:
+        with tqdm(dataloader, desc=step, total=len(dataloader), disable=True) as tepoch:
             _pred = []
             _target = []
             for inputs, target in tepoch:
                 # if inputs[0].shape[0] < dataloader.batch_size:
                 #     continue
-                _pred.extend(np.reshape(model(inputs).cpu().detach().numpy(),(-1,)))
-                _target.extend(np.reshape(target.cpu().detach().numpy(),(-1,)))
+                _pred.extend(np.reshape(model(inputs).cpu().detach().numpy(), (-1,)))
+                _target.extend(np.reshape(target.cpu().detach().numpy(), (-1,)))
 
             remind = len(_pred) % interval
-            if remind >0:
+            if remind > 0:
                 _pred = _pred[:-remind]
                 _target = _target[:-remind]
-        p.extend(np.reshape(np.reshape(np.asarray(_pred),-1),(-1,interval)))
-        t.extend(np.reshape(np.reshape(np.asarray(_target),-1),(-1,interval)))
+        p.extend(np.reshape(np.reshape(np.asarray(_pred), -1), (-1, interval)))
+        t.extend(np.reshape(np.reshape(np.asarray(_target), -1), (-1, interval)))
     p = np.asarray(p)
     t = np.asarray(t)
 
-
-    hr_pred, hr_target = get_hr(p, t,
-                                model_type=model_type, cal_type=cal_type)
+    hr_pred, hr_target = get_hr(p, t, model_type=model_type, cal_type=cal_type)
     hr_pred = np.asarray(hr_pred)
     hr_target = np.asarray(hr_target)
 
     if "MAE" in metrics:
-        print("MAE",MAE(hr_pred,hr_target))
+        print("MAE", MAE(hr_pred, hr_target))
     if "RMSE" in metrics:
-        print("RMSE",RMSE(hr_pred,hr_target))
+        print("RMSE", RMSE(hr_pred, hr_target))
     if "MAPE" in metrics:
-        print("MAPE",MAPE(hr_pred,hr_target))
+        print("MAPE", MAPE(hr_pred, hr_target))
     if "Pearson" in metrics:
-        print("Pearson",corr(hr_pred,hr_target))
+        print("Pearson", corr(hr_pred, hr_target))
 
 
 

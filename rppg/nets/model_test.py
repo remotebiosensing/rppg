@@ -103,10 +103,7 @@ if __name__ == '__main__':
         # check_APNETv2_computation_time(net)
         out = net(img)  # [batch,time]
     elif model_name == "EfficientPhys":
-        img = torch.rand(4, 10, 3, 72, 72).to(device)  # [batch, length, channel, height, width]
-        N, D, C, H, W = img.shape
-        img = img.view(N * D, C, H, W)
-        last_frame = torch.unsqueeze(img[-1, :, :, :], 0)
-        img = torch.cat((img, last_frame), 0)
+        img = torch.rand(40, 3, 72, 72).to(device)  # [batch, channel, height, width]
+        N, C, H, W = img.shape
         net = EfficientPhys(img_size=W).to(device)
-        out = net(img)  # [batch,time]
+        out = net(img)
