@@ -38,105 +38,105 @@ def preprocessing(preprocess_cfg, dataset_name):
     :return:
     """
 
-    chunk_size = preprocess_cfg.chunk_size
-    dataset_path = dataset_path
+    chunk_size = preprocess_cfg.process_num
     manager = multiprocessing.Manager()
-    for dataset in preprocess_cfg.datasets:
-        dataset_name = dataset['name']
-        if dataset['type'] == 'CONT':
-            preprocess_type = 'CONT'
+
+    if preprocess_cfg.dataset.type == 'continuous':
+        preprocess_type = 'CONT'
+    else:
+        preprocess_type = 'DIFF'
+    face_detect_algorithm = preprocess_cfg.dataset.face_detect_algorithm
+    fixed_position = preprocess_cfg.dataset.fixed_position
+    img_size = preprocess_cfg.dataset.image_size
+
+    dataset_root_path = preprocess_cfg.data_root_path + dataset_name
+    if not os.path.isdir(dataset_root_path):
+        raise ValueError("dataset path does not exist, check data_root_path in preprocess.yaml")
+    return_dict = manager.dict()
+    if dataset_name == "V4V":
+        dataset_root_path = dataset_root_path + "/train_val/data"
+        data_list = [data for data in os.listdir(dataset_root_path)]
+        vid_name = "/video.mkv"
+        ground_truth_name = "/label.txt"
+        print(data_list)
+    elif dataset_name == "UBFC":
+        data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+        vid_name = "/vid.avi"
+        ground_truth_name = "/ground_truth.txt"
+    elif dataset_name == "cuff_less_blood_pressure":
+        data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("part")]
+    elif dataset_name == "VIPL_HR":
+        data_dir = "/data"
+        person_data_path = dataset_root_path + data_dir
+        # source1/2/3
+        # /data/pxx/vxx/sourcex/
+
+        data_list = []
+        person_list = [data for data in os.listdir(person_data_path) if data.__contains__("p")]
+        for person in person_list:
+            v_list = [v for v in os.listdir(person_data_path + "/" + person) if v.__contains__(v)]
+            for v in v_list:
+                source_list = [source for source in os.listdir(person_data_path + "/" + person + "/" + v)]
+                for source in source_list:
+                    tmp = data_dir + "/" + person + "/" + v + "/" + source
+                    if len(os.listdir(dataset_root_path + tmp)) == 5 and source == 'source1':
+                        data_list.append(tmp)
+
+        vid_name = "/video.avi"
+        ground_truth_name = "/wave.csv"
+
+        print(person_list)
+    elif dataset_name.__contains__("cohface"):
+        dataset_root_path = preprocess_cfg.data_root_path + "cohface"
+        protocol = dataset_root_path + "/" + "protocols/"
+        if dataset_name.__contains__("all"):
+            protocol += "all/all.txt"
+        elif dataset_name.__contains__("clean"):
+            protocol += "clean/all.txt"
+        elif dataset_name.__contains__("natural"):
+            protocol += "natural/all.txt"
+        f = open(protocol, 'r')
+        data_list = f.readlines()
+        data_list = [path.replace("data\n", "") for path in data_list]
+        f.close()
+        vid_name = "data.mkv"
+        ground_truth_name = "data.hdf5"
+    elif dataset_name.__contains__("PURE"):
+        data_list = os.listdir(dataset_root_path)
+        vid_name = "/png"
+        ground_truth_name = "/json"
+    elif dataset_name.__contains__("MMPD"):
+        data_list = []
+        subject_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
+        for subject in subject_list:
+            task_list = [task for task in os.listdir(dataset_root_path + "/" + subject) if task.__contains__('.mat')]
+            for task in task_list:
+                tmp = subject + "/" + task
+                data_list.append(tmp)
+        vid_name = ""
+        ground_truth_name = ""
+
+    # ssl_flag = True
+
+    # multiprocessing
+    chunk_num = math.ceil(len(data_list) / chunk_size)
+    if chunk_num == 1:
+        chunk_size = len(data_list)
+    for i in range(chunk_num):
+        if i == chunk_num - 1:
+            chunk_data_list = data_list[i * chunk_size:]
         else:
-            preprocess_type = 'DIFF'
-        face_detect_algorithm = dataset['face_detect_algorithm']
-        fixed_position = dataset["fixed_position"]
-        img_size = dataset['image_size']
+            chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]
 
-        dataset_root_path = data_root_path + dataset_name
+        print("chunk_data_list : ", chunk_data_list)
 
-        return_dict = manager.dict()
-        if dataset_name == "V4V":
-            dataset_root_path = dataset_root_path + "/train_val/data"
-            data_list = [data for data in os.listdir(dataset_root_path)]
-            vid_name = "/video.mkv"
-            ground_truth_name = "/label.txt"
-            print(data_list)
-        elif dataset_name == "UBFC":
-            data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
-            vid_name = "/vid.avi"
-            ground_truth_name = "/ground_truth.txt"
-        elif dataset_name == "cuff_less_blood_pressure":
-            data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("part")]
-        elif dataset_name == "VIPL_HR":
-            data_dir = "/data"
-            person_data_path = dataset_root_path + data_dir
-            # source1/2/3
-            # /data/pxx/vxx/sourcex/
+        chunk_preprocessing(preprocess_type, chunk_data_list, dataset_root_path, vid_name, ground_truth_name,
+                            dataset_name,
+                            preprocess_cfg.dataset_path,
+                            face_detect_algorithm=face_detect_algorithm,
+                            fixed_position=fixed_position, img_size=img_size,
+                            chunk_size=chunk_size, idx=i)
 
-            data_list = []
-            person_list = [data for data in os.listdir(person_data_path) if data.__contains__("p")]
-            for person in person_list:
-                v_list = [v for v in os.listdir(person_data_path + "/" + person) if v.__contains__(v)]
-                for v in v_list:
-                    source_list = [source for source in os.listdir(person_data_path + "/" + person + "/" + v)]
-                    for source in source_list:
-                        tmp = data_dir + "/" + person + "/" + v + "/" + source
-                        if len(os.listdir(dataset_root_path + tmp)) == 5 and source == 'source1':
-                            data_list.append(tmp)
-
-            vid_name = "/video.avi"
-            ground_truth_name = "/wave.csv"
-
-            print(person_list)
-        elif dataset_name.__contains__("cohface"):
-            dataset_root_path = data_root_path + "cohface"
-            protocol = dataset_root_path + "/" + "protocols/"
-            if dataset_name.__contains__("all"):
-                protocol += "all/all.txt"
-            elif dataset_name.__contains__("clean"):
-                protocol += "clean/all.txt"
-            elif dataset_name.__contains__("natural"):
-                protocol += "natural/all.txt"
-            f = open(protocol, 'r')
-            data_list = f.readlines()
-            data_list = [path.replace("data\n", "") for path in data_list]
-            f.close()
-            vid_name = "data.mkv"
-            ground_truth_name = "data.hdf5"
-        elif dataset_name.__contains__("PURE"):
-            data_list = os.listdir(dataset_root_path)
-            vid_name = "/png"
-            ground_truth_name = "/json"
-        elif dataset_name.__contains__("MMPD"):
-            data_list = []
-            subject_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
-            for subject in subject_list:
-                task_list = [task for task in os.listdir(dataset_root_path + "/" + subject) if task.__contains__('.mat')]
-                for task in task_list:
-                    tmp = subject + "/" + task
-                    data_list.append(tmp)
-            vid_name = ""
-            ground_truth_name = ""
-
-        ssl_flag = True
-
-        # multiprocessing
-        chunk_num = math.ceil(len(data_list) / chunk_size)
-        if chunk_num == 1:
-            chunk_size = len(data_list)
-        for i in range(chunk_num):
-            if i == chunk_num - 1:
-                chunk_data_list = data_list[i * chunk_size:]
-            else:
-                chunk_data_list = data_list[i * chunk_size:(i + 1) * chunk_size]
-
-            print("chunk_data_list : ", chunk_data_list)
-
-            chunk_preprocessing(preprocess_type, chunk_data_list, dataset_root_path, vid_name, ground_truth_name,
-                                dataset_name,
-                                dataset_path,
-                                face_detect_algorithm=face_detect_algorithm,
-                                fixed_position=fixed_position, img_size=img_size,
-                                chunk_size=chunk_size, idx=i)
 
 def mkdir_p(directory):
     """Like mkdir -p ."""
@@ -162,16 +162,14 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     save_root_path = kwargs['save_root_path']
     dataset_name = kwargs['dataset_name']
 
-
     raw_video = video_preprocess(preprocess_type=preprocess_type,
-                                path=path + vid_name,
-                                **kwargs)
+                                 path=path + vid_name,
+                                 **kwargs)
 
     preprocessed_label = label_preprocess(preprocess_type=preprocess_type,
                                           path=path + ground_truth_name,
-                                          frame_total = len(raw_video),
+                                          frame_total=len(raw_video),
                                           **kwargs)
-
 
     if None in raw_video:
         return
@@ -190,12 +188,11 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     if not os.path.isdir(dir_path):
         mkdir_p(dir_path)
 
-    data = h5py.File(dir_path + path[-1] + ".hdf5","w")
-    data.create_dataset('raw_video',data=raw_video)
+    data = h5py.File(dir_path + path[-1] + ".hdf5", "w")
+    data.create_dataset('raw_video', data=raw_video)
     data.create_dataset('preprocessed_label', data=preprocessed_label[0])
-    data.create_dataset('preprocessed_hr',data=preprocessed_label[1])
+    data.create_dataset('preprocessed_hr', data=preprocessed_label[1])
     data.close()
-
 
 
 def chunk_preprocessing(preprocess_type,
@@ -225,7 +222,7 @@ def chunk_preprocessing(preprocess_type,
                                            return_dict)
                                        , kwargs={"face_detect_algorithm": face_detect_algorithm,
                                                  "save_root_path": save_root_path,
-                                                 "dataset_name" : dataset_name,
+                                                 "dataset_name": dataset_name,
                                                  "fixed_position": fixed_position,
                                                  "img_size": img_size,
                                                  "flip_flag": 0})
