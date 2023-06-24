@@ -2,25 +2,30 @@ import math
 import torch
 import wandb
 from tqdm import tqdm
-from rppg.utils.funcs import (get_hr,MAE,RMSE,MAPE,corr,IrrelevantPowerRatio)
+from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr, IrrelevantPowerRatio)
 import numpy as np
+import os
 
-def run(model, optimizer, lr_sch, criterion, cfg, dataloaders,model_path, wandb_flag):
-
+def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
     best_loss = 100000
     val_loss = 0
     eval_flag = False
-    if cfg.train_flag:
-        for epoch in range(cfg.train.epochs):
-            train_fn(epoch, model, optimizer,lr_sch, criterion,dataloaders[0])
+    save_dir = cfg.model_save_path + cfg.fit.model + "/"
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    if cfg.fit.train_flag:
+        for epoch in range(cfg.fit.train.epochs):
+            train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders[0])
             val_loss = val_fn(epoch, model, criterion, dataloaders[1])
-            if best_loss> val_loss:
+            if best_loss > val_loss:
                 best_loss = val_loss
-                torch.save(model.state_dict(),model_path + cfg.model + "_" + cfg.train.dataset + ".pt")
+                torch.save(model.state_dict(), save_dir +
+                           "train" + cfg.fit.train.dataset + "_test" + cfg.fit.test.dataset + ".pt")
                 eval_flag = True
-            if cfg.eval_flag and (eval_flag or (epoch+1)%cfg.eval_interval == 0):
-                test_fn(epoch,model,dataloaders[2],cfg.model,cal_type=cfg.test.cal_type,
-                        metrics=cfg.test.metric, wandb_flag=wandb_flag)
+            if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
+                test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                        metrics=cfg.fit.test.metric, wandb_flag=wandb_flag)
                 eval_flag = False
     else:
         #model = torch.load()
@@ -88,11 +93,11 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
         return running_loss / tepoch.__len__()
 
 
-def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_flag: bool = True):
+def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, wandb_flag: bool = True):
     # To evaluate a model by subject, you can use the meta option
     step = "Test"
 
-    if model_name in ["DeepPhys", "MTTS", "BigSmall", "EfficientPhys"]:
+    if model_name in ["DeepPhys", "TSCAN", "MTTS", "BigSmall", "EfficientPhys"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'

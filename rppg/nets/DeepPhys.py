@@ -1,8 +1,8 @@
 import torch
 
 device = torch.device(
-        "cuda:0" if torch.cuda.is_available() else "cpu"
-    )
+    "cuda:0" if torch.cuda.is_available() else "cpu"
+)
 
 class DeepPhys(torch.nn.Module):
     def __init__(self):
@@ -14,11 +14,11 @@ class DeepPhys(torch.nn.Module):
         self.attention_mask2 = None
 
         self.appearance_model = AppearanceModel(in_channels=self.in_channels, out_channels=self.out_channels,
-                                                   kernel_size=self.kernel_size)
+                                                kernel_size=self.kernel_size)
         self.motion_model = MotionModel(in_channels=self.in_channels, out_channels=self.out_channels,
                                         kernel_size=self.kernel_size)
 
-        self.linear_model = LinearModel()
+        self.linear_model = LinearModel(16384)
 
     def forward(self, inputs):
         """
@@ -29,8 +29,9 @@ class DeepPhys(torch.nn.Module):
         original 2d model
         """
 
-        self.attention_mask1, self.attention_mask2 = self.appearance_model(inputs[0].squeeze())
-        motion_output = self.motion_model(inputs[1].squeeze(), self.attention_mask1, self.attention_mask2)
+        self.attention_mask1, self.attention_mask2 = self.appearance_model(inputs[0])
+        motion_output = self.motion_model(inputs[1], self.attention_mask1, self.attention_mask2)
+
         out = self.linear_model(motion_output)
 
         return out
@@ -38,23 +39,26 @@ class DeepPhys(torch.nn.Module):
     def get_attention_mask(self):
         return self.attention_mask1, self.attention_mask2
 
+
 class AppearanceModel(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size):
         # Appearance model
         super().__init__()
-        #1
-        self.a_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=1)
-        self.a_conv2 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=3)
+        # 1
+        self.a_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+                                       kernel_size=kernel_size, padding=1)
+        self.a_conv2 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels,
+                                       kernel_size=kernel_size)
 
-        #drop 안됨
+        # drop 안됨
         self.a_dropout1 = torch.nn.Dropout2d(p=0.25)
         # Attention mask1
         self.attention_mask1 = AttentionBlock(out_channels)
         self.a_avg1 = torch.nn.AvgPool2d(kernel_size=2)
-        self.a_conv3 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels * 2, kernel_size=3,
-                                       padding=1)
-
-        self.a_conv4 = torch.nn.Conv2d(in_channels=out_channels * 2, out_channels=out_channels * 2, kernel_size=3)
+        self.a_conv3 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels * 2,
+                                       kernel_size=kernel_size, padding=1)
+        self.a_conv4 = torch.nn.Conv2d(in_channels=out_channels * 2, out_channels=out_channels * 2,
+                                       kernel_size=kernel_size)
 
         self.a_dropout2 = torch.nn.Dropout2d(p=0.25)
         # Attention mask2
@@ -84,16 +88,17 @@ class MotionModel(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size):
         super().__init__()
         # Motion model
-        self.m_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                       padding=1)
+        self.m_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+                                       kernel_size=kernel_size, padding=1)
 
-        self.m_conv2 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.m_conv2 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels,
+                                       kernel_size=kernel_size)
 
         self.m_dropout1 = torch.nn.Dropout2d(p=0.50)
-
         self.m_avg1 = torch.nn.AvgPool2d(kernel_size=2)
-        self.m_conv3 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels * 2, kernel_size=kernel_size,
-                                       padding=1)
+
+        self.m_conv3 = torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels * 2,
+                                       kernel_size=kernel_size, padding=1)
 
         self.m_conv4 = torch.nn.Conv2d(in_channels=out_channels * 2, out_channels=out_channels * 2,
                                        kernel_size=kernel_size)
@@ -105,7 +110,7 @@ class MotionModel(torch.nn.Module):
         M1 = torch.tanh(self.m_conv1(inputs))
         M2 = torch.tanh(self.m_conv2(M1))
         # element wise multiplication Mask1
-        g1 = M2*mask1
+        g1 = M2 * mask1
         M3 = self.m_avg1(g1)
         M4 = self.m_dropout1(M3)
         # pooling
@@ -120,53 +125,12 @@ class MotionModel(torch.nn.Module):
 
         return M8
 
-class TSM_Block(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, padding):
-        super().__init__()
-        self.tsm1 = TSM()
-        self.t_conv1 = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                       padding=padding)
-
-    def forward(self, input, n_frame=2, fold_div=3):
-        t = self.tsm1(input, n_frame, fold_div)
-        t = self.t_conv1(t)
-        return t
-
-
-class TSM(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def __call__(self, input, n_frame=4, fold_div=3):
-        n_frame = 4
-        B, C, H, W = input.shape
-        input = input.view(-1, n_frame, H, W, C)
-        fold = C // fold_div
-        last_fold = C - (fold_div - 1) * fold
-        out1, out2, out3 = torch.split(input, [fold, fold, last_fold], -1)
-
-        padding1 = torch.zeros_like(out1)
-        padding1 = padding1[:, -1, :, :, :]
-        padding1 = torch.unsqueeze(padding1, 1)
-        _, out1 = torch.split(out1, [1, n_frame - 1], 1)
-        out1 = torch.cat((out1, padding1), 1)
-
-        padding2 = torch.zeros_like(out2)
-        padding2 = padding2[:, 0, :, :, :]
-        padding2 = torch.unsqueeze(padding2, 1)
-        out2, _ = torch.split(out2, [n_frame - 1, 1], 1)
-        out2 = torch.cat((padding2, out2), 1)
-
-        out = torch.cat((out1, out2, out3), -1)
-        out = out.view([-1, C, H, W])
-
-        return out
 
 class LinearModel(torch.nn.Module):
-    def __init__(self, in_channel=16384):
+    def __init__(self, in_features=3136):
         super().__init__()
         self.f_drop1 = torch.nn.Dropout(0.5)
-        self.f_linear1 = torch.nn.Linear(in_channel, 128, bias=True)
+        self.f_linear1 = torch.nn.Linear(in_features, 128, bias=True)
         self.f_linear2 = torch.nn.Linear(128, 1, bias=True)
 
     def forward(self, input):
@@ -176,10 +140,11 @@ class LinearModel(torch.nn.Module):
         f4 = self.f_linear2(f3)
         return f4
 
+
 class AttentionBlock(torch.nn.Module):
     def __init__(self, in_channels):
         super().__init__()
-        self.attention = torch.nn.Conv2d(in_channels, 1, kernel_size=1,  padding=0)
+        self.attention = torch.nn.Conv2d(in_channels, 1, kernel_size=1, padding=0)
 
     def forward(self, input):
         mask = self.attention(input)

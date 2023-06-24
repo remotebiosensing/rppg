@@ -1,0 +1,15 @@
+---
+data_root_path: "/ssd/ssd0/dataset/raw/rppg/"           # raw data path
+dataset_path: "/ssd/ssd0/dataset/preprocessed/rppg/"    # preprocessed data path
+
+flag: true                                              # true: preprocess, false: not preprocess
+analyze: false                                          # true: analyze, false: not analyze
+process_num: 48                                         # number of task per process for multiprocessing
+dataset:
+  name: UBFC                                            # dataset name
+  type: DIFF                                            # "DIFF" or "CONT"
+  video_fps: 30                                         # video fps
+  fixed_position: 1                                     # 0: face tracking, 1: fixed position
+  face_detect_algorithm: 1                              # 1: face recognition, 2: FaceMesh
+  image_size: 144                                       # cropped image size
+  label_fps: 30                                         # label fps

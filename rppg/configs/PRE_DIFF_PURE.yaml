@@ -1,0 +1,17 @@
+---
+data_root_path : "/hdd/hdd1/dataset/data/"
+dataset_path: "/hdd/hdd1/dataset/data/preprocessed/" # preprocessed data path
+model_path: "/media/hdd1/dy/model/"
+preprocess:
+  flag: true
+  analyze: false
+  chunk_size: 96
+  datasets:
+    - name: PURE
+      type: diff # diff or continuous
+      video_fps: 30
+      fixed_position: 1
+      face_detect_algorithm: 1 # 1: face recognition 2: FaceMesh
+      face_position: 0 # 0 : face tracking 1: fixed position
+      image_size: 72
+      label_sampling_rate: 30
