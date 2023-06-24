@@ -8,11 +8,24 @@ from rppg.preprocessing.image_preprocess import video_preprocess
 from rppg.preprocessing.text_preprocess import label_preprocess
 
 
-def preprocessing(
-        data_root_path,
-        preprocess_cfg,
-        dataset_path
-):
+def check_preprocessed_data(fit_cfg, pre_cfg):
+    if fit_cfg.fit.img_size > pre_cfg.dataset.image_size:
+        print('*** Image size for model input is larger than the preprocessed image *** '
+              '\n\tPlease check the image size in the config files.')
+
+    if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.train.dataset + "/" + fit_cfg.fit.type.upper()):
+        print('Preprocessing train({}) dataset...'.format(fit_cfg.fit.train.dataset))
+        preprocessing(preprocess_cfg=pre_cfg, dataset_name=fit_cfg.fit.train.dataset)
+    else:
+        print('Preprocessed {} data already exists.'.format(fit_cfg.fit.train.dataset))
+    if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.test.dataset + "/" + fit_cfg.fit.type.upper()):
+        print('Preprocessing test({}) dataset...'.format(fit_cfg.fit.test.dataset))
+        preprocessing(preprocess_cfg=pre_cfg, dataset_name=fit_cfg.fit.test.dataset)
+    else:
+        print('Preprocessed {} data already exists.'.format(fit_cfg.fit.test.dataset))
+
+
+def preprocessing(preprocess_cfg, dataset_name):
     """
     :param save_root_path: save file destination path
     :param model_name: select preprocessing method
