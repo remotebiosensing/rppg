@@ -6,6 +6,7 @@ import numpy as np
 from torch.utils.data import ConcatDataset
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
+from torch.utils.data.sampler import Sampler
 
 from rppg.datasets.APNETv2Dataset import APNETv2Dataset
 from rppg.datasets.DeepPhysDataset import DeepPhysDataset
@@ -38,6 +39,9 @@ def dataset_split(
 def data_loader(
         datasets,
         batch_size,
+        model_type,
+        time_length,
+        shuffle,
         meta=False
 ):
     if meta:
@@ -52,22 +56,41 @@ def data_loader(
             data_loader.append([support_loader, query_loader])
         return data_loader
 
+    test_loader = []
     if datasets.__len__() == 3:
-        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=False)
-        validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=False)
-        test_loader = []
+        if model_type == 'DIFF':
+            total_len_train = datasets[0].__len__()
+            total_len_validation = datasets[1].__len__()
+            idx_train = np.arange(total_len_train)
+            idx_validation = np.arange(total_len_validation)
+            if shuffle:
+                idx_train = idx_train.reshape(-1, time_length)
+                idx_train = np.random.permutation(idx_train)
+                idx_train = idx_train.reshape(-1)
+                idx_validation = idx_validation.reshape(-1, time_length)
+                idx_validation = np.random.permutation(idx_validation)
+                idx_validation = idx_validation.reshape(-1)
+                shuffle = False
+            sampler_train = ClipSampler(idx_train)
+            sampler_validation = ClipSampler(idx_validation)
+
+            train_loader = DataLoader(datasets[0], batch_size=(batch_size * time_length),
+                                      sampler=sampler_train, shuffle=shuffle)
+            validation_loader = DataLoader(datasets[1], batch_size=(batch_size * time_length),
+                                           sampler=sampler_validation, shuffle=shuffle)
+        # elif fit_type == 'CONT':
+        else:
+            train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=shuffle)
+            validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=shuffle)
+
         for dataset in datasets[2]:
             test_loader.append(DataLoader(dataset, batch_size, shuffle=False))
         return [train_loader, validation_loader, test_loader]
-    elif datasets.__len__() == 2:
-        train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
-        test_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=False)
-        return [train_loader, test_loader]
+
     elif datasets.__len__() == 1:
-        data_loader = []
         for dataset in datasets[0]:
-            data_loader.append(DataLoader(dataset, batch_size, shuffle=False))
-        return [data_loader]
+            test_loader.append(DataLoader(dataset, batch_size, shuffle=False))
+        return [test_loader]
 
 
 def dataset_loader(
@@ -360,7 +383,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                 else:
                     diff_video = np.diff(file['raw_video'][:], axis=0)
 
-                num_frame = ((num_frame-1)//time_length) * time_length
+                num_frame = ((num_frame - 1) // time_length) * time_length
                 label_data.extend(diff_norm_label[:num_frame])
                 video_data.extend(diff_video[:num_frame])
 
@@ -440,3 +463,13 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
     else:
         return datasets
 
+
+class ClipSampler(Sampler):
+    def __init__(self, data_source):
+        self.data_source = data_source
+
+    def __iter__(self):
+        return iter(self.data_source.tolist())
+
+    def __len__(self):
+        return len(self.data_source.tolist())

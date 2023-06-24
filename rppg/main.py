@@ -47,12 +47,16 @@ if __name__ == "__main__":
 
     data_loaders = data_loader(
         datasets=datasets,
-        batch_size=fit_cfg.fit.batch_size
+        batch_size=fit_cfg.fit.batch_size,
+        model_type=fit_cfg.fit.type,
+        time_length=fit_cfg.fit.time_length,
+        shuffle=fit_cfg.fit.train.shuffle,
     )
 
     model = get_model(
         model_name=fit_cfg.fit.model,
-        time_length=fit_cfg.fit.time_length)
+        time_length=fit_cfg.fit.time_length,
+        img_size=fit_cfg.fit.img_size)
 
     wandb_cfg = get_config("configs/WANDB_CONFG.yaml")
     if wandb_cfg.flag and fit_cfg.fit.train_flag:
