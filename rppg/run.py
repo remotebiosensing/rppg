@@ -2,30 +2,34 @@ import math
 import torch
 import wandb
 from tqdm import tqdm
-from rppg.utils.funcs import (get_hr,MAE,RMSE,MAPE,corr,IrrelevantPowerRatio)
+from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr, IrrelevantPowerRatio)
 import numpy as np
+import os
 
-def run(model, optimizer, lr_sch, criterion, cfg, dataloaders,model_path, wandb_flag):
-
+def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
     best_loss = 100000
     val_loss = 0
     eval_flag = False
-    if cfg.train_flag:
-        for epoch in range(cfg.train.epochs):
-            train_fn(epoch, model, optimizer,lr_sch, criterion,dataloaders[0])
+    save_dir = cfg.model_save_path + cfg.fit.model + "/"
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    if cfg.fit.train_flag:
+        for epoch in range(cfg.fit.train.epochs):
+            train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders[0])
             val_loss = val_fn(epoch, model, criterion, dataloaders[1])
-            if best_loss> val_loss:
+            if best_loss > val_loss:
                 best_loss = val_loss
-                torch.save(model.state_dict(),model_path + cfg.model + "_" + cfg.train.dataset + ".pt")
+                torch.save(model.state_dict(), save_dir +
+                           "train" + cfg.fit.train.dataset + "_test" + cfg.fit.test.dataset + ".pt")
                 eval_flag = True
-            if cfg.eval_flag and (eval_flag or (epoch+1)%cfg.eval_interval == 0):
-                test_fn(epoch,model,dataloaders[2],cfg.model,cal_type=cfg.test.cal_type,
-                        metrics=cfg.test.metric, wandb_flag=wandb_flag)
+            if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
+                test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                        metrics=cfg.fit.test.metric, wandb_flag=wandb_flag)
                 eval_flag = False
     else:
-        #model = torch.load()
-        test_fn(0, model, dataloaders[0], cfg.model, cal_type=cfg.test.cal_type,
-                metrics=cfg.test.metric, wandb_flag=wandb_flag)
+        # model = torch.load()
+        print("TBD")
 
 
 def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag: bool = True):
@@ -37,8 +41,8 @@ def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag
         running_loss = 0.0
 
         for inputs, target in tepoch:
-            # if inputs[0].shape[0] < dataloaders.batch_size:
-            #     continue
+            if inputs[0].shape[0] < dataloaders.batch_size:
+                continue
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
             outputs = model(inputs)
@@ -67,12 +71,13 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
     # TODO : Implement save model function
     step = "Val"
 
-
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.eval()
         running_loss = 0.0
         with torch.no_grad():
             for inputs, target in tepoch:
+                if inputs[0].shape[0] < dataloaders.batch_size:
+                    continue
                 tepoch.set_description(step + "%d" % epoch)
                 outputs = model(inputs)
                 loss = criterion(outputs, target)
@@ -88,11 +93,11 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
         return running_loss / tepoch.__len__()
 
 
-def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_flag: bool = True):
+def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, wandb_flag: bool = True):
     # To evaluate a model by subject, you can use the meta option
     step = "Test"
 
-    if model_name in ["DeepPhys", "MTTS","BigSmall"]:
+    if model_name in ["DeepPhys", "TSCAN", "MTTS", "BigSmall"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'
@@ -111,39 +116,42 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type,  metrics, wandb_fla
     interval = fs * time
 
     for dataloader in dataloaders:
-        with tqdm(dataloader, desc=step,total= len(dataloader),disable=True) as tepoch:
+        with tqdm(dataloader, desc=step, total=len(dataloader), disable=True) as tepoch:
             _pred = []
             _target = []
             for inputs, target in tepoch:
-                # if inputs[0].shape[0] < dataloader.batch_size:
-                #     continue
-                _pred.extend(np.reshape(model(inputs).cpu().detach().numpy(),(-1,)))
-                _target.extend(np.reshape(target.cpu().detach().numpy(),(-1,)))
+                if inputs[0].shape[0] < dataloader.batch_size:
+                    continue
+                _pred.extend(np.reshape(model(inputs).cpu().detach().numpy(), (-1,)))
+                _target.extend(np.reshape(target.cpu().detach().numpy(), (-1,)))
 
             remind = len(_pred) % interval
-            if remind >0:
+            if remind > 0:
                 _pred = _pred[:-remind]
                 _target = _target[:-remind]
-        p.extend(np.reshape(np.reshape(np.asarray(_pred),-1),(-1,interval)))
-        t.extend(np.reshape(np.reshape(np.asarray(_target),-1),(-1,interval)))
+        p.extend(np.reshape(np.reshape(np.asarray(_pred), -1), (-1, interval)))
+        t.extend(np.reshape(np.reshape(np.asarray(_target), -1), (-1, interval)))
     p = np.asarray(p)
     t = np.asarray(t)
 
-
     hr_pred, hr_target = get_hr(p, t,
                                 model_type=model_type, cal_type=cal_type)
-    hr_pred = np.asarray(hr_pred)
-    hr_target = np.asarray(hr_target)
+    hr_preds.extend(hr_pred)
+    hr_targets.extend(hr_target)
+
+    hr_preds = np.asarray(hr_preds)
+    hr_targets = np.asarray(hr_targets)
+
+    print(hr_preds.shape)
 
     if "MAE" in metrics:
-        print("MAE",MAE(hr_pred,hr_target))
+        print("MAE", MAE(hr_preds, hr_targets))
     if "RMSE" in metrics:
-        print("RMSE",RMSE(hr_pred,hr_target))
+        print("RMSE", RMSE(hr_preds, hr_targets))
     if "MAPE" in metrics:
-        print("MAPE",MAPE(hr_pred,hr_target))
+        print("MAPE", MAPE(hr_preds, hr_targets))
     if "Pearson" in metrics:
-        print("Pearson",corr(hr_pred,hr_target))
-
+        print("Pearson", corr(hr_preds, hr_targets))
 
 
 def find_lr(model, train_loader, optimizer, criterion, init_value=1e-8, final_value=10., beta=0.98):
