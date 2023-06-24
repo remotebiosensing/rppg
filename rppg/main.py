@@ -37,9 +37,10 @@ if __name__ == "__main__":
         save_root_path=preprocess_cfg.dataset_path,
         model_name=fit_cfg.fit.model,
         dataset_name=[fit_cfg.fit.train.dataset, fit_cfg.fit.test.dataset],
-        time_length=fit_cfg.fit.time_length, #???
-        overlap_interval=fit_cfg.fit.overlap_interval, # ???
+        time_length=fit_cfg.fit.time_length,
+        overlap_interval=fit_cfg.fit.overlap_interval,
         img_size=fit_cfg.fit.img_size,
+        batch_size=fit_cfg.fit.batch_size,
         train_flag=fit_cfg.fit.train_flag,
         eval_flag=fit_cfg.fit.eval_flag,
         meta=fit_cfg.fit.train.meta.flag
