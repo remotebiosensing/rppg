@@ -1,0 +1,38 @@
+---
+model_save_path: "/ssd/ssd0/pretrained_model/rppg/"      # model save path
+preprocess:
+  flag: true                                                     # true: preprocess, false: not preprocess
+
+fit:
+  model: DeepPhys
+  type: DIFF
+  time_length: 1
+  overlap_interval: 0 # default 0
+  img_size: 72
+  train_flag: True
+  eval_flag: True
+  eval_interval: 100
+  batch_size: 720
+
+  train:
+    dataset: UBFC
+    shuffle: False
+    fs: 30 #video fps
+    batch_size: 720
+    learning_rate: 0.009
+    epochs: 30
+    loss: MSE
+    optimizer: AdamW
+    meta:
+      flag: false
+      inner_optim: adam
+      inner_loss: MSE
+      inner_lr: 0.01
+
+  test:
+    cal_type: FFT
+    metric: [ 'MAE','RMSE','MAPE','Pearson' ]
+    dataset: PURE
+    shuffle: false
+    fs: 30 #video fps
+    batch_size: 300
