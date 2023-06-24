@@ -56,7 +56,7 @@ def data_loader(
         validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=False)
         test_loader = []
         for dataset in datasets[2]:
-            test_loader.append(DataLoader(dataset,batch_size,shuffle=False))
+            test_loader.append(DataLoader(dataset, batch_size, shuffle=False))
         return [train_loader, validation_loader, test_loader]
     elif datasets.__len__() == 2:
         train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=True)
@@ -82,18 +82,18 @@ def dataset_loader(
         meta=False
 ):
     model_type = ''
-    if model_name in ["DeepPhys", "MTTS","BigSmall"]:
+    if model_name in ["DeepPhys", "TSCAN", "MTTS", "Efficient", "BigSmall"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'
 
     if dataset_name[0] == dataset_name[1]:
-        root_file_path = save_root_path + "/" + dataset_name[0] + "/" + model_type
+        root_file_path = save_root_path + dataset_name[0] + "/" + model_type
 
         path = get_all_files_in_path(root_file_path)
         # path = path[:2]
         path_len = len(path)
-        #for test
+        # for test
 
         test_len = 0
         if eval_flag and train_flag:
@@ -109,16 +109,21 @@ def dataset_loader(
 
     elif dataset_name[0] != dataset_name[1]:
 
-        root_file_path = save_root_path + "/" + dataset_name[0] + "/" + model_type
-        path = get_all_files_in_path(root_file_path)
+        root_file_path = save_root_path + dataset_name[0] + "/" + model_type
+        if not os.path.exists(root_file_path):
+            raise FileExistsError("There is no dataset in the path : ", root_file_path)
+
+        path = get_all_files_in_path(root_file_path)[:]
         path_len = len(path)
         if train_flag:
             train_len = int(np.floor(path_len * 0.9))
             train_path = path[:train_len]
             val_path = path[train_len:]
         if eval_flag:
-            root_file_path = save_root_path + "/" + dataset_name[1] + "/" + model_type
-            path = get_all_files_in_path(root_file_path)
+            root_file_path = save_root_path + dataset_name[1] + "/" + model_type
+            if not os.path.exists(root_file_path):
+                raise FileExistsError("There is no dataset in the path : ", root_file_path)
+            path = get_all_files_in_path(root_file_path)[:]
             eval_path = path
 
     idx = 0
@@ -182,8 +187,8 @@ def dataset_loader(
                 file.close()
 
                 rst_dataset = PhysNetDataset(video_data=np.asarray(video_data),
-                                         label_data=np.asarray(label_data),
-                                         target_length=time_length)
+                                             label_data=np.asarray(label_data),
+                                             target_length=time_length)
 
             elif model_name in ["DeepPhys", "MTTS"]:
                 for key in file.keys():
@@ -196,12 +201,13 @@ def dataset_loader(
     else:
         dataset = []
         if train_flag:
-            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size,False)
+            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval, img_size,
+                                        False)
             dataset.append(train_dataset)
-            val_dataset = get_dataset(val_path, model_type, model_name, time_length, 0, img_size,False)
+            val_dataset = get_dataset(val_path, model_type, model_name, time_length, 0, img_size, False)
             dataset.append(val_dataset)
         if eval_flag:
-            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, 0, img_size,True)
+            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, 0, img_size, True)
             dataset.append(eval_dataset)
 
     return dataset
@@ -285,11 +291,11 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             h5_tree(file)
             if model_type == 'DIFF':
                 num_frame, w, h, c = file['raw_video'][:].shape
-                if model_name =="BigSmall":
+                if model_name == "BigSmall":
                     for i in range(num_frame):
                         img = file['raw_video'][i]
-                        appearance_data.append(cv2.resize(img[:,:,3:],(144,144),interpolation=cv2.INTER_AREA))
-                        motion_data.append(cv2.resize(img[:,:,:3],(9,9),interpolation=cv2.INTER_AREA))
+                        appearance_data.append(cv2.resize(img[:, :, 3:], (144, 144), interpolation=cv2.INTER_AREA))
+                        motion_data.append(cv2.resize(img[:, :, :3], (9, 9), interpolation=cv2.INTER_AREA))
 
                 elif w != img_size:
                     new_shape = (num_frame, img_size, img_size, c)
@@ -302,12 +308,16 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                 else:
                     appearance_data.extend(file['raw_video'][:, :, :, -3:])
                     motion_data.extend(file['raw_video'][:, :, :, :3])
-                label_data.extend(file['preprocessed_label'])
-                if len(label_data) != num_frame:
-                    label_data = np.interp(
+
+                temp_label = file['preprocessed_label']
+                # resample label data
+                if len(temp_label) != num_frame:
+                    print('-----Resampling label data-----')
+                    temp_label = np.interp(
                         np.linspace(
-                            1, len(label_data), num_frame), np.linspace(
-                            1, len(label_data), len(label_data)), label_data)
+                            1, len(temp_label), num_frame), np.linspace(
+                            1, len(temp_label), len(temp_label)), temp_label)
+                label_data.extend(temp_label)
 
             elif model_name in ["APNETv2"]:
                 start = 0
@@ -342,7 +352,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     new_shape = (num_frame, img_size[1], img_size[0], c)
                     resized_img = np.zeros(new_shape)
                     for i in range(num_frame):
-                        img = file['raw_video'][i]#/255.
+                        img = file['raw_video'][i]  # /255.
                         resized_img[i] = cv2.resize(img, (img_size[0], img_size[1]))
 
                 while end <= len(file['raw_video']):
@@ -387,7 +397,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             elif model_name in ["Vitamon", "Vitamon_phase2"]:
                 dataset = VitamonDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data))
-            if not  eval_flag:
+            if not eval_flag:
                 datasets = [rst_dataset, dataset]
                 rst_dataset = ConcatDataset([dataset for dataset in datasets if dataset is not None])
             else:
@@ -397,4 +407,3 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
         return rst_dataset
     else:
         return datasets
-
