@@ -22,12 +22,16 @@ def check_preprocessed_data(fit_cfg, pre_cfg):
               '\n\tPlease check the image size in the config files.')
 
     if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.train.dataset + "/" + fit_cfg.fit.type.upper()):
-        print('Preprocessing train({}) dataset...'.format(fit_cfg.fit.train.dataset))
+        print('Preprocessing train({}-{}) dataset...'.format(fit_cfg.fit.train.dataset, fit_cfg.fit.type))
+        if pre_cfg.dataset.type != fit_cfg.fit.type:
+            raise ValueError("dataset type in preprocess.yaml and fit.yaml are different")
         preprocessing(preprocess_cfg=pre_cfg, dataset_name=fit_cfg.fit.train.dataset)
     else:
         print('Preprocessed {} data already exists.'.format(fit_cfg.fit.train.dataset))
     if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.test.dataset + "/" + fit_cfg.fit.type.upper()):
-        print('Preprocessing test({}) dataset...'.format(fit_cfg.fit.test.dataset))
+        print('Preprocessing test({}-{}) dataset...'.format(fit_cfg.fit.test.dataset, fit_cfg.fit.type))
+        if pre_cfg.dataset.type != fit_cfg.fit.type:
+            raise ValueError("dataset type in preprocess.yaml and fit.yaml are different")
         preprocessing(preprocess_cfg=pre_cfg, dataset_name=fit_cfg.fit.test.dataset)
     else:
         print('Preprocessed {} data already exists.'.format(fit_cfg.fit.test.dataset))
