@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 from rppg.config import get_config
-from rppg.preprocessing.temp_dataset_preprocess import preprocessing
+from rppg.preprocessing.dataset_preprocess import preprocessing
 
 SEED = 0
 
