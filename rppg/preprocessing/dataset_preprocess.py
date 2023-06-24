@@ -345,8 +345,8 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         cap.release()
 
     if preprocess_type == 'DIFF':
-        raw_video = diff_normalize_label(raw_video)
-        raw_label = diff_normalize_video(raw_label)
+        raw_video = diff_normalize_video(raw_video)
+        raw_label = diff_normalize_label(raw_label)
     elif preprocess_type == 'CUSTOM':
         pass
 
