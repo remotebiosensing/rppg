@@ -40,6 +40,7 @@ if __name__ == "__main__":
         time_length=fit_cfg.fit.time_length,
         overlap_interval=fit_cfg.fit.overlap_interval,
         img_size=fit_cfg.fit.img_size,
+        batch_size=fit_cfg.fit.batch_size,
         train_flag=fit_cfg.fit.train_flag,
         eval_flag=fit_cfg.fit.eval_flag,
         debug_flag=fit_cfg.fit.debug_flag,
