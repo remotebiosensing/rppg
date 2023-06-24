@@ -78,7 +78,6 @@ def dataset_loader(
         time_length: int,
         overlap_interval: int,
         img_size: int,
-        batch_size: int,
         train_flag: bool,
         eval_flag: bool,
         meta=False
@@ -203,13 +202,13 @@ def dataset_loader(
     else:
         dataset = []
         if train_flag:
-            train_dataset = get_dataset(train_path, model_type, model_name, time_length, batch_size, overlap_interval,
+            train_dataset = get_dataset(train_path, model_type, model_name, time_length, overlap_interval,
                                         img_size, False)
             dataset.append(train_dataset)
-            val_dataset = get_dataset(val_path, model_type, model_name, time_length, batch_size, 0, img_size, False)
+            val_dataset = get_dataset(val_path, model_type, model_name, time_length, 0, img_size, False)
             dataset.append(val_dataset)
         if eval_flag:
-            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, batch_size, 0, img_size, True)
+            eval_dataset = get_dataset(eval_path, model_type, model_name, time_length, 0, img_size, True)
             dataset.append(eval_dataset)
 
     return dataset
@@ -261,7 +260,7 @@ def get_all_files_in_path(path):
     return files
 
 
-def get_dataset(path, model_type, model_name, time_length, batch_size, overlap_interval, img_size, eval_flag):
+def get_dataset(path, model_type, model_name, time_length, overlap_interval, img_size, eval_flag):
     idx = 0
     round_flag = 0
     rst_dataset = None
@@ -321,6 +320,11 @@ def get_dataset(path, model_type, model_name, time_length, batch_size, overlap_i
                             1, len(temp_label), len(temp_label)), temp_label)
                 label_data.extend(temp_label)
 
+                num_frame = (num_frame // time_length) * time_length
+                appearance_data = appearance_data[:num_frame]
+                motion_data = motion_data[:num_frame]
+                label_data = label_data[:num_frame]
+
             elif model_name in ["APNETv2"]:
                 start = 0
                 end = time_length
@@ -356,7 +360,7 @@ def get_dataset(path, model_type, model_name, time_length, batch_size, overlap_i
                 else:
                     diff_video = np.diff(file['raw_video'][:], axis=0)
 
-                num_frame = ((num_frame-1)//batch_size) * batch_size
+                num_frame = ((num_frame-1)//time_length) * time_length
                 label_data.extend(diff_norm_label[:num_frame])
                 video_data.extend(diff_video[:num_frame])
 
