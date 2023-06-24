@@ -13,6 +13,7 @@ fit:
   eval_flag: True
   eval_interval: 100
   batch_size: 720
+  debug_flag: False                        # True: debug mode (load small dataset, False: normal mode
 
   train:
     dataset: UBFC

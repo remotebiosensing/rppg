@@ -42,6 +42,7 @@ if __name__ == "__main__":
         img_size=fit_cfg.fit.img_size,
         train_flag=fit_cfg.fit.train_flag,
         eval_flag=fit_cfg.fit.eval_flag,
+        debug_flag=fit_cfg.fit.debug_flag,
         meta=fit_cfg.fit.train.meta.flag
     )
 

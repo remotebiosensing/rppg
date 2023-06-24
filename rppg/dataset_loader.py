@@ -103,6 +103,7 @@ def dataset_loader(
         img_size: int,
         train_flag: bool,
         eval_flag: bool,
+        debug_flag: bool,
         meta=False
 ):
     model_type = ''
@@ -115,7 +116,8 @@ def dataset_loader(
         root_file_path = save_root_path + dataset_name[0] + "/" + model_type
 
         path = get_all_files_in_path(root_file_path)
-        # path = path[:10]
+        if debug_flag:
+            path = path[:3]
         path_len = len(path)
         # for test
 
@@ -137,7 +139,9 @@ def dataset_loader(
         if not os.path.exists(root_file_path):
             raise FileExistsError("There is no dataset in the path : ", root_file_path)
 
-        path = get_all_files_in_path(root_file_path)[:]
+        path = get_all_files_in_path(root_file_path)
+        if debug_flag:
+            path = path[:3]
         path_len = len(path)
         if train_flag:
             train_len = int(np.floor(path_len * 0.9))
@@ -148,6 +152,8 @@ def dataset_loader(
             if not os.path.exists(root_file_path):
                 raise FileExistsError("There is no dataset in the path : ", root_file_path)
             path = get_all_files_in_path(root_file_path)[:]
+            if debug_flag:
+                path = path[:3]
             eval_path = path
 
     idx = 0
