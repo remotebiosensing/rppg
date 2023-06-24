@@ -4,6 +4,7 @@ from rppg.log import log_warning, log_info
 # DNN Method
 from nets.models.AxisNet import AxisNet, PhysiologicalGenerator
 from rppg.nets.DeepPhys import DeepPhys
+from rppg.nets.TSCAN import TSCAN
 from nets.models.DeepPhys_DA import DeepPhys_DA
 from nets.models.ETArPPGNet import ETArPPGNet
 from nets.models.PPNet import PPNet
@@ -35,6 +36,8 @@ def get_model(model_name, time_length):
 
     if model_name == "DeepPhys":
         model = DeepPhys()
+    elif model_name == "TSCAN":
+        model = TSCAN()
     elif model_name == "DeepPhys_DA":
         model = DeepPhys_DA()
     elif model_name == "PhysNet":
