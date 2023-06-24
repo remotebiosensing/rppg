@@ -2,15 +2,15 @@ import torchinfo
 
 from rppg.log import log_warning, log_info
 # DNN Method
-from nets.models.AxisNet import AxisNet, PhysiologicalGenerator
+# from nets.models.AxisNet import AxisNet, PhysiologicalGenerator
 from rppg.nets.DeepPhys import DeepPhys
 from rppg.nets.TSCAN import TSCAN
-from nets.models.DeepPhys_DA import DeepPhys_DA
-from nets.models.ETArPPGNet import ETArPPGNet
-from nets.models.PPNet import PPNet
-from nets.models.PhysNet import PhysNet_2DCNN_LSTM
-from nets.models.RhythmNet import RhythmNet
-from nets.models.sub_models.VitaMon import Vitamon
+# from nets.models.DeepPhys_DA import DeepPhys_DA
+# from nets.models.ETArPPGNet import ETArPPGNet
+# from nets.models.PPNet import PPNet
+# from nets.models.PhysNet import PhysNet_2DCNN_LSTM
+# from nets.models.RhythmNet import RhythmNet
+# from nets.models.sub_models.VitaMon import Vitamon
 from rppg.nets.APNETv2 import APNETv2
 from rppg.nets.PhysNet import PhysNet
 from rppg.nets.PhysFormer import PhysFormer
