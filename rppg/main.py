@@ -64,10 +64,11 @@ if __name__ == "__main__":
     if wandb_cfg.flag and fit_cfg.fit.train_flag:
         wandb.init(project=wandb_cfg.wandb_project_name,
                    entity=wandb_cfg.wandb_entity,
-                   name=fit_cfg.fit.model + "/TRAIN_DATA" +
-                        fit_cfg.fit.train.dataset + "/TEST_DATA" +
+                   name=fit_cfg.fit.model + "/" +
+                        fit_cfg.fit.train.dataset + "/" +
                         fit_cfg.fit.test.dataset + "/" +
-                        str(fit_cfg.fit.time_length) + "/" +
+                        str(fit_cfg.fit.img_size) + "/" +
+                        str(fit_cfg.fit.test.batch_size // fit_cfg.fit.train.fs) + "/" +
                         datetime.datetime.now().strftime('%m-%d%H:%M:%S'))
         wandb.config = {
             "learning_rate": fit_cfg.fit.train.learning_rate,
