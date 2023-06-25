@@ -1,25 +1,24 @@
 ---
-model_save_path: "/ssd/ssd0/pretrained_model/rppg/"      # model save path
+model_save_path: ""      # model save path
 preprocess:
-  flag: true                                                     # true: preprocess, false: not preprocess
+  flag: false                                                     # true: preprocess, false: not preprocess
 
 fit:
   model: DeepPhys
   type: DIFF
-  time_length: 1
+  time_length: 180
   overlap_interval: 0 # default 0
   img_size: 72
   train_flag: True
   eval_flag: True
   eval_interval: 100
-  batch_size: 720
   debug_flag: False                        # True: debug mode (load small dataset, False: normal mode
 
   train:
     dataset: UBFC
-    shuffle: False
+    shuffle: True
     fs: 30 #video fps
-    batch_size: 720
+    batch_size: 4
     learning_rate: 0.009
     epochs: 30
     loss: MSE
@@ -33,7 +32,7 @@ fit:
   test:
     cal_type: FFT
     metric: [ 'MAE','RMSE','MAPE','Pearson' ]
-    dataset: PURE
-    shuffle: false
+    dataset: UBFC
+    shuffle: False
     fs: 30 #video fps
-    batch_size: 300
+    batch_size: 10
