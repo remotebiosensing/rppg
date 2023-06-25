@@ -17,8 +17,8 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
     test_result = []
     if cfg.fit.train_flag:
         for epoch in range(cfg.fit.train.epochs):
-            train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders[0])
-            val_loss = val_fn(epoch, model, criterion, dataloaders[1])
+            train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders[0], wandb_flag)
+            val_loss = val_fn(epoch, model, criterion, dataloaders[1], wandb_flag)
             if best_loss > val_loss:
                 best_loss = val_loss
                 torch.save(model.state_dict(), save_dir +
