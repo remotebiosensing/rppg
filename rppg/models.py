@@ -43,7 +43,7 @@ def get_model(fit_cfg):
     if model_name == "DeepPhys":
         model = DeepPhys()
     elif model_name == "TSCAN":
-        model = TSCAN(fit_cfg.batch_size)
+        model = TSCAN(time_length)
     elif model_name == "DeepPhys_DA":
         model = DeepPhys_DA()
     elif model_name == "PhysNet":
@@ -104,7 +104,7 @@ def summary(model_name, model):
     log_info("=========================================")
     log_info(model_name)
     log_info("=========================================")
-    if model_name == "DeepPhys" or model_name == DeepPhys_DA:
+    if model_name == "DeepPhys" or model_name == "DeepPhys_DA":
         # torchsummary.summary(model, (2, 3, 36, 36))
         print("TBD")
     elif model_name == "PhysNet" or model_name == "PhysNet_LSTM":

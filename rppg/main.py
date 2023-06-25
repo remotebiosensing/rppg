@@ -33,26 +33,10 @@ if __name__ == "__main__":
 
     check_preprocessed_data(fit_cfg, preprocess_cfg)
 
-    datasets = dataset_loader(
-        save_root_path=preprocess_cfg.dataset_path,
-        model_name=fit_cfg.fit.model,
-        dataset_name=[fit_cfg.fit.train.dataset, fit_cfg.fit.test.dataset],
-        time_length=fit_cfg.fit.time_length,
-        overlap_interval=fit_cfg.fit.overlap_interval,
-        img_size=fit_cfg.fit.img_size,
-        train_flag=fit_cfg.fit.train_flag,
-        eval_flag=fit_cfg.fit.eval_flag,
-        debug_flag=fit_cfg.fit.debug_flag,
-        meta=fit_cfg.fit.train.meta.flag
-    )
+    datasets = dataset_loader(save_root_path=preprocess_cfg.dataset_path, fit_cfg=fit_cfg.fit)
 
-    data_loaders = data_loader(
-        datasets=datasets,
-        batch_size=fit_cfg.fit.batch_size,
-        model_type=fit_cfg.fit.type,
-        time_length=fit_cfg.fit.time_length,
-        shuffle=fit_cfg.fit.train.shuffle,
-    )
+    data_loaders = data_loader(datasets=datasets, fit_cfg=fit_cfg.fit)
+
     model = get_model(fit_cfg.fit)
 
     wandb_cfg = get_config("configs/WANDB_CONFG.yaml")
@@ -68,7 +52,8 @@ if __name__ == "__main__":
         wandb.config = {
             "learning_rate": fit_cfg.fit.train.learning_rate,
             "epochs": fit_cfg.fit.train.epochs,
-            "batch_size": fit_cfg.fit.batch_size
+            "train_batch_size": fit_cfg.fit.train.batch_size,
+            "test_batch_size": fit_cfg.fit.test.batch_size
         }
         wandb.watch(model, log="all", log_freq=10)
 
