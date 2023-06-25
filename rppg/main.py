@@ -1,9 +1,7 @@
-import os
 import random
 import datetime
 
 import numpy as np
-import pandas as pd
 import torch
 import wandb
 
@@ -14,6 +12,7 @@ from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import check_preprocessed_data
 from rppg.run import run
+from rppg.utils.test_utils import save_result
 
 SEED = 0
 
@@ -29,24 +28,11 @@ random.seed(SEED)
 generator = torch.Generator()
 generator.manual_seed(SEED)
 
-def save_result(result_path, result, cfg):
-    idx = '_'.join([cfg.model, cfg.train.dataset, cfg.test.dataset, str(cfg.img_size),
-                    str(cfg.test.batch_size // cfg.test.fs)])
-    if os.path.exists(result_path):
-        remaining_result = pd.read_csv(result_path + 'result.csv')
-    else:
-        new_result = pd.DataFrame(columns=cfg.test.metric,
-                                  index=[idx])
-        new_result[cfg.test.metric] = [result[-1]]
-        print('test')
-    print('test')
-
-
 if __name__ == "__main__":
 
     fit_cfg = get_config("configs/fit.yaml")
     preprocess_cfg = get_config("configs/preprocess.yaml")
-    result_save_path = 'results/csv/'
+    result_save_path = 'result/csv/'
 
     check_preprocessed_data(fit_cfg, preprocess_cfg)
 
@@ -56,10 +42,9 @@ if __name__ == "__main__":
 
     model = get_model(fit_cfg.fit)
 
-    wandb_cfg = get_config("configs/WANDB_CONFG.yaml")
-    if wandb_cfg.flag and fit_cfg.fit.train_flag:
-        wandb.init(project=wandb_cfg.wandb_project_name,
-                   entity=wandb_cfg.wandb_entity,
+    if fit_cfg.wandb.flag and fit_cfg.fit.train_flag:
+        wandb.init(project=fit_cfg.wandb.project_name,
+                   entity=fit_cfg.wandb.entity,
                    name=fit_cfg.fit.model + "/" +
                         fit_cfg.fit.train.dataset + "/" +
                         fit_cfg.fit.test.dataset + "/" +
@@ -86,7 +71,7 @@ if __name__ == "__main__":
         lr_sch = torch.optim.lr_scheduler.OneCycleLR(
             opt, max_lr=fit_cfg.fit.train.learning_rate, epochs=fit_cfg.fit.train.epochs,
             steps_per_epoch=len(datasets[0]))
-    test_result = run(model, opt, lr_sch, criterion, fit_cfg, data_loaders, wandb_cfg.flag)
+    test_result = run(model, opt, lr_sch, criterion, fit_cfg, data_loaders, fit_cfg.wandb.flag)
 
     save_result(result_save_path, test_result, fit_cfg.fit)
 
