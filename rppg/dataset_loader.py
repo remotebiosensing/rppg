@@ -36,14 +36,14 @@ def dataset_split(
         return datasets[0], datasets[1]
 
 
-def data_loader(
-        datasets,
-        batch_size,
-        model_type,
-        time_length,
-        shuffle,
-        meta=False
-):
+def data_loader(datasets, fit_cfg):
+    model_type = fit_cfg.type
+    train_batch_size = fit_cfg.train.batch_size
+    test_batch_size = fit_cfg.test.batch_size
+    time_length = fit_cfg.time_length
+    shuffle = fit_cfg.train.shuffle
+    meta = fit_cfg.train.meta.flag
+
     if meta:
         data_loader = []
         for dataset in datasets:
@@ -51,8 +51,8 @@ def data_loader(
             support_len = int(np.floor(dataset_len * 0.8))
             query_len = dataset_len - support_len
             support_dataset, query_dataset = random_split(dataset, [support_len, query_len])
-            support_loader = DataLoader(support_dataset, batch_size=batch_size, shuffle=False)
-            query_loader = DataLoader(query_dataset, batch_size=batch_size, shuffle=False)
+            support_loader = DataLoader(support_dataset, batch_size=train_batch_size, shuffle=False)
+            query_loader = DataLoader(query_dataset, batch_size=train_batch_size, shuffle=False)
             data_loader.append([support_loader, query_loader])
         return data_loader
 
@@ -74,39 +74,44 @@ def data_loader(
             sampler_train = ClipSampler(idx_train)
             sampler_validation = ClipSampler(idx_validation)
 
-            train_loader = DataLoader(datasets[0], batch_size=(batch_size * time_length),
+            train_loader = DataLoader(datasets[0], batch_size=(train_batch_size * time_length),
                                       sampler=sampler_train, shuffle=shuffle)
-            validation_loader = DataLoader(datasets[1], batch_size=(batch_size * time_length),
+            validation_loader = DataLoader(datasets[1], batch_size=(train_batch_size * time_length),
                                            sampler=sampler_validation, shuffle=shuffle)
+            for dataset in datasets[2]:
+                test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False))
+            return [train_loader, validation_loader, test_loader]
         # elif fit_type == 'CONT':
         else:
-            train_loader = DataLoader(datasets[0], batch_size=batch_size, shuffle=shuffle)
-            validation_loader = DataLoader(datasets[1], batch_size=batch_size, shuffle=shuffle)
+            train_loader = DataLoader(datasets[0], batch_size=train_batch_size, shuffle=shuffle)
+            validation_loader = DataLoader(datasets[1], batch_size=train_batch_size, shuffle=shuffle)
 
-        for dataset in datasets[2]:
-            test_loader.append(DataLoader(dataset, batch_size, shuffle=False))
-        return [train_loader, validation_loader, test_loader]
+            for dataset in datasets[2]:
+                test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False))
+            return [train_loader, validation_loader, test_loader]
 
     elif datasets.__len__() == 1:
-        for dataset in datasets[0]:
-            test_loader.append(DataLoader(dataset, batch_size, shuffle=False))
-        return [test_loader]
+        if model_type == 'DIFF':
+            for dataset in datasets[2]:
+                test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False))
+            return [test_loader]
+        else:
+            for dataset in datasets[0]:
+                test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False))
+            return [test_loader]
 
 
-def dataset_loader(
+def dataset_loader(save_root_path: str, fit_cfg):
+    model_name = fit_cfg.model
+    dataset_name = [fit_cfg.train.dataset, fit_cfg.test.dataset]
+    time_length = fit_cfg.time_length
+    overlap_interval = fit_cfg.overlap_interval
+    img_size = fit_cfg.img_size
+    train_flag = fit_cfg.train_flag
+    eval_flag = fit_cfg.eval_flag
+    debug_flag = fit_cfg.debug_flag
+    meta = fit_cfg.train.meta.flag
 
-        save_root_path: str,
-        model_name: str,
-        dataset_name: [],
-        time_length: int,
-        overlap_interval: int,
-        img_size: int,
-        train_flag: bool,
-        eval_flag: bool,
-        debug_flag: bool,
-        meta=False
-):
-    model_type = ''
     if model_name in ["DeepPhys", "TSCAN", "MTTS", "BigSmall"]:
         model_type = 'DIFF'
     else:
@@ -117,7 +122,7 @@ def dataset_loader(
 
         path = get_all_files_in_path(root_file_path)
         if debug_flag:
-            path = path[:3]
+            path = path[:10]
         path_len = len(path)
         # for test
 
@@ -448,9 +453,9 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                 dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data),
                                          target_length=time_length)
-            elif model_name in ["RhythmNet"]:
-                dataset = RhythmNetDataset(st_map_data=np.asarray(st_map_data),
-                                           target_data=np.asarray(target_data))
+            # elif model_name in ["RhythmNet"]:
+            #     dataset = RhythmNetDataset(st_map_data=np.asarray(st_map_data),
+            #                                target_data=np.asarray(target_data))
             elif model_name in ["ETArPPGNet"]:
                 dataset = ETArPPGNetDataset(video_data=np.asarray(video_data),
                                             label_data=np.asarray(label_data))
