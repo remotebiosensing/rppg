@@ -30,12 +30,9 @@ class TSM(nn.Module):
 
 
 class MotionBranch(MotionModel):
-    def __init__(self, in_channels, out_channels, kernel_size):
+    def __init__(self, in_channels, out_channels, kernel_size, clip_n=4):
         super().__init__(in_channels, out_channels, kernel_size)
-        self.tsm = TSM(n_clip=4, fold_div=3)
-        # self.tsm2 = TSM(n_clip=4, fold_div=3)
-        # self.tsm3 = TSM(n_clip=4, fold_div=3)
-        # self.tsm4 = TSM(n_clip=4, fold_div=3)
+        self.tsm = TSM(n_clip=clip_n, fold_div=3)
 
     def forward(self, inputs, mask1, mask2):
         m1 = torch.tanh(self.m_conv1(self.tsm(inputs)))
@@ -54,25 +51,26 @@ class MotionBranch(MotionModel):
 
 
 class TSCAN(nn.Module):
-    def __init__(self):
+    def __init__(self, clip_n=4):
         super(TSCAN, self).__init__()
         self.in_channels = 3
         self.out_channels = 32
         self.kernel_size = 3
+        self.clip_n = clip_n
         self.attention_mask1 = None
         self.attention_mask2 = None
 
         self.appearance_model = AppearanceModel(in_channels=self.in_channels, out_channels=self.out_channels,
                                                 kernel_size=self.kernel_size)
         self.motion_model = MotionBranch(in_channels=self.in_channels, out_channels=self.out_channels,
-                                         kernel_size=self.kernel_size)
+                                         kernel_size=self.kernel_size, clip_n=self.clip_n)
         self.linear_model = LinearModel(16384)
 
     def forward(self, inputs):
         averaged_frames = inputs[0]
-        B, C, H, W = averaged_frames.shape
-        averaged_frames = averaged_frames.view(4, -1, C, H, W)
-        averaged_frames = torch.mean(averaged_frames, dim=1, keepdim=True).expand(-1, 180, -1, -1, -1).reshape(B, C, H, W)
+        S, C, H, W = averaged_frames.shape
+        averaged_frames = averaged_frames.view(self.clip_n, -1, C, H, W)
+        averaged_frames = torch.mean(averaged_frames, dim=1, keepdim=True).expand(-1, S//self.clip_n, -1, -1, -1).reshape(S, C, H, W)
 
         self.attention_mask1, self.attention_mask2 = self.appearance_model(averaged_frames)
         motion_output = self.motion_model(inputs[1], self.attention_mask1, self.attention_mask2)

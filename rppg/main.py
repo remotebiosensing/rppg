@@ -40,7 +40,6 @@ if __name__ == "__main__":
         time_length=fit_cfg.fit.time_length,
         overlap_interval=fit_cfg.fit.overlap_interval,
         img_size=fit_cfg.fit.img_size,
-        batch_size=fit_cfg.fit.batch_size,
         train_flag=fit_cfg.fit.train_flag,
         eval_flag=fit_cfg.fit.eval_flag,
         debug_flag=fit_cfg.fit.debug_flag,
@@ -54,11 +53,7 @@ if __name__ == "__main__":
         time_length=fit_cfg.fit.time_length,
         shuffle=fit_cfg.fit.train.shuffle,
     )
-
-    model = get_model(
-        model_name=fit_cfg.fit.model,
-        time_length=fit_cfg.fit.time_length,
-        img_size=fit_cfg.fit.img_size)
+    model = get_model(fit_cfg.fit)
 
     wandb_cfg = get_config("configs/WANDB_CONFG.yaml")
     if wandb_cfg.flag and fit_cfg.fit.train_flag:

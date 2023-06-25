@@ -30,7 +30,11 @@ from rppg.nets.PCA import PCA
 NUM_FEATURES = 5
 NUM_CLASSES = 10
 
-def get_model(model_name, time_length, img_size):
+
+def get_model(fit_cfg):
+    model_name = fit_cfg.model
+    time_length = fit_cfg.time_length
+    img_size = fit_cfg.img_size
     """
     :param model_name: model name
     :return: model
@@ -39,7 +43,7 @@ def get_model(model_name, time_length, img_size):
     if model_name == "DeepPhys":
         model = DeepPhys()
     elif model_name == "TSCAN":
-        model = TSCAN()
+        model = TSCAN(fit_cfg.batch_size)
     elif model_name == "DeepPhys_DA":
         model = DeepPhys_DA()
     elif model_name == "PhysNet":
@@ -57,7 +61,7 @@ def get_model(model_name, time_length, img_size):
     elif model_name == "Vitamon":
         model = Vitamon()
     elif model_name == "EfficientPhys":
-        model = EfficientPhys(frame_depth=10, img_size=img_size)
+        model = EfficientPhys(frame_depth=time_length, img_size=img_size)
     elif model_name =="BigSmall":
         model = BigSmall()
     elif model_name == "LSTCrPPG":
