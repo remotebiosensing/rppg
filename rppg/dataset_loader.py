@@ -78,7 +78,9 @@ def data_loader(datasets, fit_cfg):
                                       sampler=sampler_train, shuffle=shuffle)
             validation_loader = DataLoader(datasets[1], batch_size=(train_batch_size * time_length),
                                            sampler=sampler_validation, shuffle=shuffle)
-            if datasets.__len__() == 3:
+            if datasets.__len__() == 2:
+                return [train_loader, validation_loader]
+            elif datasets.__len__() == 3:
                 for dataset in datasets[2]:
                     test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False))
                 return [train_loader, validation_loader, test_loader]
@@ -86,14 +88,16 @@ def data_loader(datasets, fit_cfg):
         else:
             train_loader = DataLoader(datasets[0], batch_size=train_batch_size, shuffle=shuffle)
             validation_loader = DataLoader(datasets[1], batch_size=train_batch_size, shuffle=shuffle)
-            if datasets.__len__() == 3:
+            if datasets.__len__() == 2:
+                return [train_loader, validation_loader]
+            elif datasets.__len__() == 3:
                 for dataset in datasets[2]:
                     test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False))
                 return [train_loader, validation_loader, test_loader]
 
     elif datasets.__len__() == 1:
         if model_type == 'DIFF':
-            for dataset in datasets[2]:
+            for dataset in datasets[0]:
                 test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False))
             return [test_loader]
         else:
@@ -137,7 +141,7 @@ def dataset_loader(save_root_path: str, fit_cfg):
         if train_flag:
             train_len = int(np.floor(path_len * 0.8))
             train_path = path[:train_len]
-            val_path = path[train_len:-test_len]
+            val_path = path[train_len:]
 
     elif dataset_name[0] != dataset_name[1]:
 
@@ -149,10 +153,12 @@ def dataset_loader(save_root_path: str, fit_cfg):
         if debug_flag:
             path = path[:3]
         path_len = len(path)
+
         if train_flag:
             train_len = int(np.floor(path_len * 0.9))
             train_path = path[:train_len]
             val_path = path[train_len:]
+
         if eval_flag:
             root_file_path = save_root_path + dataset_name[1] + "/" + model_type
             if not os.path.exists(root_file_path):

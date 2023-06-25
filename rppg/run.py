@@ -35,8 +35,8 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
                 eval_flag = False
     else:
         # model = torch.load()
-        test_result.append(test_fn(0, model, dataloaders[0], cfg.model, cal_type=cfg.test.cal_type,
-                                   metrics=cfg.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
+        test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                                   metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
                                    wandb_flag=wandb_flag))
 
     return test_result
