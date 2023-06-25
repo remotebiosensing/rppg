@@ -57,7 +57,7 @@ def data_loader(datasets, fit_cfg):
         return data_loader
 
     test_loader = []
-    if datasets.__len__() == 3:
+    if datasets.__len__() == 3 or datasets.__len__() == 2:
         if model_type == 'DIFF':
             total_len_train = datasets[0].__len__()
             total_len_validation = datasets[1].__len__()
@@ -78,17 +78,18 @@ def data_loader(datasets, fit_cfg):
                                       sampler=sampler_train, shuffle=shuffle)
             validation_loader = DataLoader(datasets[1], batch_size=(train_batch_size * time_length),
                                            sampler=sampler_validation, shuffle=shuffle)
-            for dataset in datasets[2]:
-                test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False))
-            return [train_loader, validation_loader, test_loader]
+            if datasets.__len__() == 3:
+                for dataset in datasets[2]:
+                    test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False))
+                return [train_loader, validation_loader, test_loader]
         # elif fit_type == 'CONT':
         else:
             train_loader = DataLoader(datasets[0], batch_size=train_batch_size, shuffle=shuffle)
             validation_loader = DataLoader(datasets[1], batch_size=train_batch_size, shuffle=shuffle)
-
-            for dataset in datasets[2]:
-                test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False))
-            return [train_loader, validation_loader, test_loader]
+            if datasets.__len__() == 3:
+                for dataset in datasets[2]:
+                    test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False))
+                return [train_loader, validation_loader, test_loader]
 
     elif datasets.__len__() == 1:
         if model_type == 'DIFF':
