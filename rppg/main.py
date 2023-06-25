@@ -1,3 +1,4 @@
+import sys
 import random
 import datetime
 
@@ -75,4 +76,4 @@ if __name__ == "__main__":
 
     save_result(result_save_path, test_result, fit_cfg.fit)
 
-
+    sys.exit(0)

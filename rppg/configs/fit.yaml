@@ -34,10 +34,11 @@ fit:
       inner_lr: 0.01
 
   test:
-    cal_type: FFT
-    metric: [ 'MAE','RMSE','MAPE','Pearson' ]
-    eval_time_length: 30 # second
-    dataset: UBFC
+    dataset: PURE
     shuffle: False
     fs: 30 #video fps
-    batch_size: 10
+    batch_size: 4
+    cal_type: FFT
+    metric: [ 'MAE','RMSE','MAPE','Pearson' ]
+    eval_time_length: 10 # second
+

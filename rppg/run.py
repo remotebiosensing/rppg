@@ -148,16 +148,16 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, eval_time_
 
     test_result = []
     if "MAE" in metrics:
-        test_result.append(MAE(hr_pred, hr_target))
+        test_result.append(round(MAE(hr_pred, hr_target), 3))
         print("MAE", MAE(hr_pred, hr_target))
     if "RMSE" in metrics:
-        test_result.append(RMSE(hr_pred, hr_target))
+        test_result.append(round(RMSE(hr_pred, hr_target), 3))
         print("RMSE", RMSE(hr_pred, hr_target))
     if "MAPE" in metrics:
-        test_result.append(MAPE(hr_pred, hr_target))
+        test_result.append(round(MAPE(hr_pred, hr_target), 3))
         print("MAPE", MAPE(hr_pred, hr_target))
     if "Pearson" in metrics:
-        test_result.append(corr(hr_pred, hr_target)[0][1])
+        test_result.append(round(corr(hr_pred, hr_target)[0][1], 3))
         print("Pearson", corr(hr_pred, hr_target))
     return test_result
 
