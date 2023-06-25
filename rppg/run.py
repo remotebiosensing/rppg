@@ -30,12 +30,12 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
                 eval_flag = True
             if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
                 test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
-                        metrics=cfg.fit.test.metric, wandb_flag=wandb_flag)
+                        metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length, wandb_flag=wandb_flag)
                 eval_flag = False
     else:
         # model = torch.load()
         test_fn(0, model, dataloaders[0], cfg.model, cal_type=cfg.test.cal_type,
-                metrics=cfg.test.metric, wandb_flag=wandb_flag)
+                metrics=cfg.test.metric, eval_time_length=cfg.fit.test.eval_time_length, wandb_flag=wandb_flag)
 
 
 def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag: bool = True):
@@ -97,7 +97,7 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
         return running_loss / tepoch.__len__()
 
 
-def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, wandb_flag: bool = True):
+def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, eval_time_length, wandb_flag: bool = True):
     # To evaluate a model by subject, you can use the meta option
     step = "Test"
 
@@ -115,7 +115,7 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, wandb_flag
     t = []
 
     fs = 30
-    time = 10
+    time = eval_time_length
 
     interval = fs * time
 

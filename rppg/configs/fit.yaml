@@ -4,25 +4,25 @@ preprocess:
   flag: false                                                     # true: preprocess, false: not preprocess
 
 fit:
-  model: DeepPhys
-  type: DIFF
-  time_length: 180
+  model: PhysNet
+  type: CONT
+  time_length: 64
   overlap_interval: 0 # default 0
-  img_size: 72
+  img_size: 96
   train_flag: True
   eval_flag: True
   eval_interval: 100
-  debug_flag: False                        # True: debug mode (load small dataset, False: normal mode
+  debug_flag: True                        # True: debug mode (load small dataset, False: normal mode
 
   train:
     dataset: UBFC
     shuffle: True
     fs: 30 #video fps
-    batch_size: 4
-    learning_rate: 0.009
+    batch_size: 16
+    learning_rate: 0.001
     epochs: 30
-    loss: MSE
-    optimizer: AdamW
+    loss: neg_pearson
+    optimizer: Adam
     meta:
       flag: false
       inner_optim: adam
@@ -32,7 +32,9 @@ fit:
   test:
     cal_type: FFT
     metric: [ 'MAE','RMSE','MAPE','Pearson' ]
+    eval_time_length: 30 # second
     dataset: UBFC
     shuffle: False
     fs: 30 #video fps
-    batch_size: 10
+    batch_size: 16
+
