@@ -14,7 +14,7 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
     save_dir = cfg.model_save_path + cfg.fit.model + "/"
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-
+    test_result = []
     if cfg.fit.train_flag:
         for epoch in range(cfg.fit.train.epochs):
             train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders[0])
@@ -29,14 +29,15 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
                            ".pt")
                 eval_flag = True
             if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
-                test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
-                        metrics=cfg.fit.test.metric, wandb_flag=wandb_flag)
+                test_result.append(test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                                      metrics=cfg.fit.test.metric, wandb_flag=wandb_flag))
                 eval_flag = False
     else:
         # model = torch.load()
-        test_fn(0, model, dataloaders[0], cfg.model, cal_type=cfg.test.cal_type,
-                metrics=cfg.test.metric, wandb_flag=wandb_flag)
+        test_result.append(test_fn(0, model, dataloaders[0], cfg.model, cal_type=cfg.test.cal_type,
+                              metrics=cfg.test.metric, wandb_flag=wandb_flag))
 
+    return test_result
 
 def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag: bool = True):
     # TODO : Implement multiple loss
@@ -142,14 +143,20 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, wandb_flag
     hr_pred = np.asarray(hr_pred)
     hr_target = np.asarray(hr_target)
 
+    test_result = []
     if "MAE" in metrics:
+        test_result.append(MAE(hr_pred, hr_target))
         print("MAE", MAE(hr_pred, hr_target))
     if "RMSE" in metrics:
+        test_result.append(RMSE(hr_pred, hr_target))
         print("RMSE", RMSE(hr_pred, hr_target))
     if "MAPE" in metrics:
+        test_result.append(MAPE(hr_pred, hr_target))
         print("MAPE", MAPE(hr_pred, hr_target))
     if "Pearson" in metrics:
+        test_result.append(corr(hr_pred, hr_target)[0][1])
         print("Pearson", corr(hr_pred, hr_target))
+    return test_result
 
 
 def find_lr(model, train_loader, optimizer, criterion, init_value=1e-8, final_value=10., beta=0.98):

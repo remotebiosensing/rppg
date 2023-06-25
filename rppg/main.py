@@ -1,9 +1,12 @@
+import os
 import random
+import datetime
 
 import numpy as np
+import pandas as pd
 import torch
 import wandb
-import datetime
+
 from rppg.loss import loss_fn
 from rppg.models import get_model
 from rppg.optim import optimizer
@@ -26,10 +29,24 @@ random.seed(SEED)
 generator = torch.Generator()
 generator.manual_seed(SEED)
 
+def save_result(result_path, result, cfg):
+    idx = '_'.join([cfg.model, cfg.train.dataset, cfg.test.dataset, str(cfg.img_size),
+                    str(cfg.test.batch_size // cfg.test.fs)])
+    if os.path.exists(result_path):
+        remaining_result = pd.read_csv(result_path + 'result.csv')
+    else:
+        new_result = pd.DataFrame(columns=cfg.test.metric,
+                                  index=[idx])
+        new_result[cfg.test.metric] = [result[-1]]
+        print('test')
+    print('test')
+
+
 if __name__ == "__main__":
 
     fit_cfg = get_config("configs/fit.yaml")
     preprocess_cfg = get_config("configs/preprocess.yaml")
+    result_save_path = 'results/csv/'
 
     check_preprocessed_data(fit_cfg, preprocess_cfg)
 
@@ -84,4 +101,8 @@ if __name__ == "__main__":
         lr_sch = torch.optim.lr_scheduler.OneCycleLR(
             opt, max_lr=fit_cfg.fit.train.learning_rate, epochs=fit_cfg.fit.train.epochs,
             steps_per_epoch=len(datasets[0]))
-    run(model, opt, lr_sch, criterion, fit_cfg, data_loaders, wandb_cfg.flag)
+    test_result = run(model, opt, lr_sch, criterion, fit_cfg, data_loaders, wandb_cfg.flag)
+
+    save_result(result_save_path, test_result, fit_cfg.fit)
+
+
