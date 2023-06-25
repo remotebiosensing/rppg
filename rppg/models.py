@@ -17,7 +17,7 @@ from rppg.nets.PhysFormer import PhysFormer
 from rppg.nets.EfficientPhys import EfficientPhys
 from rppg.nets.BigSmall import BigSmall
 from rppg.nets.LSTCrPPG import LSTCrPPG
-from rppg.nets.JAMSNet import JAMSNet
+# from rppg.nets.JAMSNet import JAMSNet
 # Non-DNN Method
 from rppg.nets.GREEN import GREEN
 from rppg.nets.POS import POS
@@ -43,7 +43,7 @@ def get_model(fit_cfg):
     if model_name == "DeepPhys":
         model = DeepPhys()
     elif model_name == "TSCAN":
-        model = TSCAN(fit_cfg.batch_size)
+        model = TSCAN(time_length)
     elif model_name == "DeepPhys_DA":
         model = DeepPhys_DA()
     elif model_name == "PhysNet":
