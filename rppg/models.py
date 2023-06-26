@@ -63,7 +63,7 @@ def get_model(fit_cfg):
     elif model_name == "EfficientPhys":
         model = EfficientPhys(frame_depth=time_length, img_size=img_size)
     elif model_name =="BigSmall":
-        model = BigSmall()
+        model = BigSmall(time_length)
     elif model_name == "LSTCrPPG":
         model = LSTCrPPG()
     elif model_name == "JAMSNet":
