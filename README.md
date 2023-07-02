@@ -140,5 +140,5 @@ This work was partly supported by the ICT R&D program of
 MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
 ## Reference
-We will publish the paper to introduce this repo soon, please cite the GitHub link by then.
+We will publish the paper introducing this repo soon, please cite the GitHub link by then.
 https://github.com/remotebiosensing/rppg
