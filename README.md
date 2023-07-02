@@ -121,17 +121,11 @@ DATASET INFO
 
 ## Community
 
-Any questions or suggestions? Please feel free to contact us for collaboration.
-
-Our community is eagerly waiting for researchers and developers interested in non-contact/non-invasive algorithm
-research and development
-to [join](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) us.
-
 <a href="https://github.com/remotebiosensing/rppg/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=remotebiosensing/rppg" />
 </a>
 
-Any suggestion? Please feel free to contact us and [join Slack](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) for collaboration.
+Any questions or suggestions? Please feel free to contact us and [join Slack](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) for collaboration.
 
 ## Contacts
 
