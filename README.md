@@ -10,10 +10,8 @@ Any suggestion? Please feel free to contact us for collaboration.
 [![Slack](https://img.shields.io/badge/Chat-Slack-red)](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg)
 [![Tutorial](https://img.shields.io/badge/Tutorial-doc-blue)](https://github.com/remotebiosensing/rppg/wiki/rPPG-Documentation)
 
-Remote Biosensing (`rPPG`) is a framework for non-contact algorithms for remote photoplethysmography (rPPG) and for
-non-invasive blood pressure measurement algorithms (CNIBP) technology.
-We aim to implement a deep learning-based remote photoplethysmography (rPPG) model and continuous non-invasive blood
-pressure (CNIBP) using PyTorch.
+Remote Biosensing (`rPPG`) is an open-source framework for remote photoplethysmography (rPPG) and non-invasive blood pressure measurement (CNIBP) technology.
+We aim to implement, evaluate and benchmark a deep learning-based remote photoplethysmography (rPPG) model and continuous non-invasive blood pressure (CNIBP). Our code is based on PyTorch.
 
 ### Quick Environment Setting with ANACONDA
 
