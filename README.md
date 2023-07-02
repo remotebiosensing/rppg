@@ -4,7 +4,7 @@ __________________________
  <img src="logo.png">
 </p>
 
-Any questions or suggestions? Please feel free to contact us for collaboration.
+Feel free to contact us with any questions and suggestions. We welcome your contributions and cooperation.
 
 [![GitHub license](https://img.shields.io/github/license/remotebiosensing/rppg)](https://github.com/remotebiosensing/rppg/blob/main/LICENSE)
 [![Slack](https://img.shields.io/badge/Chat-Slack-red)](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg)
@@ -121,11 +121,13 @@ DATASET INFO
 
 ## Community
 
+Feel free to contact us with any questions and suggestions. We welcome your contributions and cooperation.
+
 <a href="https://github.com/remotebiosensing/rppg/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=remotebiosensing/rppg" />
 </a>
 
-Any questions or suggestions? Please feel free to contact us and [join Slack](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) for collaboration.
+Please feel free to contact us and [join Slack](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg).
 
 ## Contacts
 
