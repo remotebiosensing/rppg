@@ -4,7 +4,7 @@ __________________________
  <img src="logo.png">
 </p>
 
-Any suggestion? Please feel free to contact us for collaboration.
+Any questions or suggestions? Please feel free to contact us for collaboration.
 
 [![GitHub license](https://img.shields.io/github/license/remotebiosensing/rppg)](https://github.com/remotebiosensing/rppg/blob/main/LICENSE)
 [![Slack](https://img.shields.io/badge/Chat-Slack-red)](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg)
@@ -120,6 +120,8 @@ DATASET INFO
 
 
 ## Community
+
+Any questions or suggestions? Please feel free to contact us for collaboration.
 
 Our community is eagerly waiting for researchers and developers interested in non-contact/non-invasive algorithm
 research and development
