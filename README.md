@@ -4,7 +4,7 @@ __________________________
  <img src="logo.png">
 </p>
 
-We are eagerly waiting for researchers and developers interested in non-contact/non-invasive technologies to [join](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) us.
+Any suggestion? Please feel free to contact us for collaboration.
 
 [![GitHub license](https://img.shields.io/github/license/remotebiosensing/rppg)](https://github.com/remotebiosensing/rppg/blob/main/LICENSE)
 [![Slack](https://img.shields.io/badge/Chat-Slack-red)](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg)
@@ -130,6 +130,8 @@ to [join](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-x
 <a href="https://github.com/remotebiosensing/rppg/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=remotebiosensing/rppg" />
 </a>
+
+Any suggestion? Please feel free to contact us and [join Slack](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) for collaboration.
 
 ## Contacts
 
