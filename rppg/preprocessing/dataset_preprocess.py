@@ -260,9 +260,9 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
                                        y_x_w[i][1] + y_x_w[i][2]), 1, mode='clip')
             face = (face / 255.).astype(np.float32)
             if img_size == y_x_w[frame_num][2] * 2:
-                raw_video[frame_num] = face
+                raw_video[i] = face
             else:
-                raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
+                raw_video[i] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
 
     elif video_path.__contains__(".mat"):
         f = sio.loadmat(video_path)
