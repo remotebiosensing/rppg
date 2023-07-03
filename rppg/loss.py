@@ -1,8 +1,9 @@
 import os
-
+import math
 import torch
 import torch.nn as nn
 import torch.nn.modules.loss as loss
+from torch.autograd import Variable
 import numpy as np
 from rppg.log import log_warning
 import torch.nn.functional as F
@@ -15,6 +16,8 @@ import torch.utils.checkpoint as cp
 from scipy.signal import find_peaks
 from scipy.signal import butter, sosfiltfilt
 from rppg.utils.funcs import _next_power_of_2
+
+
 def loss_fn(loss_name):
     """
     :param loss_fn: implement loss function for training
@@ -81,6 +84,8 @@ def loss_fn(loss_name):
         return PearsonLoss()
     elif loss_name == "BVPVelocityLoss":
         return BVPVelocityLoss()
+    elif loss_name == "CLGDLoss":
+        return CurriculumLearningGuidedDynamicLoss()
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
@@ -261,12 +266,12 @@ def stft(input_signal):
                           center=True, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
     return stft_sig
 
+
 def phase_diff_loss(pred, gt):
     pred_phase = torch.angle(pred)
     gt_phase = torch.angle(gt)
     loss = torch.abs(torch.sum(torch.exp(1j * (pred_phase - gt_phase)))) / pred.size(0)
     return loss
-
 
 
 class stftLoss(nn.Module):
@@ -320,6 +325,7 @@ def phase_correlation_loss(input, target):
     loss = 1.0 - torch.mean(torch.cos(torch.tensor(2.0 * np.pi * max_corr_idx / input.shape[1], device=input.device)))
 
     return loss
+
 
 def mutual_information_loss(signal1, signal2, num_bins=32):
     # Compute the joint histogram
@@ -407,10 +413,12 @@ def peak_loss(y_true, y_pred, alpha=0.5, beta=1.0):
             freq_diff = torch.abs(torch.tensor(y_true_peak_freq - y_pred_peak_freq))
 
             # Combine the losses
-            loss = alpha * (peak_count_difference+neg_peak_count_difference + peak_value_difference + neg_peak_value_difference) + freq_diff  # + beta * peak_position_difference
+            loss = alpha * (
+                        peak_count_difference + neg_peak_count_difference + peak_value_difference + neg_peak_value_difference) + freq_diff  # + beta * peak_position_difference
             total_loss += loss
 
     return total_loss / batch_size
+
 
 class BVPVelocityLoss(nn.Module):
     def __init__(self):
@@ -430,12 +438,14 @@ class BVPVelocityLoss(nn.Module):
 
         # perd_loss = periodic_signal_loss(targets,predictions)
 
-        loss = pearson + peak_loss(targets,predictions) + derivative_loss(predictions,targets)#+ NMI + phase
+        loss = pearson + peak_loss(targets, predictions) + derivative_loss(predictions, targets)  # + NMI + phase
 
         return loss
 
+
 def cos_sim(A, B):
-  return dot(A, B)/(norm(A)*norm(B))
+    return dot(A, B) / (norm(A) * norm(B))
+
 
 # derivative loss for bvp
 def derivative_loss(predictions, targets):
@@ -455,17 +465,14 @@ def derivative_loss(predictions, targets):
         targets[i] = np.gradient(targets[i])
         loss += cos_sim(predictions[i], targets[i])
 
-
-    return 2 - loss/batch
+    return 2 - loss / batch
 
 
 def periodic_signal_loss(signal, pred_period):
-
     for s in signal:
         periods = s.unfold(1, pred_period, pred_period).squeeze(0)
         min_values, _ = torch.min(periods, dim=1)
         max_values, _ = torch.max(periods, dim=1)
-
 
     # 예측된 주기를 정수로 변환
     pred_period = int(pred_period.item())
@@ -482,6 +489,7 @@ def periodic_signal_loss(signal, pred_period):
 
     return min_max_diff
 
+
 def autocorrelation(signal, max_lag=None):
     if max_lag is None:
         max_lag = signal.shape[-1] // 2
@@ -494,6 +502,7 @@ def autocorrelation(signal, max_lag=None):
 
     return acf
 
+
 def bandpass_filter(data, lowcut=0.8, highcut=2.5, fs=30, order=5):
     # Design bandpass filter
     nyq = 0.5 * fs
@@ -504,6 +513,7 @@ def bandpass_filter(data, lowcut=0.8, highcut=2.5, fs=30, order=5):
     y = sosfiltfilt(sos, data)
     return y
 
+
 class LSTCrPPGLoss(nn.Module):
     def __init__(self):
         super(LSTCrPPGLoss, self).__init__()
@@ -511,35 +521,34 @@ class LSTCrPPGLoss(nn.Module):
         self.lambda_value = 0.2
         self.alpha = 1.0
         self.beta = 0.5
-    def forward(self, predictions, targets):
 
+    def forward(self, predictions, targets):
         if len(predictions.shape) == 1:
             predictions = predictions.view(1, -1)
 
         # predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
         # targets = (targets - torch.mean(targets)) / torch.std(targets)
 
-        targets = torch.nn.functional.normalize(targets,dim=1)
-        predictions = torch.nn.functional.normalize(predictions,dim=1)
+        targets = torch.nn.functional.normalize(targets, dim=1)
+        predictions = torch.nn.functional.normalize(predictions, dim=1)
 
-        l_time = self.timeLoss(predictions,targets)
-        l_frequency = self.frequencyLoss(predictions,targets)
-        return self.alpha*l_time + self.beta*l_frequency
+        l_time = self.timeLoss(predictions, targets)
+        l_frequency = self.frequencyLoss(predictions, targets)
+        return self.alpha * l_time + self.beta * l_frequency
 
-    def frequencyLoss(self,predictions, target):
-
+    def frequencyLoss(self, predictions, target):
         batch, n = predictions.shape
         predictions = self.calculate_rppg_psd(predictions)
         target = self.calculate_rppg_psd(target)
         di = torch.log(predictions) - torch.log(target)
-        sum_di_squared = torch.sum(di ** 2 , dim = -1)
-        sum_di = torch.sum(di, dim = -1)
+        sum_di_squared = torch.sum(di ** 2, dim=-1)
+        sum_di = torch.sum(di, dim=-1)
 
         hybrid_loss = (1 / n) * sum_di_squared - (self.lambda_value / (n ** 2)) * sum_di ** 2
-        loss = torch.sum(hybrid_loss)/batch
+        loss = torch.sum(hybrid_loss) / batch
         return loss
 
-    def calculate_rppg_psd(self,rppg_signal):
+    def calculate_rppg_psd(self, rppg_signal):
         spectrum = fft.fft(rppg_signal)
         # 복소 곱을 사용하여 PSD 계산
         psd = torch.abs(spectrum) ** 2
@@ -547,4 +556,67 @@ class LSTCrPPGLoss(nn.Module):
         return psd
 
 
+class CurriculumLearningGuidedDynamicLoss(nn.Module):
+    def __init__(self):
+        super(CurriculumLearningGuidedDynamicLoss, self).__init__()
+        # self.predicted_rppg, self.target_rppg, self.average_hr = predicted_rppg, target_rppg, average_hr
+        self.fs, self.std = 30, 1.0
+        self.bpm_range = torch.arange(40, 180, dtype=torch.float).cuda()
 
+        self.temporal_loss = 1.0
+        self.cross_entropy_loss = 0.0
+        self.label_distribution_loss = 0.0
+        self.kl_loss = loss.KLDivLoss()
+
+        self.init_alpha, self.init_beta = 0.1, 1.0
+        self.alpha_exp, self.beta_exp = 0.5, 5.0
+        self.alpha, self.beta = 0.05, 5.0
+        self.total_loss = self.alpha * self.temporal_loss + \
+                          self.beta * (self.cross_entropy_loss + self.label_distribution_loss)
+
+    def forward(self, epoch, predicted_rppg, target_ppg, average_hr):
+
+        # temporal_loss
+        if predicted_rppg.dim() == 1:
+            predicted_rppg = predicted_rppg.view(1, -1)
+            target_ppg = target_ppg.view(1, -1)
+        self.temporal_loss = neg_Pearson_Loss(predicted_rppg, target_ppg)
+
+        # frequency loss - cross entropy
+        n = predicted_rppg.size()[1]
+        unit_per_hz = self.fs / n
+        feasible_bpm = self.bpm_range / 60.0
+        k = (feasible_bpm / unit_per_hz).type(torch.FloatTensor).cuda().view(1, -1, 1)
+        two_pi_n_over_N = (Variable(2 * math.pi * torch.arange(0, n, dtype=torch.float32),
+                                    requires_grad=True) / n).cuda().view(1, -1, 1)
+        hanning = (Variable(torch.from_numpy(np.hanning(n)).type(torch.FloatTensor),
+                            requires_grad=True).view(1, -1)).cuda()
+        hanning_rppg = (predicted_rppg * hanning).type(torch.FloatTensor)
+
+        complex_absolute = torch.sum(hanning_rppg * torch.sin(k * two_pi_n_over_N), dim=-1) ** 2 + \
+                           torch.sum(hanning_rppg * torch.cos(k * two_pi_n_over_N), dim=-1) ** 2
+
+        complex_absolute_softmax = (1.0 / complex_absolute.sum()) * complex_absolute
+
+        self.cross_entropy_loss = F.cross_entropy(complex_absolute_softmax, average_hr.view((1)).type(torch.long))
+
+        # frequency loss - label distribution
+        target_distribution = []
+        for i in range(140):
+            target_distribution.append(math.exp(-(i-int(average_hr)**2/(2*self.std**2))/math.sqrt(2*math.pi)*self.std))
+        target_distribution = [i if i > 1e-15 else 1e-15 for i in target_distribution]
+        target_distribution = torch.Tensor(target_distribution).cuda()
+        frequency_distribution = F.softmax(complex_absolute_softmax.view(-1))
+
+        self.label_distribution_loss = self.kl_loss(target_distribution, frequency_distribution)
+
+
+        # curriculum learning setting
+        if epoch > 25:
+            self.alpha = 0.05
+            self.beta = 5.0
+        else:
+            self.alpha = self.init_alpha * math.pow(self.alpha_exp, epoch / 25.0)
+            self.beta = self.init_beta * math.pow(self.beta_exp, epoch / 25.0)
+
+        return self.total_loss
