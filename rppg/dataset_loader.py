@@ -398,7 +398,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                     resized_img = np.zeros(new_shape, dtype=np.float32)
                     for i in range(num_frame):
                         img = file['raw_video'][i]  # / 255.
-                        resized_img[i] = cv2.resize(img, (img_size, img_size))
+                        resized_img[i] = cv2.resize(img, (img_size, img_size), interpolation=cv2.INTER_AREA)
                     diff_video = np.diff(resized_img, axis=0)
                 else:
                     diff_video = np.diff(file['raw_video'][:], axis=0)
@@ -422,10 +422,10 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
 
                 if w != img_size and h != img_size:
                     new_shape = (num_frame, img_size, img_size, c)
-                    resized_img = np.zeros(new_shape)
+                    resized_img = np.zeros(new_shape, dtype=np.float32)
                     for i in range(num_frame):
                         img = file['raw_video'][i]
-                        resized_img[i] = cv2.resize(img, (img_size, img_size))
+                        resized_img[i] = cv2.resize(img, (img_size, img_size), interpolation=cv2.INTER_AREA)
 
                 while end <= len(file['raw_video']):
                     if w != img_size:

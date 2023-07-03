@@ -4,18 +4,14 @@ __________________________
  <img src="logo.png">
 </p>
 
-Our community is eagerly waiting for researchers and developers interested in non-contact/non-invasive algorithm
-research and development
-to [join](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) us.
+Feel free to contact us with any questions and suggestions. We welcome your contributions and cooperation.
 
 [![GitHub license](https://img.shields.io/github/license/remotebiosensing/rppg)](https://github.com/remotebiosensing/rppg/blob/main/LICENSE)
 [![Slack](https://img.shields.io/badge/Chat-Slack-red)](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg)
 [![Tutorial](https://img.shields.io/badge/Tutorial-doc-blue)](https://github.com/remotebiosensing/rppg/wiki/rPPG-Documentation)
 
-Remote Biosensing (`rPPG`) is a framework for non-contact algorithms for remote photoplethysmography (rPPG) and for
-non-invasive blood pressure measurement algorithms (CNIBP) technology.
-We aim to implement a deep learning-based remote photoplethysmography (rPPG) model and continuous non-invasive blood
-pressure (CNIBP) using PyTorch.
+Remote Biosensing (`rPPG`) is an open-source framework for remote photoplethysmography (rPPG) and non-invasive blood pressure measurement (CNIBP) technology.
+We aim to implement, evaluate, and benchmark DNN models for remote photoplethysmography (rPPG) and continuous non-invasive blood pressure (CNIBP). Our code is based on PyTorch.
 
 ### Quick Environment Setting with ANACONDA
 
@@ -29,7 +25,7 @@ pressure (CNIBP) using PyTorch.
 | year |  type   |     **model**     |       **implement**       |                                                                                           paper                                                                                            | 
 |:----:|:-------:|:-----------------:|:-------------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
 | 2018 |   DL    |     DeepPhys      |             O             |                                                                         [paper](https://arxiv.org/abs/1805.07888)                                                                          |
-| 2020 |   DL    |       MTTS        |                           |                                                 [paper](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf)                                                 |
+| 2020 |   DL    |       MTTS        |              O             |                                                 [paper](https://papers.nips.cc/paper/2020/file/e1228be46de6a0234ac22ded31417bc7-Paper.pdf)                                                 |
  | 2020 |   DL    |     MetaPhys      |             O             |                                                                         [paper](https://arxiv.org/abs/2010.01773)                                                                          |
 | 2021 |   DL    |   EfficentPhys    |             O              |                                                                         [paper](https://arxiv.org/abs/2110.04447)                                                                          |
 | 2023 |   DL    |     BIGSMALL      |             O             |                                                                         [paper](https://arxiv.org/abs/2303.11573)                                                                          |
@@ -100,6 +96,7 @@ DATASET INFO
 | 21  |           |      |   24    |   RGB   |   HR/HRV/ECG   |  StableSet   |   example   |   config   |                                                                                                                                  |                                                                                                                                                link                                                                                                                                                |
 | 22  |           |      |   37    |   RGB   |      PPG       |  BSIPL-RPPG  |   example   |   config   |                                                                                                                                  |                                                                                                                                                link                                                                                                                                                |
 | 23  |           |      |   14    |    -    |     PPG/HR     |  BAMI-rPPG   |   example   |   config   |                                                                                                                                  |                                                                                                                                                link                                                                                                                                                |
+| 24  |           |      |   900    |    -    |         |  Vital Videos   |   example   |   config   |                                                   [link](https://arxiv.org/abs/2306.11891)                                                                               |                                                                                                                                                link                                                                                                                                                |
 
 
 ### Documentation(TBD)
@@ -124,13 +121,13 @@ DATASET INFO
 
 ## Community
 
-Our community is eagerly waiting for researchers and developers interested in non-contact/non-invasive algorithm
-research and development
-to [join](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg) us.
+Feel free to contact us with any questions and suggestions. We welcome your contributions and cooperation.
 
 <a href="https://github.com/remotebiosensing/rppg/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=remotebiosensing/rppg" />
 </a>
+
+Please feel free to contact us and [join Slack](https://join.slack.com/t/remobebiosensing/shared_invite/zt-1u3kjfhf9-xWw_XQ8hGd7qFZymCSzUtg).
 
 ## Contacts
 
@@ -143,5 +140,5 @@ This work was partly supported by the ICT R&D program of
 MSIP/IITP. [2021(2021-0-00900), Adaptive Federated Learning in Dynamic Heterogeneous Environment]
 
 ## Reference
-If you use this code before our paper is published, please cite the GitHub link.
+We will publish the paper introducing this repo soon, please cite the GitHub link by then.
 https://github.com/remotebiosensing/rppg
