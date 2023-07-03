@@ -432,7 +432,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                         video_chunk = resized_img[start:end]
                     else:
                         video_chunk = file['raw_video'][start:end]
-                    video_chunk = (video_chunk - np.mean(video_chunk)) / np.std(video_chunk)
+                    # video_chunk = (video_chunk - np.mean(video_chunk)) / np.std(video_chunk)
                     video_data.append(video_chunk)
                     tmp_label = label[start:end]
 
