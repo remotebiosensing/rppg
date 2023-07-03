@@ -13,7 +13,7 @@ from rppg.config import get_config
 from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import check_preprocessed_data
 from rppg.run import run
-from rppg.utils.test_utils import save_result
+from rppg.utils.test_utils import save_single_result
 
 SEED = 0
 
@@ -21,7 +21,7 @@ SEED = 0
 torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.cuda.manual_seed_all(SEED)  # if use multi-GPU
-torch.backends.cudnn.deterministic = False
+torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 random.seed(SEED)
@@ -74,6 +74,6 @@ if __name__ == "__main__":
             steps_per_epoch=len(datasets[0]))
     test_result = run(model, opt, lr_sch, criterion, fit_cfg, data_loaders, fit_cfg.wandb.flag)
 
-    save_result(result_save_path, test_result, fit_cfg.fit)
+    save_single_result(result_save_path, test_result, fit_cfg.fit)
 
     sys.exit(0)
