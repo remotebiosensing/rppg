@@ -12,6 +12,7 @@ import math
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
+from rppg.utils.funcs import detrend, BPF, get_hrv
 from tqdm import tqdm
 
 
@@ -179,7 +180,7 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     video_path = path + vid_name
     label_path = path + ground_truth_name
 
-    raw_video, preprocessed_label = data_preprocess(preprocess_type, video_path, label_path, **kwargs)
+    raw_video, preprocessed_label, hrv = data_preprocess(preprocess_type, video_path, label_path, **kwargs)
 
     if None in raw_video:
         return
@@ -201,6 +202,7 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     data = h5py.File(dir_path + path[-1] + ".hdf5", "w")
     data.create_dataset('raw_video', data=raw_video)
     data.create_dataset('preprocessed_label', data=preprocessed_label)
+    data.create_dataset('hrv', data=hrv)
     data.close()
 
 
@@ -241,6 +243,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         data = sorted(os.listdir(path))[1:]
         frame_total = len(data)
         raw_label = get_label(label_path, frame_total)
+        hrv = get_hrv_label(raw_label, fs=30.)
 
         for i in tqdm(range(frame_total), position=0, leave=True, desc=path):
             frame = cv2.imread(path + "/" + data[i])
@@ -256,6 +259,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
 
         xy_points = xy_points[front_idx:rear_idx + 1]
         raw_label = raw_label[front_idx:rear_idx + 1]
+        hrv = hrv[front_idx:rear_idx + 1]
 
         y_x_w = get_CntYX_Width(xy_points=xy_points, large_box_coef=large_box_coef)
 
@@ -278,6 +282,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         frames = f['video']
         raw_label = f['GT_ppg']
         frame_total = len(frames)
+        hrv = get_hrv_label(raw_label, fs=30.)
 
         for i in tqdm(range(frame_total), position=0, leave=True, desc=video_path):
             frame = frames[i]
@@ -293,6 +298,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
 
         xy_points = xy_points[front_idx:rear_idx + 1]
         raw_label = raw_label[front_idx:rear_idx + 1]
+        hrv = hrv[front_idx:rear_idx + 1]
         frames = frames[front_idx:rear_idx + 1]
 
         y_x_w = get_CntYX_Width(xy_points=xy_points, large_box_coef=large_box_coef)
@@ -312,6 +318,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         cap = cv2.VideoCapture(video_path)
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         raw_label = get_label(label_path, frame_total)
+        hrv = get_hrv_label(raw_label, fs=30.)
 
         for i in tqdm(range(frame_total), position=0, leave=True, desc=video_path):
             ret, frame = cap.read()
@@ -331,6 +338,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
 
         xy_points = xy_points[front_idx:rear_idx + 1]
         raw_label = raw_label[front_idx:rear_idx + 1]
+        hrv = hrv[front_idx:rear_idx + 1]
 
         y_x_w = get_CntYX_Width(xy_points=xy_points, large_box_coef=large_box_coef)
 
@@ -363,7 +371,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
     elif preprocess_type == 'CUSTOM':
         pass
 
-    return raw_video, raw_label
+    return raw_video, raw_label, hrv
 
 
 def get_label(label_path, frame_total):
@@ -465,6 +473,13 @@ def get_label(label_path, frame_total):
                 1, len(label), len(label)), label)
 
     return np.array(label, dtype=np.float32)
+
+
+def get_hrv_label(ppg_signal, fs=30.):
+    clean_ppg = detrend(ppg_signal, 100)
+    clean_ppg = BPF(clean_ppg, fs=fs)
+    hrv = get_hrv(clean_ppg, fs=fs)
+    return hrv.astype(np.float32)
 
 
 def diff_normalize_label(label):

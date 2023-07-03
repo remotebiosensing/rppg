@@ -5,7 +5,10 @@ from scipy.signal import butter
 from scipy import signal
 from scipy.fft import fft
 from scipy.sparse import spdiags
+import neurokit2 as nk
 import torch
+
+
 def detrend(signal, Lambda):
     """detrend(signal, Lambda) -> filtered_signal
     This function applies a detrending filter.
@@ -36,7 +39,7 @@ def detrend(signal, Lambda):
     return filtered_signal
 
 
-def BPF(input_val, fs=30,low= 0.75, high=2.5):
+def BPF(input_val, fs=30, low=0.75, high=2.5):
     low = low / (0.5 * fs)
     high = high / (0.5 * fs)
     [b_pulse, a_pulse] = butter(6, [low, high], btype='bandpass')
@@ -56,11 +59,19 @@ def plot_graph(start_point, length, target, inference):
 def normalize(input_val):
     return (input_val - np.mean(input_val)) / np.std(input_val)
 
+
 def _next_power_of_2(x):
     """Calculate the nearest power of 2."""
     return 1 if x == 0 else 2 ** (x - 1).bit_length()
 
-def calculate_hr(cal_type, ppg_signal, fs=60, low_pass=0.75, high_pass=2.5):
+
+def get_hrv(ppg_signal, fs=30.):
+    ppg_peaks = nk.ppg_findpeaks(ppg_signal, sampling_rate=fs)['PPG_Peaks']
+    hrv = nk.signal_rate(ppg_peaks, sampling_rate=fs, desired_length=len(ppg_signal))
+    return hrv
+
+
+def calculate_hr(cal_type, ppg_signal, fs=60., low_pass=0.75, high_pass=2.5):
     """Calculate heart rate based on PPG using Fast Fourier transform (FFT)."""
     if cal_type == "FFT":
         ppg_signal = np.expand_dims(ppg_signal, 0)
@@ -72,52 +83,57 @@ def calculate_hr(cal_type, ppg_signal, fs=60, low_pass=0.75, high_pass=2.5):
         hr = np.take(mask_ppg, np.argmax(mask_pxx, 0))[0] * 60
 
     else:
-        ppg_peaks, _ = scipy.signal.find_peaks(ppg_signal)
-        hr = 60 / (np.mean(np.diff(ppg_peaks)) / fs)
+        hrv = get_hrv(ppg_signal, fs=fs)
+        hr = np.mean(hrv, dtype=np.float32)
+        # ppg_peaks, _ = scipy.signal.find_peaks(ppg_signal)
+        # hr = 60 / (np.mean(np.diff(ppg_peaks)) / fs)
     return hr
+
 
 def mag2db(magnitude):
     return 20. * np.log10(magnitude)
 
-def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True,low =0.75,high=2.5):
 
+def get_hr(pred, label, model_type, cal_type, fs=30, bpf_flag=True, low=0.75, high=2.5):
     if model_type == "DIFF":
-        pred =[detrend(np.cumsum(p),100) for p in pred]
-        label = [detrend(np.cumsum(l),100) for l in label]
+        pred = [detrend(np.cumsum(p), 100) for p in pred]
+        label = [detrend(np.cumsum(l), 100) for l in label]
     else:
-        pred = [detrend(p,100) for p in pred]
-        label = [detrend(l,100) for l in label]
+        pred = [detrend(p, 100) for p in pred]
+        label = [detrend(l, 100) for l in label]
 
     if bpf_flag:
-        pred = [BPF(p,fs,low,high) for p in pred]
+        pred = [BPF(p, fs, low, high) for p in pred]
         label = [BPF(l, fs, low, high) for l in label]
 
     if cal_type != "BOTH":
-        hr_pred = [calculate_hr(cal_type,p,fs,low,high) for p in pred]
-        hr_label = [calculate_hr(cal_type,l,fs,low,high) for l in label]
+        hr_pred = [calculate_hr(cal_type, p, fs, low, high) for p in pred]
+        hr_label = [calculate_hr(cal_type, l, fs, low, high) for l in label]
     else:
         hr_pred_fft = calculate_hr("FFT", pred, fs, low, high)
         hr_label_fft = calculate_hr("FFT", label, fs, low, high)
         hr_pred_peak = calculate_hr("PEAK", pred, fs, low, high)
         hr_label_peak = calculate_hr("PEAK", label, fs, low, high)
-        hr_pred = [hr_pred_fft,hr_pred_peak]
+        hr_pred = [hr_pred_fft, hr_pred_peak]
         hr_label = [hr_label_fft, hr_label_peak]
 
     return hr_pred, hr_label
 
-def MAE(pred,label):
-    return np.mean(np.abs(pred-label))
 
-def RMSE(pred,label):
-    return np.sqrt(np.mean((pred-label)**2))
-
-def MAPE(pred,label):
-    return np.mean(np.abs((pred-label)/label)) *100
-
-def corr(pred,label):
-    return np.corrcoef(pred,label)
+def MAE(pred, label):
+    return np.mean(np.abs(pred - label))
 
 
+def RMSE(pred, label):
+    return np.sqrt(np.mean((pred - label) ** 2))
+
+
+def MAPE(pred, label):
+    return np.mean(np.abs((pred - label) / label)) * 100
+
+
+def corr(pred, label):
+    return np.corrcoef(pred, label)
 
 
 class IrrelevantPowerRatio(torch.nn.Module):
@@ -138,8 +154,8 @@ class IrrelevantPowerRatio(torch.nn.Module):
         freqs = torch.linspace(0, Fn, X_real.shape[-2])
         use_freqs = torch.logical_and(freqs >= self.high_pass / 60, freqs <= self.low_pass / 60)
         zero_freqs = torch.logical_not(use_freqs)
-        use_energy = torch.sum(torch.linalg.norm(X_real[:,use_freqs], dim=-1), dim=-1)
-        zero_energy = torch.sum(torch.linalg.norm(X_real[:,zero_freqs], dim=-1), dim=-1)
+        use_energy = torch.sum(torch.linalg.norm(X_real[:, use_freqs], dim=-1), dim=-1)
+        zero_energy = torch.sum(torch.linalg.norm(X_real[:, zero_freqs], dim=-1), dim=-1)
         denom = use_energy + zero_energy
         energy_ratio = torch.ones_like(denom)
         for ii in range(len(denom)):
