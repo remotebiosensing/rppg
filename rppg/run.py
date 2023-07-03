@@ -6,8 +6,7 @@ from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr, IrrelevantPowerRati
 import numpy as np
 import os
 
-
-def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
+def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
     best_loss = 100000
     val_loss = 0
     eval_flag = False
@@ -25,19 +24,34 @@ def run(model, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
                            "train" + cfg.fit.train.dataset +
                            "_test" + cfg.fit.test.dataset +
                            "_imgsize" + str(cfg.fit.img_size) +
-                           "_testlen" + str(cfg.fit.test.batch_size // cfg.fit.train.fs) +
                            ".pt")
                 eval_flag = True
-            if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
-                test_result.append(test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
-                                           metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
-                                           wandb_flag=wandb_flag))
+            if not sweep:
+                if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
+                    test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                            metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
+                            wandb_flag=wandb_flag)
                 eval_flag = False
+        if not sweep:
+            test_result = test_fn(0, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                                  metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
+                                  wandb_flag=wandb_flag)
+        else:
+            for et in cfg.fit.test.eval_time_length:
+                test_result.append(test_fn(0, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                                           metrics=cfg.fit.test.metric, eval_time_length=et,
+                                           wandb_flag=wandb_flag))
     else:
         # model = torch.load()
-        test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
-                                   metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
-                                   wandb_flag=wandb_flag))
+        if not sweep:
+            test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                                       metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
+                                       wandb_flag=wandb_flag))
+        else:
+            for et in cfg.fit.test.eval_time_length:
+                test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                                           metrics=cfg.fit.test.metric, eval_time_length=et,
+                                           wandb_flag=wandb_flag))
 
     return test_result
 
