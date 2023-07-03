@@ -15,20 +15,27 @@ from scipy.interpolate import interp1d
 from tqdm import tqdm
 
 
-
 def check_preprocessed_data(fit_cfg, pre_cfg):
+    print("model: ", fit_cfg.fit.model)
+    print("fit type: ", fit_cfg.fit.type)
+    print("fit image size: ", fit_cfg.fit.img_size)
+    print("dataset: ", fit_cfg.fit.train.dataset, fit_cfg.fit.test.dataset)
+    print("preprocess type: ", pre_cfg.dataset.type)
+    print("preprocess image size: ", pre_cfg.dataset.image_size)
     if fit_cfg.fit.img_size > pre_cfg.dataset.image_size:
         print('*** Image size for model input is larger than the preprocessed image *** '
               '\n\tPlease check the image size in the config files.')
 
-    if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.train.dataset + "/" + fit_cfg.fit.type.upper()):
+    if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.train.dataset + "/" + fit_cfg.fit.type.upper() + "_" + str(
+            pre_cfg.dataset.image_size)):
         print('Preprocessing train({}-{}) dataset...'.format(fit_cfg.fit.train.dataset, fit_cfg.fit.type))
         if pre_cfg.dataset.type != fit_cfg.fit.type:
             raise ValueError("dataset type in preprocess.yaml and fit.yaml are different")
         preprocessing(preprocess_cfg=pre_cfg, dataset_name=fit_cfg.fit.train.dataset)
     else:
         print('Preprocessed {} data already exists.'.format(fit_cfg.fit.train.dataset))
-    if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.test.dataset + "/" + fit_cfg.fit.type.upper()):
+    if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.test.dataset + "/" + fit_cfg.fit.type.upper() + "_" + str(
+            pre_cfg.dataset.image_size)):
         print('Preprocessing test({}-{}) dataset...'.format(fit_cfg.fit.test.dataset, fit_cfg.fit.type))
         if pre_cfg.dataset.type != fit_cfg.fit.type:
             raise ValueError("dataset type in preprocess.yaml and fit.yaml are different")
@@ -38,7 +45,7 @@ def check_preprocessed_data(fit_cfg, pre_cfg):
 
 
 def preprocessing(preprocess_cfg, dataset_name):
-# def preprocessing(data_root_path, preprocess_cfg, dataset_path):
+    # def preprocessing(data_root_path, preprocess_cfg, dataset_path):
     """
     :param save_root_path: save file destination path
     :param model_name: select preprocessing method
@@ -63,6 +70,7 @@ def preprocessing(preprocess_cfg, dataset_name):
 
     dataset_root_path = preprocess_cfg.data_root_path + dataset_name
     if not os.path.isdir(dataset_root_path):
+        # os.makedirs(dataset_root_path)
         raise ValueError("dataset path does not exist, check data_root_path in preprocess.yaml")
     return_dict = manager.dict()
     if dataset_name == "V4V":
@@ -167,6 +175,7 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
 
     save_root_path = kwargs['save_root_path']
     dataset_name = kwargs['dataset_name']
+    img_size = kwargs['img_size']
     video_path = path + vid_name
     label_path = path + ground_truth_name
 
@@ -185,7 +194,7 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
         add_info = path[-2] + "/"
         path[-1] = path[-1][:-4]
 
-    dir_path = save_root_path + "/" + dataset_name + "/" + preprocess_type + "/" + add_info
+    dir_path = save_root_path + "/" + dataset_name + "/" + preprocess_type + "_" + str(img_size) + "/" + add_info
     if not os.path.isdir(dir_path):
         mkdir_p(dir_path)
 
