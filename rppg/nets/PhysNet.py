@@ -6,7 +6,8 @@ class PhysNet(torch.nn.Module):
         self.physnet = torch.nn.Sequential(
             EncoderBlock(),
             decoder_block(),
-            torch.nn.AdaptiveMaxPool3d((frames, 1, 1)),  # spatial adaptive pooling
+             # torch.nn.AdaptiveMaxPool3d((frames, 1, 1)),  # spatial adaptive pooling
+            torch.nn.AdaptiveAvgPool3d((frames, 1, 1)),  # spatial adaptive pooling
             torch.nn.Conv3d(64, 1, [1, 1, 1], stride=1, padding=0)
         )
 
