@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     check_preprocessed_data(fit_cfg, preprocess_cfg)
 
-    datasets = dataset_loader(save_root_path=preprocess_cfg.dataset_path, fit_cfg=fit_cfg.fit)
+    datasets = dataset_loader(fit_cfg=fit_cfg.fit, pre_cfg=preprocess_cfg)
 
     data_loaders = data_loader(datasets=datasets, fit_cfg=fit_cfg.fit)
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         lr_sch = torch.optim.lr_scheduler.OneCycleLR(
             opt, max_lr=fit_cfg.fit.train.learning_rate, epochs=fit_cfg.fit.train.epochs,
             steps_per_epoch=len(datasets[0]))
-    test_result = run(model, opt, lr_sch, criterion, fit_cfg, data_loaders, fit_cfg.wandb.flag)
+    test_result = run(model, False, opt, lr_sch, criterion, fit_cfg, data_loaders, wandb_flag=fit_cfg.wandb.flag)
 
     save_single_result(result_save_path, test_result, fit_cfg.fit)
 
