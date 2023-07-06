@@ -51,7 +51,7 @@ def preprocessing(preprocess_cfg, dataset_name):
     :param save_root_path: save file destination path
     :param model_name: select preprocessing method
     :param data_root_path: data set root path
-    :param dataset_name: data set name(ex. UBFC, COFACE)
+    :param dataset_name: data set name(ex. UBFC, COHFACE)
     :return:
     """
 
@@ -238,6 +238,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
     detection_model = 'hog'
     xy_points = pd.DataFrame(columns=['bottom', 'right', 'top', 'left'])
 
+    # for PURE dataset
     if video_path.__contains__("png"):
         path = video_path[:-4]
         data = sorted(os.listdir(path))[1:]
@@ -313,7 +314,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
                 raw_video[frame_num] = face
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
-
+    # for UBFC dataset
     else:
         cap = cv2.VideoCapture(video_path)
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -353,7 +354,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
             if not ret:
                 print(f"Can't receive frame: {video_path}")
                 break
-
+            # crop face from frame
             face = np.take(frame, range(y_x_w[frame_num][0] - y_x_w[frame_num][2],
                                         y_x_w[frame_num][0] + y_x_w[frame_num][2]), 0, mode='clip')
             face = np.take(face, range(y_x_w[frame_num][1] - y_x_w[frame_num][2],
@@ -364,7 +365,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
         cap.release()
-
+    '''비디오 통째로 고칠거면 여기'''
     if preprocess_type == 'DIFF':
         raw_video = diff_normalize_video(raw_video)
         raw_label = diff_normalize_label(raw_label)

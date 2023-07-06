@@ -12,6 +12,7 @@ from rppg.datasets.APNETv2Dataset import APNETv2Dataset
 from rppg.datasets.DeepPhysDataset import DeepPhysDataset
 from rppg.datasets.ETArPPGNetDataset import ETArPPGNetDataset
 from rppg.datasets.PhysNetDataset import PhysNetDataset
+from rppg.datasets.PhysFormerDataset import PhysFormerDataset
 from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
 from rppg.datasets.EfficientPhysDataset import EfficientPhysDataset
@@ -318,7 +319,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             elif model_type == 'CONT':
                 video_data = []
                 label_data = []
-                bpm_data = []
+                hr_data = []
                 keypoint_data = []
             round_flag = 1
         elif round_flag == 1:
@@ -412,6 +413,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                 end = time_length
                 # label = detrend(file['preprocessed_label'], 100)
                 label = file['preprocessed_label']
+                hr_label = file['hrv']
                 num_frame, w, h, c = file['raw_video'][:].shape
 
                 if len(label) != num_frame:
@@ -438,6 +440,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
 
                     # tmp_label = np.around(normalize(tmp_label, 0, 1), 2)
                     label_data.append(tmp_label)
+                    hr_data.append(hr_label[start:end].mean())
                     # video_chunks.append(video_chunk)
                     start += time_length - overlap_interval
                     end += time_length - overlap_interval
@@ -458,6 +461,11 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
             elif model_name in ["EfficientPhys"]:
                 dataset = EfficientPhysDataset(video_data=np.asarray(video_data),
                                                label_data=np.asarray(label_data))
+            elif model_name in ["PhysFormer"]:
+                dataset = PhysFormerDataset(video_data=np.asarray(video_data),
+                                            label_data=np.asarray(label_data),
+                                            average_hr=np.asarray(hr_data),
+                                            target_length=time_length)
             elif model_type == 'CONT':
                 dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data),
