@@ -1,14 +1,14 @@
 ---
-model_save_path: ""      # model save path
+model_save_path: "/ssd/ssd0/pretrained_model/rppg/"      # model save path
 preprocess:
-  flag: true                                                     # true: preprocess, false: not preprocess
+  flag: true                              # true: preprocess, false: not preprocess
 wandb:
-  flag: false
-  project_name: DeepPhys
+  flag: True
+  project_name: physformer
   entity: paperchae
 
 fit:
-  model: DeepPhys
+  model: EfficientPhys                    # DeepPhys, TSCAN, EfficientPhys, BigSmall, PhysNet, PhysFormer, APNET
   type: DIFF
   time_length: 180
   overlap_interval: 0 # default 0
@@ -16,13 +16,13 @@ fit:
   train_flag: True
   eval_flag: True
   eval_interval: 100
-  debug_flag: False                        # True: debug mode (load small dataset, False: normal mode
+  debug_flag: False                        # True: debug mode (load small dataset, False: normal mode)
 
   train:
     dataset: UBFC
     shuffle: True
     fs: 30 #video fps
-    batch_size: 4
+    batch_size: 8
     learning_rate: 0.009
     epochs: 30
     loss: MSE
@@ -34,11 +34,11 @@ fit:
       inner_lr: 0.01
 
   test:
-    dataset: PURE
+    dataset: UBFC
     shuffle: False
     fs: 30 #video fps
-    batch_size: 4
+    batch_size: 8
     cal_type: FFT
     metric: [ 'MAE','RMSE','MAPE','Pearson' ]
-    eval_time_length: 10 # second
+    eval_time_length: 5 # second
 

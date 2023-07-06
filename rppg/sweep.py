@@ -38,7 +38,7 @@ if __name__ == "__main__":
     preset_cfg = get_config("configs/model_preset.yaml")
     models = [list(m)[0] for m in preset_cfg.models]
     test_eval_time_length = [3, 5, 10, 20, 30]  # in seconds
-    datasets = [['UBFC', 'PURE']]  # ,['PURE', 'PURE'],['UBFC', 'UBFC'],['PURE', 'UBFC']]
+    datasets = [['VIPL_HR', 'VIPL_HR']]  # ,['PURE', 'PURE'],['UBFC', 'UBFC'],['PURE', 'UBFC']]
 
     model_name = []
     model_type = []
@@ -64,6 +64,10 @@ if __name__ == "__main__":
 
     for d in datasets:
         fit_cfg = get_config("configs/fit.yaml")
+        if fit_cfg.fit.debug_flag is True:
+            print("Debug mode is on.\n No wandb logging & result saving")
+            fit_cfg.wandb.flag = False
+        fit_cfg.wandb.flag = not fit_cfg.fit.debug_flag
         preprocess_cfg = get_config("configs/preprocess.yaml")
         fit_cfg.fit.train.dataset, fit_cfg.fit.test.dataset = d[0], d[1]
 
@@ -110,8 +114,10 @@ if __name__ == "__main__":
                 # lr_sch = torch.optim.lr_scheduler.OneCycleLR(
                 #     opt, max_lr=fit_cfg.fit.train.learning_rate, epochs=fit_cfg.fit.train.epochs,
                 #     steps_per_epoch=len(datasets[0]))
+                lr_sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
             test_result = run(model, True, opt, lr_sch, criterion, fit_cfg, data_loaders, fit_cfg.wandb.flag)
-            save_sweep_result(result_save_path, test_result, fit_cfg.fit)
+            if not fit_cfg.fit.debug_flag:
+                save_sweep_result(result_save_path, test_result, fit_cfg.fit)
             # save_single_result(result_save_path, test_result, fit_cfg.fit)
 
             wandb.finish()

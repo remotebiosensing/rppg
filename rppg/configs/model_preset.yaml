@@ -1,5 +1,6 @@
 ---
 models:
+
 #- DeepPhys:
 #    model: DeepPhys
 #    type: DIFF
@@ -76,8 +77,9 @@ models:
       img_size: 128
       time_length: 160
       batch_size: 4
-      optimizer: AdamW
-      loss: neg_pearson
+      optimizer: Adam
+      loss: CLGDLoss
+#      loss: neg_pearson
       learning_rate: 0.001
 
 
