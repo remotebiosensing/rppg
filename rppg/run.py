@@ -5,13 +5,10 @@ from tqdm import tqdm
 from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr, IrrelevantPowerRatio)
 import numpy as np
 import os
-from torch.autograd import Variable
-import torch.nn.modules.loss as loss
-import torch.nn.functional as F
-from rppg.loss import NegPearsonLoss, CurriculumLearningGuidedDynamicLoss
 
 
 def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
+    log = True
     best_loss = 100000
     val_loss = 0
     eval_flag = False
@@ -31,15 +28,15 @@ def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag
                            "_imgsize" + str(cfg.fit.img_size) +
                            ".pt")
                 eval_flag = True
-            if not sweep:
+            if log:
                 if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
                     test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
-                            metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
+                            metrics=cfg.fit.test.metric, eval_time_length=10,
                             wandb_flag=wandb_flag)
                 eval_flag = False
         if not sweep:
             test_result = test_fn(0, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
-                                  metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
+                                  metrics=cfg.fit.test.metric, eval_time_length=10,
                                   wandb_flag=wandb_flag)
         else:
             for et in cfg.fit.test.eval_time_length:
@@ -68,7 +65,6 @@ def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.train()
         running_loss = 0.0
-
 
         for te in tepoch:
             if model.__module__.split('.')[-1] == 'PhysFormer':
@@ -164,54 +160,6 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
                 tepoch.set_description(step + "%d" % epoch)
                 outputs = model(inputs)
                 if model.__module__.split('.')[-1] == 'PhysFormer':
-                    # temporal_loss = 0.0
-                    # ce_loss = 0.0
-                    # ld_loss = 0.0
-                    # batch_size = inputs.size()[0]
-                    # temporal_cost_function = NegPearsonLoss()
-                    # kl_loss = torch.nn.KLDivLoss(reduction='batchmean')
-                    # temporal_loss = temporal_cost_function(outputs, target)
-                    #
-                    # fs, std = 30, 1.0
-                    # bpm_range = torch.arange(40, 180, dtype=torch.float32).cuda()
-                    # init_alpha, init_beta = 0.1, 1.0
-                    # alpha_exp, beta_exp = 0.5, 5.0
-                    # if epoch > 25:
-                    #     alpha = 0.05
-                    #     beta = 5.0
-                    # else:
-                    #     alpha = init_alpha * math.pow(alpha_exp, epoch / 25.0)
-                    #     beta = init_beta * math.pow(beta_exp, epoch / 25.0)
-                    # n = outputs.size()[-1]
-                    # unit_per_hz = n / fs
-                    # feasible_bpm = bpm_range / 60.0
-                    # k = (feasible_bpm / unit_per_hz).type(torch.FloatTensor).cuda().view(1, -1, 1)
-                    # two_pi_n_over_N = (Variable(2 * math.pi * torch.arange(0, n, dtype=torch.float32),
-                    #                             requires_grad=True) / n).cuda().view(1, 1, -1)
-                    # hanning = (Variable(torch.from_numpy(np.hanning(n)).type(torch.FloatTensor),
-                    #                     requires_grad=True).view(1, -1)).cuda()
-                    # hanning_rppg = (outputs * hanning).view(batch_size, 1, -1)  # (batch, 1, time length)
-                    # complex_absolute = torch.sum(hanning_rppg * torch.sin(k * two_pi_n_over_N), dim=-1) ** 2 + \
-                    #                    torch.sum(hanning_rppg * torch.cos(k * two_pi_n_over_N), dim=-1) ** 2
-                    # complex_absolute = (1.0 / complex_absolute.sum(keepdims=True, dim=-1)) * complex_absolute
-                    #
-                    # for b in range(batch_size):
-                    #     # ce loss
-                    #
-                    #     ce_loss += F.cross_entropy(complex_absolute[b].view(1, -1), hr[b].view(1).type(torch.long) - 40)
-                    #     # ld loss
-                    #     target_distribution = []
-                    #     for i in range(140):
-                    #         target_distribution.append(math.exp(-(i - int(hr[b])) ** 2 / (2 * std ** 2)) /
-                    #                                    (math.sqrt(2 * math.pi) * std))
-                    #     target_distribution = torch.Tensor(
-                    #         [i if i > 1e-15 else 1e-15 for i in target_distribution]).cuda()
-                    #     frequency_distribution = F.log_softmax(complex_absolute[b])
-                    #     ld_loss += kl_loss(frequency_distribution, target_distribution)
-                    # ce_loss /= batch_size
-                    # ld_loss /= batch_size
-                    #
-                    # loss = alpha * temporal_loss + beta * (ce_loss + ld_loss)
 
                     loss = criterion(epoch, outputs, target, hr)
                 else:
@@ -238,9 +186,6 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, eval_time_
         model_type = 'CONT'
 
     model.eval()
-
-    hr_preds = []
-    hr_targets = []
 
     p = []
     t = []

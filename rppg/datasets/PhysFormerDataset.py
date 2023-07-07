@@ -8,7 +8,8 @@ from torch.utils.data import Dataset
 class PhysFormerDataset(Dataset):
     def __init__(self, video_data, label_data, average_hr, target_length):
         self.transform = transforms.Compose([transforms.ToTensor()])
-        self.video_data = np.reshape(video_data, (-1, target_length, video_data.shape[2], video_data.shape[3], 3))*2-1
+        self.video_data = (video_data - 0.5) * 2
+        # self.video_data = (np.reshape(video_data, (-1, target_length, video_data.shape[2], video_data.shape[3], 3))-0.5)*2
         average_hr = [x if x > 40. else 40. for x in average_hr]
         average_hr = [x if x < 180. else 180. for x in average_hr]
         average_hr = [(x - 40.) for x in average_hr]
