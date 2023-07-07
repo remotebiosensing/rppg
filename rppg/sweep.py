@@ -2,9 +2,11 @@ import sys
 import random
 import datetime
 
+import wandb
 import numpy as np
 import torch
-import wandb
+import torch.cuda as cuda
+import torch.backends.cudnn as cudnn
 
 from rppg.loss import loss_fn
 from rppg.models import get_model
@@ -18,16 +20,20 @@ from rppg.utils.test_utils import save_sweep_result
 SEED = 0
 
 # for Reproducible model
-torch.manual_seed(SEED)
-torch.cuda.manual_seed(SEED)
-torch.cuda.manual_seed_all(SEED)  # if use multi-GPU
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-np.random.seed(SEED)
 random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.use_deterministic_algorithms(mode=True, warn_only=True)
+cuda.manual_seed(SEED)
+cuda.manual_seed_all(SEED)  # if use multi-GPU
+cuda.allow_tf32 = True
+cudnn.enabled = True
+cudnn.deterministic = True
+cudnn.benchmark = False
+cudnn.allow_tf32 = True
 
-generator = torch.Generator()
-generator.manual_seed(SEED)
+# generator = torch.Generator()
+# generator.manual_seed(SEED)
 
 if __name__ == "__main__":
 
@@ -38,7 +44,8 @@ if __name__ == "__main__":
     preset_cfg = get_config("configs/model_preset.yaml")
     models = [list(m)[0] for m in preset_cfg.models]
     test_eval_time_length = [3, 5, 10, 20, 30]  # in seconds
-    datasets = [['VIPL_HR', 'VIPL_HR']]  # ,['PURE', 'PURE'],['UBFC', 'UBFC'],['PURE', 'UBFC']]
+    # datasets = [['UBFC', 'UBFC'], ['PURE', 'PURE'], ['UBFC', 'PURE'], ['PURE', 'UBFC']]
+    datasets = [['UBFC', 'PURE']]
 
     model_name = []
     model_type = []
@@ -114,11 +121,10 @@ if __name__ == "__main__":
                 # lr_sch = torch.optim.lr_scheduler.OneCycleLR(
                 #     opt, max_lr=fit_cfg.fit.train.learning_rate, epochs=fit_cfg.fit.train.epochs,
                 #     steps_per_epoch=len(datasets[0]))
-                lr_sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
+                # lr_sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
             test_result = run(model, True, opt, lr_sch, criterion, fit_cfg, data_loaders, fit_cfg.wandb.flag)
             if not fit_cfg.fit.debug_flag:
                 save_sweep_result(result_save_path, test_result, fit_cfg.fit)
-            # save_single_result(result_save_path, test_result, fit_cfg.fit)
 
             wandb.finish()
 

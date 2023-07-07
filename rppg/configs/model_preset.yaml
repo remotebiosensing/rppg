@@ -55,31 +55,31 @@ models:
 #      ubfc: 13
 #      pure: 10
 
-#- PhysNet:
-#    model: PhysNet
-#    type: CONT
-#    preprocess_type: CONT
-#    img_size: 128
-#    time_length: 128
-#    batch_size: 16
-#    optimizer: Adam
-#    loss: neg_pearson
-#    learning_rate: 0.0001
-#    eval_time_length: 10
-#    epochs:
-#      ubfc: 15
-#      pure: 15
+- PhysNet:
+    model: PhysNet
+    type: CONT
+    preprocess_type: CONT
+    img_size: 128
+    time_length: 128
+    batch_size: 8
+    optimizer: Adam
+    loss: neg_pearson
+    learning_rate: 0.0001
+    scheduler: None
+    eval_time_length: 10
+    epochs:
+      ubfc: 15
+      pure: 15
 
-- PhysFormer:
-      model: PhysFormer
-      type: CONT
-      preprocess_type: CONT
-      img_size: 128
-      time_length: 160
-      batch_size: 4
-      optimizer: Adam
-      loss: CLGDLoss
-#      loss: neg_pearson
-      learning_rate: 0.001
+#- PhysFormer:
+#      model: PhysFormer
+#      type: CONT
+#      preprocess_type: CONT
+#      img_size: 128
+#      time_length: 160
+#      batch_size: 4
+#      optimizer: Adam
+#      loss: CLGDLoss
+#      learning_rate: 0.0001
 
 

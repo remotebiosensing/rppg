@@ -314,7 +314,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
                 raw_video[frame_num] = face
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
-    # for UBFC dataset
+    # for UBFC, VIPL-HR dataset
     else:
         cap = cv2.VideoCapture(video_path)
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

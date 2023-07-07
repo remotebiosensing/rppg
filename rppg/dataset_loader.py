@@ -1,5 +1,5 @@
 import os
-
+import random
 import cv2
 import h5py
 import numpy as np
@@ -17,6 +17,7 @@ from rppg.datasets.RhythmNetDataset import RhythmNetDataset
 from rppg.datasets.VitamonDataset import VitamonDataset
 from rppg.datasets.EfficientPhysDataset import EfficientPhysDataset
 from rppg.utils.funcs import detrend
+import torch
 
 
 def dataset_split(
@@ -35,6 +36,16 @@ def dataset_split(
         val_len = dataset_len - train_len
         datasets = random_split(dataset, [train_len, val_len])
         return datasets[0], datasets[1]
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2 ** 32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
+g = torch.Generator()
+g.manual_seed(0)
 
 
 def data_loader(datasets, fit_cfg):
@@ -76,24 +87,30 @@ def data_loader(datasets, fit_cfg):
             sampler_validation = ClipSampler(idx_validation)
 
             train_loader = DataLoader(datasets[0], batch_size=(train_batch_size * time_length),
-                                      sampler=sampler_train, shuffle=shuffle)
+                                      sampler=sampler_train, shuffle=shuffle,
+                                      worker_init_fn=seed_worker, generator=g)
             validation_loader = DataLoader(datasets[1], batch_size=(train_batch_size * time_length),
-                                           sampler=sampler_validation, shuffle=shuffle)
+                                           sampler=sampler_validation, shuffle=shuffle,
+                                           worker_init_fn=seed_worker, generator=g)
             if datasets.__len__() == 2:
                 return [train_loader, validation_loader]
             elif datasets.__len__() == 3:
                 for dataset in datasets[2]:
-                    test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False))
+                    test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False,
+                                                  worker_init_fn=seed_worker, generator=g))
                 return [train_loader, validation_loader, test_loader]
         # elif fit_type == 'CONT':
         else:
-            train_loader = DataLoader(datasets[0], batch_size=train_batch_size, shuffle=shuffle)
-            validation_loader = DataLoader(datasets[1], batch_size=train_batch_size, shuffle=shuffle)
+            train_loader = DataLoader(datasets[0], batch_size=train_batch_size, shuffle=shuffle,
+                                      worker_init_fn=seed_worker, generator=g)
+            validation_loader = DataLoader(datasets[1], batch_size=train_batch_size,
+                                           shuffle=shuffle, worker_init_fn=seed_worker, generator=g)
             if datasets.__len__() == 2:
                 return [train_loader, validation_loader]
             elif datasets.__len__() == 3:
                 for dataset in datasets[2]:
-                    test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False))
+                    test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False,
+                                                  worker_init_fn=seed_worker, generator=g))
                 return [train_loader, validation_loader, test_loader]
 
     elif datasets.__len__() == 1:
@@ -126,7 +143,7 @@ def dataset_loader(fit_cfg, pre_cfg):
         model_type = 'CONT'
 
     if dataset_name[0] == dataset_name[1]:
-        root_file_path = save_root_path + dataset_name[0] + "/" + model_type+"_"+preprocessed_img_size
+        root_file_path = save_root_path + dataset_name[0] + "/" + model_type + "_" + preprocessed_img_size
 
         path = get_all_files_in_path(root_file_path)
         if debug_flag:
@@ -148,7 +165,7 @@ def dataset_loader(fit_cfg, pre_cfg):
 
     elif dataset_name[0] != dataset_name[1]:
 
-        root_file_path = save_root_path + dataset_name[0] + "/" + model_type+"_"+preprocessed_img_size
+        root_file_path = save_root_path + dataset_name[0] + "/" + model_type + "_" + preprocessed_img_size
         if not os.path.exists(root_file_path):
             raise FileExistsError("There is no dataset in the path : ", root_file_path)
 
@@ -163,7 +180,7 @@ def dataset_loader(fit_cfg, pre_cfg):
             val_path = path[train_len:]
 
         if eval_flag:
-            root_file_path = save_root_path + dataset_name[1] + "/" + model_type+"_"+preprocessed_img_size
+            root_file_path = save_root_path + dataset_name[1] + "/" + model_type + "_" + preprocessed_img_size
             if not os.path.exists(root_file_path):
                 raise FileExistsError("There is no dataset in the path : ", root_file_path)
             path = get_all_files_in_path(root_file_path)[:]
