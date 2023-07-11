@@ -49,6 +49,7 @@ def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag
                                        wandb_flag=wandb_flag))
         else:
             for et in cfg.fit.test.eval_time_length:
+                print("=========="+str(et)+"s==========")
                 test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
                                            metrics=cfg.fit.test.metric, eval_time_length=et,
                                            wandb_flag=wandb_flag))
