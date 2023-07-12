@@ -52,8 +52,8 @@ def generate_combinations_array(arr):
     combinations_array = [list(c) for c in combinations]
 
     # 순서를 뒤집은 조합 추가
-    reversed_combinations = [list(reversed(c)) for c in combinations]
-    combinations_array.extend(reversed_combinations)
+    # reversed_combinations = [list(reversed(c)) for c in combinations]
+    # combinations_array.extend(reversed_combinations)
 
     return combinations_array
 
