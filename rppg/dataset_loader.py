@@ -124,7 +124,7 @@ def data_loader(datasets, fit_cfg):
             return [test_loader]
 
 
-def dataset_loader(fit_cfg, pre_cfg):
+def dataset_loader(fit_cfg, dataset_path):
     model_name = fit_cfg.model
     dataset_name = [fit_cfg.train.dataset, fit_cfg.test.dataset]
     time_length = fit_cfg.time_length
@@ -135,15 +135,16 @@ def dataset_loader(fit_cfg, pre_cfg):
     debug_flag = fit_cfg.debug_flag
     meta = fit_cfg.train.meta.flag
 
-    save_root_path = pre_cfg.dataset_path
-    preprocessed_img_size = str(pre_cfg.dataset.image_size)
+    save_root_path = dataset_path
+    # preprocessed_img_size = str(pre_cfg.dataset.image_size)
+    # Overwrite the fit.type in the config file
     if model_name in ["DeepPhys", "TSCAN", "MTTS", "BigSmall"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'
 
     if dataset_name[0] == dataset_name[1]:
-        root_file_path = save_root_path + dataset_name[0] + "/" + model_type + "_" + preprocessed_img_size
+        root_file_path = save_root_path + dataset_name[0] + "/" + model_type  # + "_" + preprocessed_img_size
 
         path = get_all_files_in_path(root_file_path)
         if debug_flag:
@@ -165,7 +166,7 @@ def dataset_loader(fit_cfg, pre_cfg):
 
     elif dataset_name[0] != dataset_name[1]:
 
-        root_file_path = save_root_path + dataset_name[0] + "/" + model_type + "_" + preprocessed_img_size
+        root_file_path = save_root_path + dataset_name[0] + "/" + model_type  # + "_" + preprocessed_img_size
         if not os.path.exists(root_file_path):
             raise FileExistsError("There is no dataset in the path : ", root_file_path)
 
@@ -180,7 +181,7 @@ def dataset_loader(fit_cfg, pre_cfg):
             val_path = path[train_len:]
 
         if eval_flag:
-            root_file_path = save_root_path + dataset_name[1] + "/" + model_type + "_" + preprocessed_img_size
+            root_file_path = save_root_path + dataset_name[1] + "/" + model_type  # + "_" + preprocessed_img_size
             if not os.path.exists(root_file_path):
                 raise FileExistsError("There is no dataset in the path : ", root_file_path)
             path = get_all_files_in_path(root_file_path)[:]
