@@ -16,6 +16,7 @@ from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
 from rppg.preprocessing.dataset_preprocess import check_preprocessed_data
 from rppg.run import run
 from rppg.utils.test_utils import save_sweep_result
+from itertools import product
 
 SEED = 0
 
@@ -23,7 +24,7 @@ SEED = 0
 random.seed(SEED)
 np.random.seed(SEED)
 torch.manual_seed(SEED)
-torch.use_deterministic_algorithms(mode=True, warn_only=True)
+# torch.use_deterministic_algorithms(mode=True, warn_only=True)
 cuda.manual_seed(SEED)
 cuda.manual_seed_all(SEED)  # if use multi-GPU
 cuda.allow_tf32 = True
@@ -44,9 +45,11 @@ if __name__ == "__main__":
     preset_cfg = get_config("configs/model_preset.yaml")
     models = [list(m)[0] for m in preset_cfg.models]
     test_eval_time_length = [3, 5, 10, 20, 30]  # in seconds
+    dataset_list = ['UBFC', 'PURE']
+    # dataset_list = ['UBFC', 'PURE', 'VIPL_HR']
     # datasets = [['UBFC', 'UBFC'], ['PURE', 'PURE'], ['UBFC', 'PURE'], ['PURE', 'UBFC']]
-    datasets = [['UBFC', 'PURE']]
-
+    list_product = list(product(dataset_list, repeat=2))
+    datasets = [list(x) for x in list_product][1:2]
     model_name = []
     model_type = []
     preprocess_type = []
@@ -72,8 +75,9 @@ if __name__ == "__main__":
     for d in datasets:
         fit_cfg = get_config("configs/fit.yaml")
         if fit_cfg.fit.debug_flag is True:
-            print("Debug mode is on.\n No wandb logging & result saving")
+            print("Debug mode is on.\n No wandb logging & Not saving csv and model")
             fit_cfg.wandb.flag = False
+            fit_cfg.fit.model_save_flag = False
         fit_cfg.wandb.flag = not fit_cfg.fit.debug_flag
         preprocess_cfg = get_config("configs/preprocess.yaml")
         fit_cfg.fit.train.dataset, fit_cfg.fit.test.dataset = d[0], d[1]
@@ -122,7 +126,7 @@ if __name__ == "__main__":
                 #     opt, max_lr=fit_cfg.fit.train.learning_rate, epochs=fit_cfg.fit.train.epochs,
                 #     steps_per_epoch=len(datasets[0]))
                 # lr_sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
-            test_result = run(model, True, opt, lr_sch, criterion, fit_cfg, data_loaders, fit_cfg.wandb.flag)
+            test_result = run(model, True, opt, lr_sch, criterion, fit_cfg, data_loaders)
             if not fit_cfg.fit.debug_flag:
                 save_sweep_result(result_save_path, test_result, fit_cfg.fit)
 
