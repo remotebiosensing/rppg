@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 
-def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag):
+def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders):
     log = True
     best_loss = 100000
     val_loss = 0
@@ -18,42 +18,43 @@ def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders, wandb_flag
     test_result = []
     if cfg.fit.train_flag:
         for epoch in range(cfg.fit.train.epochs):
-            train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders[0], wandb_flag)
-            val_loss = val_fn(epoch, model, criterion, dataloaders[1], wandb_flag)
+            train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders[0], cfg.wandb.flag)
+            val_loss = val_fn(epoch, model, criterion, dataloaders[1], cfg.wandb.flag)
             if best_loss > val_loss:
                 best_loss = val_loss
-                torch.save(model.state_dict(), save_dir +
-                           "train" + cfg.fit.train.dataset +
-                           "_test" + cfg.fit.test.dataset +
-                           "_imgsize" + str(cfg.fit.img_size) +
-                           ".pt")
                 eval_flag = True
+                if cfg.fit.model_save_flag:
+                    torch.save(model.state_dict(), save_dir +
+                               "train" + cfg.fit.train.dataset +
+                               "_test" + cfg.fit.test.dataset +
+                               "_imgsize" + str(cfg.fit.img_size) +
+                               ".pt")
             if log:
                 if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
                     test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
                             metrics=cfg.fit.test.metric, eval_time_length=10,
-                            wandb_flag=wandb_flag)
+                            wandb_flag=cfg.wandb.flag)
                 eval_flag = False
         if not sweep:
             test_result = test_fn(0, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
                                   metrics=cfg.fit.test.metric, eval_time_length=10,
-                                  wandb_flag=wandb_flag)
+                                  wandb_flag=cfg.wandb.flag)
         else:
             for et in cfg.fit.test.eval_time_length:
                 test_result.append(test_fn(0, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
                                            metrics=cfg.fit.test.metric, eval_time_length=et,
-                                           wandb_flag=wandb_flag))
+                                           wandb_flag=cfg.wandb.flag))
     else:
         # model = torch.load()
         if not sweep:
             test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
                                        metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
-                                       wandb_flag=wandb_flag))
+                                       wandb_flag=cfg.wandb.flag))
         else:
             for et in cfg.fit.test.eval_time_length:
                 test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
                                            metrics=cfg.fit.test.metric, eval_time_length=et,
-                                           wandb_flag=wandb_flag))
+                                           wandb_flag=cfg.wandb.flag))
 
     return test_result
 
@@ -75,52 +76,6 @@ def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag
             tepoch.set_description(step + "%d" % epoch)
             outputs = model(inputs)
             if model.__module__.split('.')[-1] == 'PhysFormer':
-                # temporal_loss = 0.0
-                # ce_loss = 0.0
-                # ld_loss = 0.0
-                # batch_size = inputs.size()[0]
-                # temporal_cost_function = NegPearsonLoss()
-                # kl_loss = torch.nn.KLDivLoss(reduction='batchmean')
-                # temporal_loss = temporal_cost_function(outputs, target)
-                #
-                # fs, std = 30, 1.0
-                # bpm_range = torch.arange(40, 180, dtype=torch.float32).cuda()
-                # init_alpha, init_beta = 0.1, 1.0
-                # alpha_exp, beta_exp = 0.5, 5.0
-                # if epoch > 25:
-                #     alpha = 0.05
-                #     beta = 5.0
-                # else:
-                #     alpha = init_alpha * math.pow(alpha_exp, epoch / 25.0)
-                #     beta = init_beta * math.pow(beta_exp, epoch / 25.0)
-                # n = outputs.size()[-1]
-                # unit_per_hz = n / fs
-                # feasible_bpm = bpm_range / 60.0
-                # k = (feasible_bpm / unit_per_hz).type(torch.FloatTensor).cuda().view(1, -1, 1)
-                # two_pi_n_over_N = (Variable(2 * math.pi * torch.arange(0, n, dtype=torch.float32),
-                #                             requires_grad=True) / n).cuda().view(1, 1, -1)
-                # hanning = (Variable(torch.from_numpy(np.hanning(n)).type(torch.FloatTensor),
-                #                     requires_grad=True).view(1, -1)).cuda()
-                # hanning_rppg = (outputs * hanning).view(batch_size, 1, -1)  # (batch, 1, time length)
-                # complex_absolute = torch.sum(hanning_rppg * torch.sin(k * two_pi_n_over_N), dim=-1) ** 2 + \
-                #                    torch.sum(hanning_rppg * torch.cos(k * two_pi_n_over_N), dim=-1) ** 2
-                # complex_absolute = (1.0 / complex_absolute.sum(keepdims=True, dim=-1)) * complex_absolute
-                #
-                # for b in range(batch_size):
-                #     # ce loss
-                #     ce_loss += F.cross_entropy(complex_absolute[b].view(1, -1), hr[b].view(1).type(torch.long) - 40)
-                #     # ld loss
-                #     target_distribution = []
-                #     for i in range(140):
-                #         target_distribution.append(math.exp(-(i - int(hr[b])) ** 2 / (2 * std ** 2)) /
-                #                                    (math.sqrt(2 * math.pi) * std))
-                #     target_distribution = torch.Tensor([i if i > 1e-15 else 1e-15 for i in target_distribution]).cuda()
-                #     frequency_distribution = F.log_softmax(complex_absolute[b])
-                #     ld_loss += kl_loss(frequency_distribution, target_distribution)
-                # ce_loss /= batch_size
-                # ld_loss /= batch_size
-                #
-                # loss = alpha * temporal_loss + beta * (ce_loss + ld_loss)
                 loss = criterion(epoch, outputs, target, hr)
             else:
                 loss = criterion(outputs, target)
@@ -175,6 +130,10 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
 
         return running_loss / tepoch.__len__()
 
+'''
+D = scipy.sparse.spdiags(298, 300)
+H + (Lambda ** 2) * np.dot(D.T, D) (300, 300)
+'''
 
 def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, eval_time_length, wandb_flag: bool = True):
     # To evaluate a model by subject, you can use the meta option
@@ -194,29 +153,26 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, eval_time_
     time = eval_time_length
 
     interval = fs * time
-
-    for dataloader in dataloaders:
-        with tqdm(dataloader, desc=step, total=len(dataloader), disable=True) as tepoch:
-            _pred = []
-            _target = []
+    empty_tensor = torch.empty(1).to('cuda')
+    empty_tensor2 = torch.empty(1).to('cuda')
+    with tqdm(dataloaders, desc=step, total=len(dataloaders), disable=False) as tepoch:
+        _pred = []
+        _target = []
+        with torch.no_grad():
             for te in tepoch:
+                torch.cuda.empty_cache()
                 if model.__module__.split('.')[-1] == 'PhysFormer':
                     inputs, target, _ = te
                 else:
                     inputs, target = te
-                _pred.extend(np.reshape(model(inputs).cpu().detach().numpy(), (-1,)))
-                _target.extend(np.reshape(target.cpu().detach().numpy(), (-1,)))
+                outputs = model(inputs).detach().clone()
+                empty_tensor = torch.cat((empty_tensor, outputs.squeeze()), dim=-1)
+                empty_tensor2 = torch.cat((empty_tensor2, target.squeeze()), dim=-1)
 
-            remind = len(_pred) % interval
-            if remind > 0:
-                _pred = _pred[:-remind]
-                _target = _target[:-remind]
-        p.extend(np.reshape(np.reshape(np.asarray(_pred), -1), (-1, interval)))
-        t.extend(np.reshape(np.reshape(np.asarray(_target), -1), (-1, interval)))
-    p = np.asarray(p)
-    t = np.asarray(t)
+    hr_pred, hr_target = get_hr(torch.stack(list(torch.split(empty_tensor[1:].detach(), 300))[:-1], dim=0),
+                                torch.stack(list(torch.split(empty_tensor2[1:].detach(), 300))[:-1], dim=0),
+                                model_type=model_type, cal_type=cal_type)
 
-    hr_pred, hr_target = get_hr(p, t, model_type=model_type, cal_type=cal_type)
     hr_pred = np.asarray(hr_pred)
     hr_target = np.asarray(hr_target)
 
