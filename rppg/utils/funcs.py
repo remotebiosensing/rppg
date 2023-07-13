@@ -58,7 +58,10 @@ def BPF(input_val, fs=30, low=0.75, high=2.5):
     low = low / (0.5 * fs)
     high = high / (0.5 * fs)
     [b_pulse, a_pulse] = signal.butter(6, [low, high], btype='bandpass')
-    return signal.filtfilt(b_pulse, a_pulse, np.double(input_val.cpu().numpy()))
+    if type(input_val) == torch.Tensor:
+        return signal.filtfilt(b_pulse, a_pulse, np.double(input_val.cpu().numpy()))
+    else:
+        return signal.filtfilt(b_pulse, a_pulse, np.double(input_val))
 
 
 def plot_graph(start_point, length, target, inference):
@@ -94,7 +97,7 @@ def calc_hr_torch(calc_type, ppg_signals, fs=30., low_freq=0.75, high_freq=2.5):
     if calc_type == "FFT":
         N = _nearest_power_of_2(sig_length)
         psd = torch.abs(torch.fft.rfft(ppg_signals, n=N, dim=-1) ** 2)
-        freq = torch.linspace(0, 15, len(psd[0]))
+        freq = torch.linspace(0, 15, len(psd[0])).cuda()
         f_mask = (freq >= low_freq) & (freq <= high_freq)
         freq = freq[f_mask]
         psd = psd[:, f_mask]

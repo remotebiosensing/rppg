@@ -73,62 +73,63 @@ if __name__ == "__main__":
         losses.append(m[name]['loss'])
 
     for d in datasets:
-        fit_cfg = get_config("configs/fit.yaml")
-        if fit_cfg.fit.debug_flag is True:
+        cfg = get_config("configs/base_config.yaml")
+        # fit_cfg = get_config("configs/fit.yaml")
+        if cfg.fit.debug_flag is True:
             print("Debug mode is on.\n No wandb logging & Not saving csv and model")
-            fit_cfg.wandb.flag = False
-            fit_cfg.fit.model_save_flag = False
-        fit_cfg.wandb.flag = not fit_cfg.fit.debug_flag
-        preprocess_cfg = get_config("configs/preprocess.yaml")
-        fit_cfg.fit.train.dataset, fit_cfg.fit.test.dataset = d[0], d[1]
+            cfg.wandb.flag = False
+            cfg.fit.model_save_flag = False
+        cfg.wandb.flag = not cfg.fit.debug_flag
+        # preprocess_cfg = get_config("configs/preprocess.yaml")
+        cfg.fit.train.dataset, cfg.fit.test.dataset = d[0], d[1]
 
         for m, i, m_t, p_t, t, b, l, loss, o in zip(model_name, img_size, model_type, preprocess_type, time_length,
                                                     batch_size,
                                                     learning_rate, losses, opts):
-            fit_cfg.fit.model, fit_cfg.fit.img_size, fit_cfg.fit.type, preprocess_cfg.dataset.type = m, i, m_t, p_t
-            fit_cfg.fit.time_length, fit_cfg.fit.train.learning_rate = t, l
-            fit_cfg.fit.train.batch_size, fit_cfg.fit.test.batch_size = b, b
-            fit_cfg.fit.train.loss, fit_cfg.fit.train.optimizer = loss, o
+            cfg.fit.model, cfg.fit.img_size, cfg.fit.type, cfg.preprocess.common.type = m, i, m_t, p_t
+            cfg.fit.time_length, cfg.fit.train.learning_rate = t, l
+            cfg.fit.train.batch_size, cfg.fit.test.batch_size = b, b
+            cfg.fit.train.loss, cfg.fit.train.optimizer = loss, o
 
-            check_preprocessed_data(fit_cfg, preprocess_cfg)
-            dset = dataset_loader(fit_cfg=fit_cfg.fit, pre_cfg=preprocess_cfg)
-            data_loaders = data_loader(datasets=dset, fit_cfg=fit_cfg.fit)
-            fit_cfg.fit.test.eval_time_length = test_eval_time_length
+            check_preprocessed_data(cfg)
+            dset = dataset_loader(fit_cfg=cfg.fit, dataset_path=cfg.dataset_path)
+            data_loaders = data_loader(datasets=dset, fit_cfg=cfg.fit)
+            cfg.fit.test.eval_time_length = test_eval_time_length
 
-            model = get_model(fit_cfg.fit)
+            model = get_model(cfg.fit)
 
-            if fit_cfg.wandb.flag and fit_cfg.fit.train_flag:
-                wandb.init(project=fit_cfg.wandb.project_name,
-                           entity=fit_cfg.wandb.entity,
-                           name=fit_cfg.fit.model + "/" +
-                                fit_cfg.fit.train.dataset + "/" +
-                                fit_cfg.fit.test.dataset + "/" +
-                                str(fit_cfg.fit.img_size) + "/" +
+            if cfg.wandb.flag and cfg.fit.train_flag:
+                wandb.init(project=cfg.wandb.project_name,
+                           entity=cfg.wandb.entity,
+                           name=cfg.fit.model + "/" +
+                                cfg.fit.train.dataset + "/" +
+                                cfg.fit.test.dataset + "/" +
+                                str(cfg.fit.img_size) + "/" +
                                 datetime.datetime.now().strftime('%m-%d%H:%M:%S'))
                 wandb.config = {
-                    "learning_rate": fit_cfg.fit.train.learning_rate,
-                    "epochs": fit_cfg.fit.train.epochs,
-                    "train_batch_size": fit_cfg.fit.train.batch_size,
-                    "test_batch_size": fit_cfg.fit.test.batch_size
+                    "learning_rate": cfg.fit.train.learning_rate,
+                    "epochs": cfg.fit.train.epochs,
+                    "train_batch_size": cfg.fit.train.batch_size,
+                    "test_batch_size": cfg.fit.test.batch_size
                 }
                 wandb.watch(model, log="all", log_freq=10)
 
             opt = None
             criterion = None
             lr_sch = None
-            if fit_cfg.fit.train_flag:
+            if cfg.fit.train_flag:
                 opt = optimizer(
                     model_params=model.parameters(),
-                    learning_rate=fit_cfg.fit.train.learning_rate,
-                    optim=fit_cfg.fit.train.optimizer)
-                criterion = loss_fn(loss_name=fit_cfg.fit.train.loss)
+                    learning_rate=cfg.fit.train.learning_rate,
+                    optim=cfg.fit.train.optimizer)
+                criterion = loss_fn(loss_name=cfg.fit.train.loss)
                 # lr_sch = torch.optim.lr_scheduler.OneCycleLR(
                 #     opt, max_lr=fit_cfg.fit.train.learning_rate, epochs=fit_cfg.fit.train.epochs,
                 #     steps_per_epoch=len(datasets[0]))
                 # lr_sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
-            test_result = run(model, True, opt, lr_sch, criterion, fit_cfg, data_loaders)
-            if not fit_cfg.fit.debug_flag:
-                save_sweep_result(result_save_path, test_result, fit_cfg.fit)
+            test_result = run(model, True, opt, lr_sch, criterion, cfg, data_loaders)
+            if not cfg.fit.debug_flag:
+                save_sweep_result(result_save_path, test_result, cfg.fit)
 
             wandb.finish()
 

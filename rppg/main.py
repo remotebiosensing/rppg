@@ -72,7 +72,7 @@ if __name__ == "__main__":
         lr_sch = torch.optim.lr_scheduler.OneCycleLR(
             opt, max_lr=cfg.fit.train.learning_rate, epochs=cfg.fit.train.epochs,
             steps_per_epoch=len(datasets[0]))
-    test_result = run(model, False, opt, lr_sch, criterion, cfg, data_loaders, wandb_flag=cfg.wandb.flag)
+    test_result = run(model, False, opt, lr_sch, criterion, cfg, data_loaders)
 
     save_single_result(result_save_path, test_result, cfg.fit)
 

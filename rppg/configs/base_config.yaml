@@ -1,23 +1,23 @@
 ---
-data_root_path: "/home/jh/data/"                         # raw data path
-dataset_path: "/home/jh/dataset/Test/"                   # preprocessed data save/load path
-model_save_path: "/home/jh/"                             # model save path
+data_root_path: "/ssd/ssd0/dataset/raw/rppg/"            # raw data path
+dataset_path: "/ssd/ssd0/dataset/preprocessed/rppg/"     # preprocessed data save/load path
+model_save_path: "/ssd/ssd0/models/rppg/"                # model save path
 
 preprocess:
   flag: False                                            # true: preprocess, false: not preprocess
 
   common:
-    process_num: 10                                       # number of task per process for multiprocessing
+    process_num: 48                                       # number of task per process for multiprocessing
     type: DIFF                                           # "DIFF" or "CONT"
     fixed_position: 1                                    # 0: face tracking, 1: fixed position
     face_detect_algorithm: 1                             # 1: face recognition, 2: FaceMesh
     larger_box_coef: 1.5
-    image_size: 72                                      # cropped image size
+    image_size: 128                                      # cropped image size
 
   train_dataset:
     name: UBFC                                           # dataset name
     select_data:                                         # Empty the list if you want to select all person/task/source
-      flag: True                                        # False if you want to select all data
+      flag: False                                        # False if you want to select all data
       person_list: [ ]                                   # If V4V dataset, fill in the format 'Fxxx' or 'Mxxx'
       task_list: [ ]                                     # Scenario/Task Number specified in the dataset
       source_list: [ ]                                   # Fill only in case of VIPL_HR dataset.
@@ -25,7 +25,7 @@ preprocess:
   test_dataset:
     name: UBFC                                           # dataset name
     select_data:                                         # Empty the list if you want to select all person/task/source
-      flag: True                                        # False if you want to select all data
+      flag: False                                        # False if you want to select all data
       person_list: [ ]                                   # If V4V dataset, fill in the format 'Fxxx' or 'Mxxx'
       task_list: [ ]                                     # Scenario/Task Number specified in the dataset
       source_list: [ ]                                   # Fill only in case of VIPL_HR dataset.
@@ -33,12 +33,12 @@ preprocess:
 
 wandb:
   flag: True
-  project_name: DeepPhys_TEST
-  entity: munjonghyeon
+  project_name: physformer
+  entity: paperchae
 
 
 fit:
-  model: DeepPhys
+  model: EfficientPhys
   type: DIFF
   time_length: 180
   overlap_interval: 0 # default 0
@@ -47,14 +47,15 @@ fit:
   eval_flag: True
   eval_interval: 100
   debug_flag: False                        # True: debug mode (load small dataset, False: normal mode
+  model_save_flag: False                   # True: save model, False: not save model
 
   train:
     dataset: UBFC
     shuffle: True
     fs: 30 #video fps
-    batch_size: 2
+    batch_size: 8
     learning_rate: 0.009
-    epochs: 30
+    epochs: 15
     loss: MSE
     optimizer: AdamW
     meta:
@@ -67,8 +68,8 @@ fit:
     dataset: UBFC
     shuffle: False
     fs: 30 #video fps
-    batch_size: 2
+    batch_size: 8
     cal_type: FFT
     metric: [ 'MAE','RMSE','MAPE','Pearson' ]
-    eval_time_length: 10 # second
+    eval_time_length: 5 # second
 

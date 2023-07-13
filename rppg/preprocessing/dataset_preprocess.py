@@ -28,35 +28,58 @@ def check_preprocessed_data(cfg):
     #     print('*** Image size for model input is larger than the preprocessed image *** '
     #           '\n\tPlease check the image size in the config files.')
 
-    if not os.path.exists(cfg.dataset_path + cfg.fit.train.dataset + "/" + cfg.fit.type.upper()):
-        print('Preprocessing train({}-{}) dataset...'.format(cfg.fit.train.dataset, cfg.fit.type))
-        print("Preprocess type: ", cfg.preprocess.common.type)
-        if cfg.preprocess.common.type != cfg.fit.type:
-            raise ValueError("dataset type in fit_cfg.preprocess and fit_cfg.fit are different")
-        print("Preprocess train_dataset name: ", cfg.preprocess.train_dataset.name)
-        if cfg.preprocess.train_dataset.name != cfg.fit.train.dataset:
-            raise ValueError("train_dataset name in fit_cfg.preprocess and fit_cfg.fit are different")
-        if cfg.fit.img_size > cfg.preprocess.common.image_size:
-            print('*** Image size for model input is larger than the preprocessed image *** '
-                  '\n\tPlease check the image size in the config files.')
-        preprocessing(cfg=cfg, dataset=cfg.preprocess.train_dataset)
-    else:
-        print('Preprocessed {} data already exists.'.format(cfg.fit.train.dataset))
+    if cfg.preprocess.flag:
+        if not os.path.exists(cfg.dataset_path + cfg.preprocess.train_dataset.name + "/" + cfg.preprocess.common.type):
+            print('Preprocessing train_dataset({}-{}) dataset...'
+                  .format(cfg.preprocess.train_dataset.dataset, cfg.preprocess.common.type))
+            print("Preprocess type: ", cfg.preprocess.common.type)
+            preprocessing(cfg=cfg, dataset=cfg.preprocess.train_dataset)
+        else:
+            print('Preprocessed {} data already exists.'.format(cfg.preprocess.train_dataset.name))
 
-    if not os.path.exists(cfg.dataset_path + cfg.fit.test.dataset + "/" + cfg.fit.type.upper()):
-        print('Preprocessing test({}-{}) dataset...'.format(cfg.fit.test.dataset, cfg.fit.type))
-        print("Preprocess type: ", cfg.preprocess.common.type)
-        if cfg.preprocess.common.type != cfg.fit.type:
-            raise ValueError("dataset type in fit_cfg.preprocess and fit_cfg.fit are different")
-        print("Preprocess test_dataset name: ", cfg.preprocess.test_dataset.name)
-        if cfg.preprocess.test_dataset.name != cfg.fit.test.dataset:
-            raise ValueError("test_dataset name in fit_cfg.preprocess and fit_cfg.fit are different")
-        if cfg.fit.img_size > cfg.preprocess.common.image_size:
-            print('*** Image size for model input is larger than the preprocessed image *** '
-                  '\n\tPlease check the image size in the config files.')
-        preprocessing(cfg=cfg, dataset=cfg.preprocess.test_dataset)
+        if not os.path.exists(cfg.dataset_path + cfg.preprocess.test_dataset.name + "/" + cfg.preprocess.common.type):
+            print('Preprocessing test_dataset({}-{}) dataset...'
+                  .format(cfg.preprocess.train_dataset.dataset, cfg.preprocess.common.type))
+            preprocessing(cfg=cfg, dataset=cfg.preprocess.test_dataset)
+        else:
+            print('Preprocessed {} data already exists.'.format(cfg.preprocess.test_dataset.name))
+
     else:
-        print('Preprocessed {} data already exists.'.format(cfg.fit.test.dataset))
+        if not os.path.exists(cfg.dataset_path + cfg.fit.train.dataset + "/" + cfg.fit.type.upper()):
+            print('Preprocessing train({}-{}) dataset...'.format(cfg.fit.train.dataset, cfg.fit.type))
+            print("Preprocess type: ", cfg.preprocess.common.type)
+            if cfg.preprocess.common.type != cfg.fit.type:
+                cfg.preprocess.common.type = cfg.fit.type
+                # raise ValueError("dataset type in fit_cfg.preprocess and fit_cfg.fit are different")
+            print("Preprocess train_dataset name: ", cfg.preprocess.train_dataset.name)
+            if cfg.preprocess.train_dataset.name != cfg.fit.train.dataset:
+                cfg.preprocess.train_dataset.name = cfg.fit.train.dataset
+                # raise ValueError("train_dataset name in fit_cfg.preprocess and fit_cfg.fit are different")
+            if cfg.fit.img_size > cfg.preprocess.common.image_size:
+                cfg.preprocess.common.image_size = cfg.fit.img_size
+                # print('*** Image size for model input is larger than the preprocessed image *** '
+                #       '\n\tPlease check the image size in the config files.')
+            preprocessing(cfg=cfg, dataset=cfg.preprocess.train_dataset)
+        else:
+            print('Preprocessed {} data already exists.'.format(cfg.fit.train.dataset))
+
+        if not os.path.exists(cfg.dataset_path + cfg.fit.test.dataset + "/" + cfg.fit.type.upper()):
+            print('Preprocessing test({}-{}) dataset...'.format(cfg.fit.test.dataset, cfg.fit.type))
+            print("Preprocess type: ", cfg.preprocess.common.type)
+            if cfg.preprocess.common.type != cfg.fit.type:
+                cfg.preprocess.common.type = cfg.fit.type
+                # raise ValueError("dataset type in fit_cfg.preprocess and fit_cfg.fit are different")
+            print("Preprocess test_dataset name: ", cfg.preprocess.test_dataset.name)
+            if cfg.preprocess.test_dataset.name != cfg.fit.test.dataset:
+                cfg.preprocess.test_dataset.name = cfg.fit.test.dataset
+                # raise ValueError("test_dataset name in fit_cfg.preprocess and fit_cfg.fit are different")
+            if cfg.fit.img_size > cfg.preprocess.common.image_size:
+                cfg.preprocess.common.image_size = cfg.fit.img_size
+                # print('*** Image size for model input is larger than the preprocessed image *** '
+                #       '\n\tPlease check the image size in the config files.')
+            preprocessing(cfg=cfg, dataset=cfg.preprocess.test_dataset)
+        else:
+            print('Preprocessed {} data already exists.'.format(cfg.fit.test.dataset))
 
 
 def preprocessing(cfg, dataset):

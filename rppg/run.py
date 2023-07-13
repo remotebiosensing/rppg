@@ -173,8 +173,8 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, eval_time_
                                 torch.stack(list(torch.split(empty_tensor2[1:].detach(), 300))[:-1], dim=0),
                                 model_type=model_type, cal_type=cal_type)
 
-    hr_pred = np.asarray(hr_pred)
-    hr_target = np.asarray(hr_target)
+    hr_pred = np.asarray(hr_pred.detach().cpu())
+    hr_target = np.asarray(hr_target.detach().cpu())
 
     test_result = []
     if "MAE" in metrics:

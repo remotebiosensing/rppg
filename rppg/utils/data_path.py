@@ -98,7 +98,7 @@ class PURE_RawDataPathLoader:
 
         # For Preprocessing
         self.video_name = '/png'
-        self.ppg_name = '.json'
+        self.ppg_name = '/json'
         self.video_fps = 35.14
         self.ppg_sample_rate = 60.
 
