@@ -1,6 +1,6 @@
 ---
 data_root_path: "/ssd/ssd0/dataset/raw/rppg/"           # raw data path
-dataset_path: "/ssd/ssd0/dataset/preprocessed/temp/"    # preprocessed data path
+dataset_path: "/ssd/ssd0/dataset/preprocessed/rppg/"    # preprocessed data path
 
 flag: true                                              # true: preprocess, false: not preprocess
 analyze: false                                          # true: analyze, false: not analyze

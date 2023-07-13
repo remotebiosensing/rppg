@@ -1,5 +1,5 @@
 ---
-model_save_path: "/ssd/ssd0/pretrained_model/rppg/"      # model save path
+model_save_path: "/ssd/ssd0/models/rppg/"      # model save path
 preprocess:
   flag: true                              # true: preprocess, false: not preprocess
 wandb:
@@ -17,6 +17,7 @@ fit:
   eval_flag: True
   eval_interval: 100
   debug_flag: False                        # True: debug mode (load small dataset, False: normal mode)
+  model_save_flag: False                   # True: save model, False: not save model
 
   train:
     dataset: UBFC
@@ -24,7 +25,7 @@ fit:
     fs: 30 #video fps
     batch_size: 8
     learning_rate: 0.009
-    epochs: 30
+    epochs: 15
     loss: MSE
     optimizer: AdamW
     meta:
