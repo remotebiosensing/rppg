@@ -27,11 +27,16 @@ class CHROM(torch.nn.Module):
         self.overlap = 0.5
         self.WinSec = 1.6
         FS = 30
-        self.B,self.A = signal.butter(3, [self.LPF/FS/2,self.HPF/FS/2], 'bandpass')
+        niq = 1.2* FS
+
+        self.B,self.A = signal.butter(3, [self.LPF/niq,self.HPF/niq], 'bandpass')
         self.interval = int((FS*self.WinSec) *self.overlap)
     def forward(self, batch_x):
 
         batch_x = torch.permute(batch_x,(0,2,1,3,4))
+
+        # batch_x = torch.permute(batch_x,(0,1,3,4,2))
+
         batch_x = torch.mean(batch_x, dim=[3,4])
 
         batch_size_org, window,_ = batch_x.shape
@@ -41,14 +46,14 @@ class CHROM(torch.nn.Module):
         RGBBase = torch.mean(batch_x, axis=1, keepdim=True)
         RGBNorm = torch.true_divide(batch_x,RGBBase)
 
-
+        #BGR
 
         batch_size_overlapped, N, num_features = batch_x.shape
         self.m = signal.windows.hann(N)
         for b in range(batch_size_overlapped):
             X = RGBNorm[b]
             Xcomp = 3*X[:, 0] - 2*X[:, 1]
-            Ycomp = (1.5*X[:, 0])+X[:, 1]-(1.5*X[:, 2])
+            Ycomp = (1.5*X[:, 0])+X[:, 1]-(1.5*X[:, 1])
             Xcomp = Xcomp.cpu().detach().numpy()
             Xcomp = torch.from_numpy(
                 signal.filtfilt(self.B, self.A, Xcomp, axis=0).copy())

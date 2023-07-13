@@ -425,12 +425,12 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                 if w != img_size and h != img_size:
                     new_shape = (num_frame, img_size, img_size, c)
                     if model_type.__contains__('RAW'):
-                        resized_img = np.zeros(new_shape, dtype=np.int8)
+                        resized_img = np.zeros(new_shape, dtype=np.uint8)
                         for i in range(num_frame):
                             img = file['raw_video'][i] * 255
                             w, h, c = img.shape
                             w_m, h_m = w - round(w * 2/3), h - round(h * 2/3)
-
+                            img = cv2.cvtColor(img.astype(np.uint8),cv2.COLOR_BGR2RGB)
                             resized_img[i] = cv2.resize(img[w_m//2:-w_m//2,h_m//2:-h_m//2], (img_size, img_size), interpolation=cv2.INTER_AREA)
                     else:
                         resized_img = np.zeros(new_shape, dtype=np.float32)
@@ -443,7 +443,7 @@ def get_dataset(path, model_type, model_name, time_length, overlap_interval, img
                         video_chunk = resized_img[start:end]
                     else:
                         video_chunk = file['raw_video'][start:end]
-                    if not model_type.__contains__('raw'):
+                    if not model_type.__contains__('RAW'):
                         video_chunk = (video_chunk - np.mean(video_chunk)) / np.std(video_chunk)
                     # video_chunk = int(video_chunk*)
                     video_data.append(video_chunk)
