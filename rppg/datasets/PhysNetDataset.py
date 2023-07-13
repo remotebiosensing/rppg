@@ -6,9 +6,10 @@ from torch.utils.data import Dataset
 
 class PhysNetDataset(Dataset):
     def __init__(self, video_data, label_data, target_length):
-        self.transform = transforms.Compose([transforms.ToTensor()])
+        # assert np.abs(1.0 - np.max(video_data)) < 0.2, 'Video data is not normalized 0~1'
+        # assert np.abs(np.min(video_data) - 0.0) < 0.2, 'Video data is not normalized 0~1'
         self.video_data = (video_data - 0.5) * 2
-        self.label_data = np.reshape(label_data, (-1, target_length))
+        self.label_data = label_data
 
     def __getitem__(self, index):
         if torch.is_tensor(index):
