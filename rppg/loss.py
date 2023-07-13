@@ -17,7 +17,7 @@ from torch.autograd import Variable
 import torch.fft as fft
 
 from rppg.log import log_warning
-from rppg.utils.funcs import _next_power_of_2
+from rppg.utils.funcs import _nearest_power_of_2
 
 
 def loss_fn(loss_name):
@@ -322,7 +322,7 @@ def peak_loss(y_true, y_pred, alpha=0.5, beta=1.0):
 
     def find_peak_freq_torch(signal, fs=30):
         signal_np = signal.detach().cpu().numpy()
-        N = _next_power_of_2(signal_np.shape[0])
+        N = _nearest_power_of_2(signal_np.shape[0])
         f_ppg, pxx_ppg = scipy.signal.periodogram(signal_np, fs=fs, nfft=N, detrend=False)
         fmask_ppg = np.argwhere((f_ppg >= 0.75) & (f_ppg <= 2.5))
         mask_ppg = np.take(f_ppg, fmask_ppg)
