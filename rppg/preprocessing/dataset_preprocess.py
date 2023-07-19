@@ -14,38 +14,75 @@ import pandas as pd
 from scipy.interpolate import interp1d
 from rppg.utils.funcs import detrend, BPF, get_hrv
 from tqdm import tqdm
+from rppg.utils.data_path import *
 
 
-def check_preprocessed_data(fit_cfg, pre_cfg):
-    print("model: ", fit_cfg.fit.model)
-    print("fit type: ", fit_cfg.fit.type)
-    print("fit image size: ", fit_cfg.fit.img_size)
-    print("dataset: ", fit_cfg.fit.train.dataset, fit_cfg.fit.test.dataset)
-    print("preprocess type: ", pre_cfg.dataset.type)
-    print("preprocess image size: ", pre_cfg.dataset.image_size)
-    if fit_cfg.fit.img_size > pre_cfg.dataset.image_size:
-        print('*** Image size for model input is larger than the preprocessed image *** '
-              '\n\tPlease check the image size in the config files.')
+def check_preprocessed_data(cfg):
+    print("model: ", cfg.fit.model)
+    print("fit type: ", cfg.fit.type)
+    print("fit image size: ", cfg.fit.img_size)
+    print("dataset: ", cfg.fit.train.dataset, cfg.fit.test.dataset)
+    # print("preprocess type: ", fit_cfg.preprocess.common.type)
+    # print("preprocess image size: ", fit_cfg.preprocess.common.image_size)
+    # if fit_cfg.fit.img_size > fit_cfg.preprocess.common.image_size:
+    #     print('*** Image size for model input is larger than the preprocessed image *** '
+    #           '\n\tPlease check the image size in the config files.')
 
-    if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.train.dataset + "/" + fit_cfg.fit.type.upper() + "_" + str(
-            pre_cfg.dataset.image_size)):
-        print('Preprocessing train({}-{}) dataset...'.format(fit_cfg.fit.train.dataset, fit_cfg.fit.type))
-        if pre_cfg.dataset.type != fit_cfg.fit.type:
-            raise ValueError("dataset type in preprocess.yaml and fit.yaml are different")
-        preprocessing(preprocess_cfg=pre_cfg, dataset_name=fit_cfg.fit.train.dataset)
+    if cfg.preprocess.flag:
+        if not os.path.exists(cfg.dataset_path + cfg.preprocess.train_dataset.name + "/" + cfg.preprocess.common.type):
+            print('Preprocessing train_dataset({}-{}) dataset...'
+                  .format(cfg.preprocess.train_dataset.dataset, cfg.preprocess.common.type))
+            print("Preprocess type: ", cfg.preprocess.common.type)
+            preprocessing(cfg=cfg, dataset=cfg.preprocess.train_dataset)
+        else:
+            print('Preprocessed {} data already exists.'.format(cfg.preprocess.train_dataset.name))
+
+        if not os.path.exists(cfg.dataset_path + cfg.preprocess.test_dataset.name + "/" + cfg.preprocess.common.type):
+            print('Preprocessing test_dataset({}-{}) dataset...'
+                  .format(cfg.preprocess.train_dataset.dataset, cfg.preprocess.common.type))
+            preprocessing(cfg=cfg, dataset=cfg.preprocess.test_dataset)
+        else:
+            print('Preprocessed {} data already exists.'.format(cfg.preprocess.test_dataset.name))
+
     else:
-        print('Preprocessed {} data already exists.'.format(fit_cfg.fit.train.dataset))
-    if not os.path.exists(pre_cfg.dataset_path + fit_cfg.fit.test.dataset + "/" + fit_cfg.fit.type.upper() + "_" + str(
-            pre_cfg.dataset.image_size)):
-        print('Preprocessing test({}-{}) dataset...'.format(fit_cfg.fit.test.dataset, fit_cfg.fit.type))
-        if pre_cfg.dataset.type != fit_cfg.fit.type:
-            raise ValueError("dataset type in preprocess.yaml and fit.yaml are different")
-        preprocessing(preprocess_cfg=pre_cfg, dataset_name=fit_cfg.fit.test.dataset)
-    else:
-        print('Preprocessed {} data already exists.'.format(fit_cfg.fit.test.dataset))
+        if not os.path.exists(cfg.dataset_path + cfg.fit.train.dataset + "/" + cfg.fit.type.upper()):
+            print('Preprocessing train({}-{}) dataset...'.format(cfg.fit.train.dataset, cfg.fit.type))
+            print("Preprocess type: ", cfg.preprocess.common.type)
+            if cfg.preprocess.common.type != cfg.fit.type:
+                cfg.preprocess.common.type = cfg.fit.type
+                # raise ValueError("dataset type in fit_cfg.preprocess and fit_cfg.fit are different")
+            print("Preprocess train_dataset name: ", cfg.preprocess.train_dataset.name)
+            if cfg.preprocess.train_dataset.name != cfg.fit.train.dataset:
+                cfg.preprocess.train_dataset.name = cfg.fit.train.dataset
+                # raise ValueError("train_dataset name in fit_cfg.preprocess and fit_cfg.fit are different")
+            if cfg.fit.img_size > cfg.preprocess.common.image_size:
+                cfg.preprocess.common.image_size = cfg.fit.img_size
+                # print('*** Image size for model input is larger than the preprocessed image *** '
+                #       '\n\tPlease check the image size in the config files.')
+            preprocessing(cfg=cfg, dataset=cfg.preprocess.train_dataset)
+        else:
+            print('Preprocessed {} data already exists.'.format(cfg.fit.train.dataset))
+
+        if not os.path.exists(cfg.dataset_path + cfg.fit.test.dataset + "/" + cfg.fit.type.upper()):
+            print('Preprocessing test({}-{}) dataset...'.format(cfg.fit.test.dataset, cfg.fit.type))
+            print("Preprocess type: ", cfg.preprocess.common.type)
+            if cfg.preprocess.common.type != cfg.fit.type:
+                cfg.preprocess.common.type = cfg.fit.type
+                # raise ValueError("dataset type in fit_cfg.preprocess and fit_cfg.fit are different")
+            print("Preprocess test_dataset name: ", cfg.preprocess.test_dataset.name)
+            if cfg.preprocess.test_dataset.name != cfg.fit.test.dataset:
+                cfg.preprocess.test_dataset.name = cfg.fit.test.dataset
+                # raise ValueError("test_dataset name in fit_cfg.preprocess and fit_cfg.fit are different")
+            if cfg.fit.img_size > cfg.preprocess.common.image_size:
+                cfg.preprocess.common.image_size = cfg.fit.img_size
+                # print('*** Image size for model input is larger than the preprocessed image *** '
+                #       '\n\tPlease check the image size in the config files.')
+            preprocessing(cfg=cfg, dataset=cfg.preprocess.test_dataset)
+        else:
+            print('Preprocessed {} data already exists.'.format(cfg.fit.test.dataset))
 
 
-def preprocessing(preprocess_cfg, dataset_name):
+def preprocessing(cfg, dataset):
     # def preprocessing(data_root_path, preprocess_cfg, dataset_path):
     """
     :param save_root_path: save file destination path
@@ -55,87 +92,75 @@ def preprocessing(preprocess_cfg, dataset_name):
     :return:
     """
 
-    chunk_size = preprocess_cfg.process_num
+    chunk_size = cfg.preprocess.common.process_num
     manager = multiprocessing.Manager()
-    # for dataset in preprocess_cfg.datasets:
-    # dataset_name = dataset['name']
-    if preprocess_cfg.dataset.type in ['continuous', 'CONT']:
+
+    if cfg.preprocess.common.type.upper() == 'CONT':
         preprocess_type = 'CONT'
-    elif preprocess_cfg.dataset.type in ['diff', 'DIFF']:
+    elif cfg.preprocess.common.type.upper() == 'DIFF':
         preprocess_type = 'DIFF'
     else:
         preprocess_type = 'CUSTOM'
 
-    img_size = preprocess_cfg.dataset.image_size
-    large_box_coef = preprocess_cfg.dataset.larger_box_coef
+    img_size = cfg.preprocess.common.image_size
+    large_box_coef = cfg.preprocess.common.larger_box_coef
 
-    dataset_root_path = preprocess_cfg.data_root_path + dataset_name
-    if not os.path.isdir(dataset_root_path):
+    if not os.path.isdir(cfg.data_root_path + dataset.name):
         # os.makedirs(dataset_root_path)
-        raise ValueError("dataset path does not exist, check data_root_path in preprocess.yaml")
+        raise ValueError("dataset path does not exist, check data_root_path in config.yaml")
     return_dict = manager.dict()
-    if dataset_name == "V4V":
-        dataset_root_path = dataset_root_path + "/train_val/data"
-        data_list = [data for data in os.listdir(dataset_root_path)]
-        vid_name = "/video.mkv"
-        ground_truth_name = "/label.txt"
-        print(data_list)
-    elif dataset_name == "UBFC":
-        data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
-        vid_name = "/vid.avi"
-        ground_truth_name = "/ground_truth.txt"
-    elif dataset_name == "cuff_less_blood_pressure":
+
+    RawDataPathLoader = None
+    if dataset.name == "V4V":
+        RawDataPathLoader = V4V_RawDataPathLoader(cfg.data_root_path,
+                                                  dataset.select_data.flag,
+                                                  dataset.select_data.person_list,
+                                                  dataset.select_data.task_list)
+    elif dataset.name == "UBFC":
+        RawDataPathLoader = UBFC_RawDataPathLoader(cfg.data_root_path,
+                                                   dataset.select_data.flag,
+                                                   dataset.select_data.person_list)
+    elif dataset.name == "VIPL_HR":
+        RawDataPathLoader = VIPL_HR_RawDataPathLoader(cfg.data_root_path,
+                                                      dataset.select_data.flag,
+                                                      dataset.select_data.person_list,
+                                                      dataset.select_data.task_list,
+                                                      dataset.select_data.source_list)
+    elif dataset.name == "PURE":
+        RawDataPathLoader = PURE_RawDataPathLoader(cfg.data_root_path,
+                                                   dataset.select_data.flag,
+                                                   dataset.select_data.person_list,
+                                                   dataset.select_data.task_list)
+    elif dataset.name == "MMPD":
+        RawDataPathLoader = MMPD_RawDataPathLoader(cfg.data_root_path,
+                                                   dataset.select_data.flag,
+                                                   dataset.select_data.person_list,
+                                                   dataset.select_data.task_list)
+    elif dataset.name == "UBFC_Phys":
+        RawDataPathLoader = UBFC_Phys_RawDataPathLoader(cfg.data_root_path,
+                                                        dataset.select_data.flag,
+                                                        dataset.select_data.person_list,
+                                                        dataset.select_data.task_list)
+    elif dataset.name == "RLAP":
+        RawDataPathLoader = RLAP_RawDataPathLoader(cfg.data_root_path,
+                                                   dataset.select_data.flag,
+                                                   dataset.select_data.person_list,
+                                                   dataset.select_data.task_list)
+    elif dataset.name.__contains__("cohface"):
+        RawDataPathLoader = COHFACE_RawDataPathLoader(cfg.data_root_path,
+                                                      dataset.select_data.flag,
+                                                      dataset.select_data.task_list)
+
+    if dataset.name == "cuff_less_blood_pressure":
+        dataset_root_path = cfg.data_root_path + dataset.name
         data_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("part")]
-    elif dataset_name == "VIPL_HR":
-        data_dir = "/data"
-        person_data_path = dataset_root_path + data_dir
-        # source1/2/3
-        # /data/pxx/vxx/sourcex/
-
-        data_list = []
-        person_list = [data for data in os.listdir(person_data_path) if data.__contains__("p")]
-        for person in person_list:
-            v_list = [v for v in os.listdir(person_data_path + "/" + person) if v.__contains__(v)]
-            for v in v_list:
-                source_list = [source for source in os.listdir(person_data_path + "/" + person + "/" + v)]
-                for source in source_list:
-                    tmp = data_dir + "/" + person + "/" + v + "/" + source
-                    if len(os.listdir(dataset_root_path + tmp)) == 5 and source == 'source1':
-                        data_list.append(tmp)
-
-        vid_name = "/video.avi"
-        ground_truth_name = "/wave.csv"
-
-        print(person_list)
-    elif dataset_name.__contains__("cohface"):
-        dataset_root_path = preprocess_cfg.data_root_path + "cohface"
-        protocol = dataset_root_path + "/" + "protocols/"
-        if dataset_name.__contains__("all"):
-            protocol += "all/all.txt"
-        elif dataset_name.__contains__("clean"):
-            protocol += "clean/all.txt"
-        elif dataset_name.__contains__("natural"):
-            protocol += "natural/all.txt"
-        f = open(protocol, 'r')
-        data_list = f.readlines()
-        data_list = [path.replace("data\n", "") for path in data_list]
-        f.close()
-        vid_name = "data.mkv"
-        ground_truth_name = "data.hdf5"
-    elif dataset_name.__contains__("PURE"):
-        data_list = os.listdir(dataset_root_path)
-        vid_name = "/png"
-        ground_truth_name = "/json"
-    elif dataset_name.__contains__("MMPD"):
-        data_list = []
-        subject_list = [data for data in os.listdir(dataset_root_path) if data.__contains__("subject")]
-        for subject in subject_list:
-            task_list = [task for task in os.listdir(dataset_root_path + "/" + subject) if task.__contains__('.mat')]
-            for task in task_list:
-                tmp = subject + "/" + task
-                data_list.append(tmp)
-        vid_name = ""
-        ground_truth_name = ""
+        vid_name = ''
+        ground_truth_name = ''
+    else:
+        dataset_root_path = RawDataPathLoader.dataset_root_path
+        data_list = RawDataPathLoader.data_list
+        vid_name = RawDataPathLoader.video_name
+        ground_truth_name = RawDataPathLoader.ppg_name
 
     # multiprocessing
     chunk_num = math.ceil(len(data_list) / chunk_size)
@@ -150,7 +175,7 @@ def preprocessing(preprocess_cfg, dataset_name):
         print("chunk_data_list : ", chunk_data_list)
 
         chunk_preprocessing(preprocess_type, chunk_data_list, dataset_root_path, vid_name, ground_truth_name,
-                            dataset_name, preprocess_cfg.dataset_path, img_size=img_size, large_box_coef=large_box_coef)
+                            dataset.name, cfg.dataset_path, img_size=img_size, large_box_coef=large_box_coef)
 
 
 def mkdir_p(directory):
@@ -166,7 +191,8 @@ def mkdir_p(directory):
     os.mkdir(directory)
 
 
-def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, return_dict, **kwargs):
+def preprocess_Dataset(preprocess_type, dataset_root_path, data_path, vid_name, ground_truth_name, return_dict,
+                       **kwargs):
     """
     :param path: dataset path
     :param flag: face detect flag
@@ -177,29 +203,40 @@ def preprocess_Dataset(preprocess_type, path, vid_name, ground_truth_name, retur
     save_root_path = kwargs['save_root_path']
     dataset_name = kwargs['dataset_name']
     img_size = kwargs['img_size']
-    video_path = path + vid_name
-    label_path = path + ground_truth_name
+
+    if dataset_name == "UBFC_Phys":
+        data_path = data_path.split('/')
+        video_path = dataset_root_path + '/' + data_path[-2] + '/' + 'vid_' + data_path[-1] + vid_name
+        label_path = dataset_root_path + '/' + data_path[-2] + '/' + 'bvp_' + data_path[-1] + ground_truth_name
+    else:
+        video_path = dataset_root_path + data_path + vid_name
+        label_path = dataset_root_path + data_path + ground_truth_name
 
     raw_video, preprocessed_label, hrv = data_preprocess(preprocess_type, video_path, label_path, **kwargs)
+    # raw_video, preprocessed_label, hrv = [1], 2, 3  # For Debug
 
     if None in raw_video:
         return
 
-    path = path.split('/')
-
     add_info = ''
 
     if dataset_name == "VIPL_HR":
-        add_info = path[-3] + "/" + path[-2] + "/"
+        data_path = data_path.split('/')
+        add_info = data_path[-3] + "/" + data_path[-2] + "/"
+        data_path = data_path[-1]
     if dataset_name == "MMPD":
-        add_info = path[-2] + "/"
-        path[-1] = path[-1][:-4]
+        data_path = data_path.split('/')
+        add_info = data_path[-2] + "/"
+        data_path = data_path[-1]
+    if dataset_name == "UBFC_Phys":
+        add_info = data_path[-2] + "/"
+        data_path = data_path[-1]
 
-    dir_path = save_root_path + "/" + dataset_name + "/" + preprocess_type + "_" + str(img_size) + "/" + add_info
+    dir_path = save_root_path + "/" + dataset_name + "/" + preprocess_type + "/" + add_info
     if not os.path.isdir(dir_path):
         mkdir_p(dir_path)
 
-    data = h5py.File(dir_path + path[-1] + ".hdf5", "w")
+    data = h5py.File(dir_path + data_path + ".hdf5", "w")
     data.create_dataset('raw_video', data=raw_video)
     data.create_dataset('preprocessed_label', data=preprocessed_label)
     data.create_dataset('hrv', data=hrv)
@@ -216,7 +253,7 @@ def chunk_preprocessing(preprocess_type, data_list, dataset_root_path, vid_name,
 
     for index, data_path in enumerate(data_list):
         proc = multiprocessing.Process(target=preprocess_Dataset,
-                                       args=(preprocess_type, dataset_root_path + "/" + data_path, vid_name,
+                                       args=(preprocess_type, dataset_root_path, data_path, vid_name,
                                              ground_truth_name, return_dict)
                                        , kwargs={"save_root_path": save_root_path,
                                                  "dataset_name": dataset_name,
@@ -238,6 +275,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
     detection_model = 'hog'
     xy_points = pd.DataFrame(columns=['bottom', 'right', 'top', 'left'])
 
+    # for PURE dataset
     if video_path.__contains__("png"):
         path = video_path[:-4]
         data = sorted(os.listdir(path))[1:]
@@ -313,7 +351,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
                 raw_video[frame_num] = face
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
-
+    # for UBFC, VIPL-HR dataset
     else:
         cap = cv2.VideoCapture(video_path)
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -353,7 +391,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
             if not ret:
                 print(f"Can't receive frame: {video_path}")
                 break
-
+            # crop face from frame
             face = np.take(frame, range(y_x_w[frame_num][0] - y_x_w[frame_num][2],
                                         y_x_w[frame_num][0] + y_x_w[frame_num][2]), 0, mode='clip')
             face = np.take(face, range(y_x_w[frame_num][1] - y_x_w[frame_num][2],
@@ -364,7 +402,7 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
             else:
                 raw_video[frame_num] = cv2.resize(face, (img_size, img_size), interpolation=cv2.INTER_AREA)
         cap.release()
-
+    '''비디오 통째로 고칠거면 여기'''
     if preprocess_type == 'DIFF':
         raw_video = diff_normalize_video(raw_video)
         raw_label = diff_normalize_label(raw_label)

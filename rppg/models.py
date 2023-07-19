@@ -26,6 +26,7 @@ from rppg.nets.LGI import LGI
 from rppg.nets.PBV import PBV
 from rppg.nets.SSR import SSR
 from rppg.nets.PCA import PCA
+from rppg.nets.ICA import ICA
 
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -82,6 +83,8 @@ def get_model(fit_cfg):
         model = SSR()
     elif model_name == "PCA":
         model = PCA()
+    elif model_name == "ICA":
+        model = ICA()
     # elif model_name == "TEST":
     #     model = APNET()
     elif model_name == "APNETv2":

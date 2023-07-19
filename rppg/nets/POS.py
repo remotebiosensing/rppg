@@ -11,8 +11,10 @@ class POS(torch.nn.Module):
 
 
     def forward(self,x):
+
+        x = torch.permute(x, (0, 2, 1, 3,4))  # (B, N, C)
         x = torch.mean(x, dim=(3, 4))
-        x = torch.permute(x,(0,2,1)) # (B, N, C)
+
         batch_size, N, num_features = x.shape
         H = torch.zeros(batch_size, 1, N).to("cuda")
 
@@ -32,8 +34,11 @@ class POS(torch.nn.Module):
                     h = h - mean_h
                     H[b, 0, m:n] = H[b, 0, m:n] + h
 
-        # BVP = H.cpu().numpy()
-        # BVP = detrend(BVP.squeeze(), 100)
-        # b, a = signal.butter(1, [0.75 / self.fs * 2, 3 / self.fs * 2], btype='bandpass')
-        # BVP = signal.filtfilt(b, a, BVP.astype(np.double))
-        return H
+        BVP = H.cpu().numpy()
+        BVP = BVP.squeeze()
+        b, a = signal.butter(1, [0.75 / self.fs * 2, 3 / self.fs * 2], btype='bandpass')
+        for i in range(len(BVP)):
+            BVP[i] = detrend(BVP[i], 100)
+            BVP[i] = signal.filtfilt(b, a, BVP[i].astype(np.double))
+        BVP = torch.from_numpy(BVP.copy()).view(batch_size, -1)
+        return BVP

@@ -1,21 +1,23 @@
 import os
 import math
-import torch
-import torch.nn as nn
-import torch.nn.modules.loss as loss
-from torch.autograd import Variable
-import numpy as np
-from rppg.log import log_warning
-import torch.nn.functional as F
 import scipy
+import numpy as np
 from numpy import dot
 from numpy.linalg import norm
-
-import torch.fft as fft
-import torch.utils.checkpoint as cp
 from scipy.signal import find_peaks
 from scipy.signal import butter, sosfiltfilt
-from rppg.utils.funcs import _next_power_of_2
+import matplotlib.pyplot as plt
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.nn.modules.loss as loss
+import torch.utils.checkpoint as cp
+from torch.autograd import Variable
+import torch.fft as fft
+
+from rppg.log import log_warning
+from rppg.utils.funcs import _nearest_power_of_2, normalize_torch
 
 
 def loss_fn(loss_name):
@@ -78,14 +80,12 @@ def loss_fn(loss_name):
         return loss.TripletMarginWithDistanceLoss()
     elif loss_name == "RhythmNetLoss":
         return RhythmNetLoss()
-    elif loss_name == "stftloss":
-        return stftLoss()
-    elif loss_name == "pearson":
-        return PearsonLoss()
     elif loss_name == "BVPVelocityLoss":
         return BVPVelocityLoss()
     elif loss_name == "CLGDLoss":
         return CurriculumLearningGuidedDynamicLoss()
+    elif loss_name == "PDLoss":
+        return PeakDetectionLoss()
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
@@ -101,8 +101,9 @@ def neg_Pearson_Loss(predictions, targets):
     targets = targets[:, :]
     # predictions = torch.squeeze(predictions)
     # Pearson correlation can be performed on the premise of normalization of input data
-    predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
-    targets = (targets - torch.mean(targets)) / torch.std(targets)
+    predictions = (predictions - torch.mean(predictions, dim=-1, keepdim=True)) / torch.std(predictions, dim=-1,
+                                                                                            keepdim=True)
+    targets = (targets - torch.mean(targets, dim=-1, keepdim=True)) / torch.std(targets, dim=-1, keepdim=True)
 
     for i in range(predictions.shape[0]):
         sum_x = torch.sum(predictions[i])  # x
@@ -237,30 +238,6 @@ class RhythmNet_autograd(torch.autograd.Function):
         return output, None, None
 
 
-def Pearson_Loss(predictions, targets):
-    rst = 0
-    targets = targets[:, :]
-    predictions = torch.squeeze(predictions)
-    # Pearson correlation can be performed on the premise of normalization of input data
-    predictions = (predictions - torch.mean(predictions)) / torch.std(predictions)
-    targets = (targets - torch.mean(targets)) / torch.std(targets)
-
-    for i in range(predictions.shape[0]):
-        sum_x = torch.sum(predictions[i])  # x
-        sum_y = torch.sum(targets[i])  # y
-        sum_xy = torch.sum(predictions[i] * targets[i])  # xy
-        sum_x2 = torch.sum(torch.pow(predictions[i], 2))  # x^2
-        sum_y2 = torch.sum(torch.pow(targets[i], 2))  # y^2
-        N = predictions.shape[1] if len(predictions.shape) > 1 else 1
-        pearson = (N * sum_xy - sum_x * sum_y) / (
-            torch.sqrt((N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2))))
-
-        rst += pearson
-
-    rst = rst / predictions.shape[0]
-    return rst
-
-
 def stft(input_signal):
     stft_sig = torch.stft(input_signal, n_fft=1024, hop_length=512, win_length=1024, window=torch.hamming_window(1024),
                           center=True, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
@@ -272,28 +249,6 @@ def phase_diff_loss(pred, gt):
     gt_phase = torch.angle(gt)
     loss = torch.abs(torch.sum(torch.exp(1j * (pred_phase - gt_phase)))) / pred.size(0)
     return loss
-
-
-class stftLoss(nn.Module):
-    def __init__(self):
-        super(stftLoss, self).__init__()
-
-    def forward(self, predictions, targets):
-        # targets = targets[:, :]
-        # predictions = torch.squeeze(predictions)
-
-        neg = neg_Pearson_Loss(predictions, targets)
-        neg_cossim = torch.mean(1.0 - F.cosine_similarity(targets, predictions))
-        neg_cossim.requires_grad_(True)
-        return neg_cossim + neg
-
-
-class PearsonLoss(nn.Module):
-    def __init__(self):
-        super(PearsonLoss, self).__init__()
-
-    def forward(self, predictions, targets):
-        return Pearson_Loss(predictions, targets)
 
 
 def phase_correlation_loss(input, target):
@@ -370,7 +325,7 @@ def peak_loss(y_true, y_pred, alpha=0.5, beta=1.0):
 
     def find_peak_freq_torch(signal, fs=30):
         signal_np = signal.detach().cpu().numpy()
-        N = _next_power_of_2(signal_np.shape[0])
+        N = _nearest_power_of_2(signal_np.shape[0])
         f_ppg, pxx_ppg = scipy.signal.periodogram(signal_np, fs=fs, nfft=N, detrend=False)
         fmask_ppg = np.argwhere((f_ppg >= 0.75) & (f_ppg <= 2.5))
         mask_ppg = np.take(f_ppg, fmask_ppg)
@@ -414,7 +369,7 @@ def peak_loss(y_true, y_pred, alpha=0.5, beta=1.0):
 
             # Combine the losses
             loss = alpha * (
-                        peak_count_difference + neg_peak_count_difference + peak_value_difference + neg_peak_value_difference) + freq_diff  # + beta * peak_position_difference
+                    peak_count_difference + neg_peak_count_difference + peak_value_difference + neg_peak_value_difference) + freq_diff  # + beta * peak_position_difference
             total_loss += loss
 
     return total_loss / batch_size
@@ -439,7 +394,6 @@ class BVPVelocityLoss(nn.Module):
         # perd_loss = periodic_signal_loss(targets,predictions)
 
         loss = pearson + peak_loss(targets, predictions) + derivative_loss(predictions, targets)  # + NMI + phase
-
         return loss
 
 
@@ -564,59 +518,143 @@ class CurriculumLearningGuidedDynamicLoss(nn.Module):
         self.bpm_range = torch.arange(40, 180, dtype=torch.float).cuda()
 
         self.temporal_loss = 1.0
-        self.cross_entropy_loss = 0.0
-        self.label_distribution_loss = 0.0
-        self.kl_loss = loss.KLDivLoss()
+        self.batch_size = 0
+        self.kl_loss = loss.KLDivLoss(reduction='batchmean', log_target=True)
+        # self.complex_absolute = None
 
         self.init_alpha, self.init_beta = 0.1, 1.0
-        self.alpha_exp, self.beta_exp = 0.5, 5.0
-        self.alpha, self.beta = 0.05, 5.0
-        self.total_loss = self.alpha * self.temporal_loss + \
-                          self.beta * (self.cross_entropy_loss + self.label_distribution_loss)
+        self.alpha_exp, self.beta_exp = 0.5, 2.0
+        self.alpha, self.beta = 0.05, 2.0
 
     def forward(self, epoch, predicted_rppg, target_ppg, average_hr):
-
-        # temporal_loss
+        batch = predicted_rppg.shape[0]
+        self.batch_size = batch
         if predicted_rppg.dim() == 1:
             predicted_rppg = predicted_rppg.view(1, -1)
             target_ppg = target_ppg.view(1, -1)
-        self.temporal_loss = neg_Pearson_Loss(predicted_rppg, target_ppg)
 
-        # frequency loss - cross entropy
-        n = predicted_rppg.size()[1]
-        unit_per_hz = self.fs / n
-        feasible_bpm = self.bpm_range / 60.0
-        k = (feasible_bpm / unit_per_hz).type(torch.FloatTensor).cuda().view(1, -1, 1)
-        two_pi_n_over_N = (Variable(2 * math.pi * torch.arange(0, n, dtype=torch.float32),
-                                    requires_grad=True) / n).cuda().view(1, -1, 1)
-        hanning = (Variable(torch.from_numpy(np.hanning(n)).type(torch.FloatTensor),
-                            requires_grad=True).view(1, -1)).cuda()
-        hanning_rppg = (predicted_rppg * hanning).type(torch.FloatTensor)
-
-        complex_absolute = torch.sum(hanning_rppg * torch.sin(k * two_pi_n_over_N), dim=-1) ** 2 + \
-                           torch.sum(hanning_rppg * torch.cos(k * two_pi_n_over_N), dim=-1) ** 2
-
-        complex_absolute_softmax = (1.0 / complex_absolute.sum()) * complex_absolute
-
-        self.cross_entropy_loss = F.cross_entropy(complex_absolute_softmax, average_hr.view((1)).type(torch.long))
-
-        # frequency loss - label distribution
-        target_distribution = []
-        for i in range(140):
-            target_distribution.append(math.exp(-(i-int(average_hr)**2/(2*self.std**2))/math.sqrt(2*math.pi)*self.std))
-        target_distribution = [i if i > 1e-15 else 1e-15 for i in target_distribution]
-        target_distribution = torch.Tensor(target_distribution).cuda()
-        frequency_distribution = F.softmax(complex_absolute_softmax.view(-1))
-
-        self.label_distribution_loss = self.kl_loss(target_distribution, frequency_distribution)
-
+        # temporal_loss - neg Pearson correlation
+        temporal_loss = neg_Pearson_Loss(predicted_rppg, target_ppg)
+        complex_absolute = self.get_complex_absolute(predicted_rppg)
+        cross_entropy_loss = self.calculate_frequency_loss(complex_absolute, average_hr)
+        label_distribution_loss = self.calculate_label_distribution_loss(complex_absolute, average_hr)
 
         # curriculum learning setting
         if epoch > 25:
             self.alpha = 0.05
-            self.beta = 5.0
+            self.beta = 2.0
         else:
             self.alpha = self.init_alpha * math.pow(self.alpha_exp, epoch / 25.0)
             self.beta = self.init_beta * math.pow(self.beta_exp, epoch / 25.0)
+        # print('alpha: ', round(self.alpha, 3), 'beta: ', round(self.beta, 3))
+        # print('temporal_loss: ', round(temporal_loss.item(), 3), 'cross_entropy_loss: ', round(cross_entropy_loss.item(), 3),
+        #         'label_distribution_loss: ', round(label_distribution_loss.item(), 3))
+        return self.alpha * temporal_loss + self.beta * (cross_entropy_loss + label_distribution_loss)
+        # return  temporal_loss +  (cross_entropy_loss + label_distribution_loss)
 
-        return self.total_loss
+    def get_complex_absolute(self, rppg):
+        n = rppg.size()[1]
+        unit_per_hz = self.fs / n
+        feasible_bpm = self.bpm_range / 60.0
+        k = (feasible_bpm / unit_per_hz).type(torch.FloatTensor).cuda().view(1, -1, 1)
+        two_pi_n_over_N = (Variable(2 * math.pi * torch.arange(0, n, dtype=torch.float32),
+                                    requires_grad=True) / n).cuda().view(1, 1, -1)
+        hanning = (Variable(torch.from_numpy(np.hanning(n)).type(torch.FloatTensor),
+                            requires_grad=True).view(1, -1)).cuda()
+        hanning_rppg = (rppg * hanning).view(self.batch_size, 1, -1)  # (batch, 1, time length)
+
+        complex_absolute = torch.sum(hanning_rppg * torch.sin(k * two_pi_n_over_N), dim=-1) ** 2 + \
+                           torch.sum(hanning_rppg * torch.cos(k * two_pi_n_over_N), dim=-1) ** 2
+
+        # return F.softmax(complex_absolute, dim=-1)
+        return (1.0 / complex_absolute.sum(keepdim=True, dim=-1)) * complex_absolute
+
+    def calculate_frequency_loss(self, complex_absolute_softmax, hr):
+        # frequency loss - cross entropy
+        cross_entropy_loss = 0.0
+
+        for b in range(self.batch_size):
+            cross_entropy_loss += F.cross_entropy(complex_absolute_softmax[b].view(1, -1),
+                                                  hr[b].view(1).type(torch.long))
+
+        return cross_entropy_loss / self.batch_size
+
+    def calculate_label_distribution_loss(self, softmax, hr):
+        # frequency loss - label distribution
+        label_distribution_loss = 0.0
+
+        for b in range(self.batch_size):
+            target_distribution = []
+            for i in range(140):
+                target_distribution.append(math.exp(-(i - int(hr[b])) ** 2 / (2 * self.std ** 2)) /
+                                           (math.sqrt(2 * math.pi) * self.std))
+            target_distribution = [i if i > 1e-15 else 1e-15 for i in target_distribution]
+            target_distribution = torch.Tensor(target_distribution).cuda()
+
+            frequency_distribution = F.log_softmax(softmax[b].view(-1))
+            label_distribution_loss += self.kl_loss(frequency_distribution, target_distribution)
+            # print(self.kl_loss(frequency_distribution, target_distribution))
+
+        return label_distribution_loss / self.batch_size
+
+
+def peak_detection_loss(rppg, ppg, fs=30, epoch=15):
+    ppg = ppg.view(5, -1)
+    rppg = rppg.view(5, -1)
+    ppg = normalize_torch(ppg)
+    rppg = normalize_torch(rppg)
+    test_n, sig_length = ppg.shape
+
+    peak_score = 0.0
+    hr_score = 0.0
+
+    if epoch < 5:
+        alpha = 1.0
+        beta = 0.0
+    elif epoch < 10:
+        alpha = 0.5
+        beta = 0.5
+    else:
+        alpha = 0.0
+        beta = 1.0
+
+    # ppg_hr_list = torch.empty(test_n)
+    # hrv_list = torch.zeros((test_n, (sig_length // fs) * 3))
+    # index_list = torch.zeros((test_n, (sig_length // fs) * 3))
+    width = 11
+    ppg_window_max = torch.nn.functional.max_pool1d(ppg, width, stride=1, padding=width // 2, return_indices=True)[
+        1].squeeze()
+    rppg_window_max = torch.nn.functional.max_pool1d(rppg, width, stride=1, padding=width // 2, return_indices=True)[
+        1].squeeze()
+
+    for i in range(test_n):
+        ppg_candidate = ppg_window_max[i].unique()
+        rppg_candidate = rppg_window_max[i].unique()
+        ppg_nice_peaks = ppg_candidate[ppg_window_max[i][ppg_candidate] == ppg_candidate]
+        ppg_nice_peaks = ppg_nice_peaks[ppg[i][ppg_nice_peaks] > torch.mean(ppg[i][ppg_nice_peaks]) / 2]
+        # ppg_nice_peaks = ppg_nice_peaks[ppg_nice_peaks > 0.5] # if normalized from 0 to 1
+        rppg_nice_peaks = rppg_candidate[rppg_window_max[i][rppg_candidate] == rppg_candidate]
+        rppg_nice_peaks = rppg_nice_peaks[rppg[i][rppg_nice_peaks] > torch.mean(rppg[i][rppg_nice_peaks]) / 2]
+        # rppg_nice_peaks = rppg_nice_peaks[rppg_nice_peaks > 0.5]
+        # peak_diff = torch.abs(ppg_nice_peaks - rppg_nice_peaks)
+        ppg_hrv = torch.diff(ppg_nice_peaks) / fs
+        rppg_hrv = torch.diff(rppg_nice_peaks) / fs
+        ppg_hr = torch.mean(60 / ppg_hrv)
+        rppg_hr = torch.mean(60 / rppg_hrv)
+        # peak_score += len(rppg_hrv) / len(ppg_hrv)
+        peak_score += abs(len(ppg_hrv) - len(rppg_hrv)) / len(ppg_hrv)
+        hr_score += abs(ppg_hr - rppg_hr) / ppg_hr
+
+    # peak_score /= test_n
+    hr_score /= test_n
+
+    # return alpha * peak_score + beta * hr_score
+    return hr_score
+
+
+class PeakDetectionLoss(nn.Module):
+    def __init__(self):
+        super(PeakDetectionLoss, self).__init__()
+
+    def forward(self, rppg, ppg, fs=30, epoch=15):
+        return peak_detection_loss(rppg, ppg, fs, epoch)
