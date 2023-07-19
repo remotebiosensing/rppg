@@ -46,10 +46,8 @@ if __name__ == "__main__":
     models = [list(m)[0] for m in preset_cfg.models]
     test_eval_time_length = [3, 5, 10, 20, 30]  # in seconds
     dataset_list = ['UBFC', 'PURE']
-    # dataset_list = ['UBFC', 'PURE', 'VIPL_HR']
-    # datasets = [['UBFC', 'UBFC'], ['PURE', 'PURE'], ['UBFC', 'PURE'], ['PURE', 'UBFC']]
     list_product = list(product(dataset_list, repeat=2))
-    datasets = [list(x) for x in list_product][1:2]
+    datasets = [list(x) for x in list_product][:1]
     model_name = []
     model_type = []
     preprocess_type = []
@@ -61,7 +59,6 @@ if __name__ == "__main__":
     losses = []
 
     for m, name in zip(preset_cfg.models, models):
-        print(m, name)
         model_name.append(m[name]['model'])
         model_type.append(m[name]['type'])
         preprocess_type.append(m[name]['preprocess_type'])
@@ -74,14 +71,15 @@ if __name__ == "__main__":
 
     for d in datasets:
         cfg = get_config("configs/base_config.yaml")
-        # fit_cfg = get_config("configs/fit.yaml")
         if cfg.fit.debug_flag is True:
             print("Debug mode is on.\n No wandb logging & Not saving csv and model")
             cfg.wandb.flag = False
             cfg.fit.model_save_flag = False
         cfg.wandb.flag = not cfg.fit.debug_flag
         # preprocess_cfg = get_config("configs/preprocess.yaml")
-        cfg.fit.train.dataset, cfg.fit.test.dataset = d[0], d[1]
+        cfg.fit.train.dataset = cfg.preprocess.train_dataset.name = d[0]
+        cfg.fit.test.dataset = cfg.preprocess.test_dataset.name = d[1]
+
 
         for m, i, m_t, p_t, t, b, l, loss, o in zip(model_name, img_size, model_type, preprocess_type, time_length,
                                                     batch_size,
@@ -124,7 +122,7 @@ if __name__ == "__main__":
                     optim=cfg.fit.train.optimizer)
                 criterion = loss_fn(loss_name=cfg.fit.train.loss)
                 # lr_sch = torch.optim.lr_scheduler.OneCycleLR(
-                #     opt, max_lr=fit_cfg.fit.train.learning_rate, epochs=fit_cfg.fit.train.epochs,
+                #     opt, max_lr=0.1, epochs=cfg.fit.train.epochs,
                 #     steps_per_epoch=len(datasets[0]))
                 # lr_sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
             test_result = run(model, True, opt, lr_sch, criterion, cfg, data_loaders)

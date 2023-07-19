@@ -2,10 +2,11 @@ import math
 import torch
 import wandb
 from tqdm import tqdm
-from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr, IrrelevantPowerRatio)
+from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr, IrrelevantPowerRatio, normalize_torch)
+
 import numpy as np
 import os
-
+import matplotlib.pyplot as plt
 
 def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders):
     log = True
@@ -30,29 +31,30 @@ def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders):
                                "_imgsize" + str(cfg.fit.img_size) +
                                ".pt")
             if log:
+                et = cfg.fit.test.eval_time_length if not sweep else cfg.fit.test.eval_time_length[2]
                 if cfg.fit.eval_flag and (eval_flag or (epoch + 1) % cfg.fit.eval_interval == 0):
-                    test_fn(epoch, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
-                            metrics=cfg.fit.test.metric, eval_time_length=10,
+                    test_fn(epoch, model, dataloaders[2], cal_type=cfg.fit.test.cal_type,
+                            metrics=cfg.fit.test.metric, eval_time_length=et,
                             wandb_flag=cfg.wandb.flag)
                 eval_flag = False
         if not sweep:
-            test_result = test_fn(0, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
-                                  metrics=cfg.fit.test.metric, eval_time_length=10,
+            test_result = test_fn(0, model, dataloaders[2], cal_type=cfg.fit.test.cal_type,
+                                  metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
                                   wandb_flag=cfg.wandb.flag)
         else:
             for et in cfg.fit.test.eval_time_length:
-                test_result.append(test_fn(0, model, dataloaders[2], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                test_result.append(test_fn(0, model, dataloaders[2], cal_type=cfg.fit.test.cal_type,
                                            metrics=cfg.fit.test.metric, eval_time_length=et,
                                            wandb_flag=cfg.wandb.flag))
     else:
         # model = torch.load()
         if not sweep:
-            test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+            test_result.append(test_fn(0, model, dataloaders[0], cal_type=cfg.fit.test.cal_type,
                                        metrics=cfg.fit.test.metric, eval_time_length=cfg.fit.test.eval_time_length,
                                        wandb_flag=cfg.wandb.flag))
         else:
             for et in cfg.fit.test.eval_time_length:
-                test_result.append(test_fn(0, model, dataloaders[0], cfg.fit.model, cal_type=cfg.fit.test.cal_type,
+                test_result.append(test_fn(0, model, dataloaders[0], cal_type=cfg.fit.test.cal_type,
                                            metrics=cfg.fit.test.metric, eval_time_length=et,
                                            wandb_flag=cfg.wandb.flag))
 
@@ -62,20 +64,21 @@ def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders):
 def train_fn(epoch, model, optimizer, lr_sch, criterion, dataloaders, wandb_flag: bool = True):
     # TODO : Implement multiple loss
     step = "Train"
+    model_name = model.__module__.split('.')[-1]
 
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.train()
         running_loss = 0.0
 
         for te in tepoch:
-            if model.__module__.split('.')[-1] == 'PhysFormer':
+            if model_name == 'PhysFormer':
                 inputs, target, hr = te
             else:
                 inputs, target = te
             optimizer.zero_grad()
             tepoch.set_description(step + "%d" % epoch)
             outputs = model(inputs)
-            if model.__module__.split('.')[-1] == 'PhysFormer':
+            if model_name == 'PhysFormer':
                 loss = criterion(epoch, outputs, target, hr)
             else:
                 loss = criterion(outputs, target)
@@ -102,19 +105,20 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
     # TODO : Implement multiple loss
     # TODO : Implement save model function
     step = "Val"
+    model_name = model.__module__.split('.')[-1]
 
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.eval()
         running_loss = 0.0
         with torch.no_grad():
             for te in tepoch:
-                if model.__module__.split('.')[-1] == 'PhysFormer':
+                if model_name == 'PhysFormer':
                     inputs, target, hr = te
                 else:
                     inputs, target = te
                 tepoch.set_description(step + "%d" % epoch)
                 outputs = model(inputs)
-                if model.__module__.split('.')[-1] == 'PhysFormer':
+                if model_name == 'PhysFormer':
 
                     loss = criterion(epoch, outputs, target, hr)
                 else:
@@ -130,29 +134,20 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
 
         return running_loss / tepoch.__len__()
 
-'''
-D = scipy.sparse.spdiags(298, 300)
-H + (Lambda ** 2) * np.dot(D.T, D) (300, 300)
-'''
 
-def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, eval_time_length, wandb_flag: bool = True):
+def test_fn(epoch, model, dataloaders, cal_type, metrics, eval_time_length=10, wandb_flag: bool = False):
     # To evaluate a model by subject, you can use the meta option
     step = "Test"
-
+    model_name = model.__module__.split('.')[-1]
     if model_name in ["DeepPhys", "TSCAN", "MTTS", "BigSmall", "EfficientPhys"]:
         model_type = 'DIFF'
     else:
         model_type = 'CONT'
 
     model.eval()
-
-    p = []
-    t = []
-
     fs = 30
-    time = eval_time_length
 
-    interval = fs * time
+    interval = fs * eval_time_length
     empty_tensor = torch.empty(1).to('cuda')
     empty_tensor2 = torch.empty(1).to('cuda')
     with tqdm(dataloaders, desc=step, total=len(dataloaders), disable=False) as tepoch:
@@ -161,17 +156,25 @@ def test_fn(epoch, model, dataloaders, model_name, cal_type, metrics, eval_time_
         with torch.no_grad():
             for te in tepoch:
                 torch.cuda.empty_cache()
-                if model.__module__.split('.')[-1] == 'PhysFormer':
+                if model_name == 'PhysFormer':
                     inputs, target, _ = te
                 else:
                     inputs, target = te
                 outputs = model(inputs).detach().clone()
-                empty_tensor = torch.cat((empty_tensor, outputs.squeeze()), dim=-1)
-                empty_tensor2 = torch.cat((empty_tensor2, target.squeeze()), dim=-1)
+                if model_type == 'DIFF':
+                    empty_tensor = torch.cat((empty_tensor, outputs.squeeze()), dim=-1)
+                    empty_tensor2 = torch.cat((empty_tensor2, target.squeeze()), dim=-1)
+                else:
+                    empty_tensor = torch.cat((empty_tensor, outputs.view(-1).squeeze()), dim=-1)
+                    empty_tensor2 = torch.cat((empty_tensor2, target.view(-1).squeeze()), dim=-1)
+    prediction_chunks = torch.stack(list(torch.split(empty_tensor[1:].detach(), interval))[:-1], dim=0)
+    target_chunks = torch.stack(list(torch.split(empty_tensor2[1:].detach(), interval))[:-1], dim=0)
 
-    hr_pred, hr_target = get_hr(torch.stack(list(torch.split(empty_tensor[1:].detach(), 300))[:-1], dim=0),
-                                torch.stack(list(torch.split(empty_tensor2[1:].detach(), 300))[:-1], dim=0),
-                                model_type=model_type, cal_type=cal_type)
+    hr_pred, hr_target = get_hr(prediction_chunks, target_chunks, model_type=model_type, cal_type=cal_type)
+
+    if cal_type == 'PEAK':
+        hr_pred, hrv_pred = hr_pred
+        hr_target, hrv_target = hr_target
 
     hr_pred = np.asarray(hr_pred.detach().cpu())
     hr_target = np.asarray(hr_target.detach().cpu())
