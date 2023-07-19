@@ -141,6 +141,11 @@ def preprocessing(cfg, dataset):
                                                         dataset.select_data.flag,
                                                         dataset.select_data.person_list,
                                                         dataset.select_data.task_list)
+    elif dataset.name == "RLAP":
+        RawDataPathLoader = RLAP_RawDataPathLoader(cfg.data_root_path,
+                                                   dataset.select_data.flag,
+                                                   dataset.select_data.person_list,
+                                                   dataset.select_data.task_list)
     elif dataset.name.__contains__("cohface"):
         RawDataPathLoader = COHFACE_RawDataPathLoader(cfg.data_root_path,
                                                       dataset.select_data.flag,
