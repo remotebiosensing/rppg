@@ -121,7 +121,7 @@ def dataset_loader(fit_cfg, pre_cfg):
     preprocessed_img_size = str(pre_cfg.dataset.image_size)
     if model_name in ["DeepPhys", "TSCAN", "MTTS", "BigSmall"]:
         model_type = 'DIFF'
-    elif model_name in ['GREEN','POS','CHROM','LGI','PBV','SSR','PCA']:
+    elif model_name in ['GREEN','POS','CHROM','LGI','PBV','SSR','PCA','ICA']:
         model_type = 'CONT_RAW'
     else:
         model_type = 'CONT'
