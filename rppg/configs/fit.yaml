@@ -2,10 +2,6 @@
 model_save_path: "/ssd/ssd0/models/rppg/"      # model save path
 preprocess:
   flag: false                              # true: preprocess, false: not preprocess
-wandb:
-  flag: false
-  project_name: rppg
-  entity: daeyeolkim
 
 fit:
   model: EfficientPhys                    # DeepPhys, TSCAN, EfficientPhys, BigSmall, PhysNet, PhysFormer, APNET
