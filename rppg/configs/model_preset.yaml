@@ -1,5 +1,77 @@
 ---
 models:
+- CHROM:
+        model: CHROM
+        type: CONT
+        preprocess_type: CONT
+        img_size: 128
+        time_length: 48
+        batch_size: 100
+        optimizer: AdamW
+        loss: neg_pearson
+        learning_rate: 0.001
+- GREEN: # done
+      model: GREEN
+      type: CONT
+      preprocess_type: CONT
+      img_size: 128
+      time_length: 300
+      batch_size: 4
+      optimizer: AdamW
+      loss: neg_pearson
+      learning_rate: 0.001
+- POS: # done
+      model: POS
+      type: CONT
+      preprocess_type: CONT
+      img_size: 128
+      time_length: 300
+      batch_size: 100
+      optimizer: AdamW
+      loss: neg_pearson
+      learning_rate: 0.001
+- LGI: # done
+      model: LGI
+      type: CONT
+      preprocess_type: CONT
+      img_size: 128
+      time_length: 300
+      batch_size: 4
+      optimizer: AdamW
+      loss: neg_pearson
+      learning_rate: 0.001
+- PCA:
+      model: PCA
+      type: CONT
+      preprocess_type: CONT
+      img_size: 128
+      time_length: 300
+      batch_size: 4
+      optimizer: AdamW
+      loss: neg_pearson
+      learning_rate: 0.001
+
+- SSR:
+      model: SSR
+      type: CONT
+      preprocess_type: CONT
+      img_size: 128
+      time_length: 300
+      batch_size: 4
+      optimizer: AdamW
+      loss: neg_pearson
+      learning_rate: 0.001
+#- ICA:
+#      model: ICA
+#      type: CONT
+#      preprocess_type: CONT
+#      img_size: 128
+#      time_length: 300
+#      batch_size: 4
+#      optimizer: AdamW
+#      loss: neg_pearson
+#      learning_rate: 0.001
+
 
 #- DeepPhys:
 #    model: DeepPhys
@@ -15,21 +87,7 @@ models:
 #    epochs:
 #        ubfc: 15
 #        pure: 10
-#
-- TSCAN:
-    model: TSCAN
-    type: DIFF
-    preprocess_type: DIFF
-    img_size: 72
-    time_length: 20
-    batch_size: 36
-    optimizer: AdamW
-    loss: MSE
-    learning_rate: 0.009
-    eval_time_length: 10
-    epochs:
-      ubfc: 10
-      pure: 15
+##
 #
 #- EfficientPhys:
 #    model: EfficientPhys

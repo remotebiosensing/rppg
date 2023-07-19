@@ -136,11 +136,13 @@ def dataset_loader(fit_cfg, dataset_path):
     # preprocessed_img_size = str(pre_cfg.dataset.image_size)
     if model_name in ["DeepPhys", "TSCAN", "MTTS", "BigSmall"]:
         model_type = 'DIFF'
+    elif model_name in ['GREEN','POS','CHROM','LGI','PBV','SSR','PCA','ICA']:
+        model_type = 'CONT_RAW'
     else:
         model_type = 'CONT'
 
     if dataset_name[0] == dataset_name[1]:  # for counterpart goto 169 line
-        root_file_path = save_root_path + dataset_name[0] + "/" + model_type  # + "_" + preprocessed_img_size
+        root_file_path = save_root_path + dataset_name[0] + "/" + model_type.split('_')[0]  # + "_" + preprocessed_img_size
 
         path = get_all_files_in_path(root_file_path)
         if debug_flag:
@@ -164,7 +166,7 @@ def dataset_loader(fit_cfg, dataset_path):
             val_path = path[train_len:]
 
     else:  # dataset_name[0] != dataset_name[1], for counterpart goto 145 line
-        root_file_path = save_root_path + dataset_name[0] + "/" + model_type  # + "_" + preprocessed_img_size
+        root_file_path = save_root_path + dataset_name[0] + "/"  + model_type.split('_')[0]  # + "_" + preprocessed_img_size
         if not os.path.exists(root_file_path):
             raise FileExistsError("There is no dataset in the path : ", root_file_path)
 
@@ -179,7 +181,7 @@ def dataset_loader(fit_cfg, dataset_path):
             val_path = path[train_len:]
 
         if eval_flag:
-            root_file_path = save_root_path + dataset_name[1] + "/" + model_type  # + "_" + preprocessed_img_size
+            root_file_path = save_root_path + dataset_name[1] + "/"  + model_type.split('_')[0]  # + "_" + preprocessed_img_size
             if not os.path.exists(root_file_path):
                 raise FileExistsError("There is no dataset in the path : ", root_file_path)
             path = get_all_files_in_path(root_file_path)[:]
@@ -338,7 +340,7 @@ def get_dataset(path, model_type, model_name, time_length, batch_size, overlap_i
                 appearance_data = []
                 motion_data = []
                 label_data = []
-            elif model_type == 'CONT':
+            elif model_type.__contains__('CONT'):
                 video_data = []
                 label_data = []
                 hr_data = []
@@ -446,17 +448,28 @@ def get_dataset(path, model_type, model_name, time_length, batch_size, overlap_i
 
                 if w != img_size and h != img_size:
                     new_shape = (num_frame, img_size, img_size, c)
-                    resized_img = np.zeros(new_shape, dtype=np.float32)
-                    for i in range(num_frame):
-                        img = file['raw_video'][i]
-                        resized_img[i] = cv2.resize(img, (img_size, img_size), interpolation=cv2.INTER_AREA)
+                    if model_type.__contains__('RAW'):
+                        resized_img = np.zeros(new_shape, dtype=np.uint8)
+                        for i in range(num_frame):
+                            img = file['raw_video'][i] * 255
+                            w, h, c = img.shape
+                            w_m, h_m = w - round(w * 2/3), h - round(h * 2/3)
+                            img = cv2.cvtColor(img.astype(np.uint8),cv2.COLOR_BGR2RGB)
+                            resized_img[i] = cv2.resize(img[w_m//2:-w_m//2,h_m//2:-h_m//2], (img_size, img_size), interpolation=cv2.INTER_AREA)
+                    else:
+                        resized_img = np.zeros(new_shape, dtype=np.float32)
+                        for i in range(num_frame):
+                            img = file['raw_video'][i]
+                            resized_img[i] = cv2.resize(img, (img_size, img_size), interpolation=cv2.INTER_AREA)
 
                 while end <= len(file['raw_video']):
                     if w != img_size:
                         video_chunk = resized_img[start:end]
                     else:
                         video_chunk = file['raw_video'][start:end]
-                    # video_chunk = (video_chunk - np.mean(video_chunk)) / np.std(video_chunk)
+                    if not model_type.__contains__('RAW'):
+                        video_chunk = (video_chunk - np.mean(video_chunk)) / np.std(video_chunk)
+                    # video_chunk = int(video_chunk*)
                     video_data.append(video_chunk)
                     tmp_label = label[start:end]
 
@@ -488,7 +501,7 @@ def get_dataset(path, model_type, model_name, time_length, batch_size, overlap_i
                                             label_data=np.asarray(label_data),
                                             average_hr=np.asarray(hr_data),
                                             target_length=time_length)
-            elif model_type == 'CONT':
+            elif model_type.__contains__('CONT'):
                 dataset = PhysNetDataset(video_data=np.asarray(video_data),
                                          label_data=np.asarray(label_data),
                                          target_length=time_length)

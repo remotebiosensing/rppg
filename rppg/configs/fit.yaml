@@ -1,22 +1,22 @@
 ---
 model_save_path: "/ssd/ssd0/models/rppg/"      # model save path
 preprocess:
-  flag: true                              # true: preprocess, false: not preprocess
+  flag: false                              # true: preprocess, false: not preprocess
 wandb:
-  flag: True
-  project_name: physformer
-  entity: paperchae
+  flag: false
+  project_name: rppg
+  entity: daeyeolkim
 
 fit:
   model: EfficientPhys                    # DeepPhys, TSCAN, EfficientPhys, BigSmall, PhysNet, PhysFormer, APNET
   type: DIFF
-  time_length: 180
+  time_length: 360
   overlap_interval: 0 # default 0
   img_size: 72
-  train_flag: True
+  train_flag: False
   eval_flag: True
   eval_interval: 100
-  debug_flag: False                        # True: debug mode (load small dataset, False: normal mode)
+  debug_flag: True                        # True: debug mode (load small dataset, False: normal mode)
   model_save_flag: False                   # True: save model, False: not save model
 
   train:

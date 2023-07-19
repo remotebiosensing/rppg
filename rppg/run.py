@@ -54,6 +54,7 @@ def run(model, sweep, optimizer, lr_sch, criterion, cfg, dataloaders):
                                        wandb_flag=cfg.wandb.flag))
         else:
             for et in cfg.fit.test.eval_time_length:
+                print("=========="+str(et)+"s==========")
                 test_result.append(test_fn(0, model, dataloaders[0], cal_type=cfg.fit.test.cal_type,
                                            metrics=cfg.fit.test.metric, eval_time_length=et,
                                            wandb_flag=cfg.wandb.flag))
@@ -160,13 +161,13 @@ def test_fn(epoch, model, dataloaders, cal_type, metrics, eval_time_length=10, w
                     inputs, target, _ = te
                 else:
                     inputs, target = te
-                outputs = model(inputs).detach().clone()
+                outputs = model(inputs)
                 if model_type == 'DIFF':
                     empty_tensor = torch.cat((empty_tensor, outputs.squeeze()), dim=-1)
                     empty_tensor2 = torch.cat((empty_tensor2, target.squeeze()), dim=-1)
                 else:
-                    empty_tensor = torch.cat((empty_tensor, outputs.view(-1).squeeze()), dim=-1)
-                    empty_tensor2 = torch.cat((empty_tensor2, target.view(-1).squeeze()), dim=-1)
+                    empty_tensor = torch.cat((empty_tensor, outputs.view(-1).squeeze().to('cuda')), dim=-1)
+                    empty_tensor2 = torch.cat((empty_tensor2, target.view(-1).squeeze().to('cuda')), dim=-1)
     prediction_chunks = torch.stack(list(torch.split(empty_tensor[1:].detach(), interval))[:-1], dim=0)
     target_chunks = torch.stack(list(torch.split(empty_tensor2[1:].detach(), interval))[:-1], dim=0)
 

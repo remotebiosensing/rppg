@@ -180,16 +180,16 @@ def get_hr(pred, target, model_type, cal_type='FFT', fs=30, bpf_flag=True, low=0
     elif cal_type == 'PEAK':
         hr_target, hrv_target, index_target = calc_hr_torch('PEAK', target, fs, low, high)
         hr_pred, hrv_pred, index_pred = calc_hr_torch('PEAK', pred, fs, low, high)
-        if bpf_flag:
-            f_hr_target, f_hrv_target, f_index_target = calc_hr_torch('PEAK', torch.from_numpy(f_target.copy()), fs, low, high)
-            f_hr_pred, f_hrv_pred, f_index_pred = calc_hr_torch('PEAK', torch.from_numpy(f_pred.copy()), fs, low, high)
-            pred = normalize_torch(pred)
-            f_pred = normalize_torch(f_pred)
-            target = normalize_torch(target)
-            f_target = normalize_torch(f_target)
-            for i in range(len(pred)):
-                plot(pred[i], hr_pred[i], hrv_pred[i], index_pred[i], f_pred[i], f_hr_pred[i], f_hrv_pred[i], f_index_pred[i],
-                     target[i], hr_target[i], hrv_target[i], index_target[i], f_target[i], f_hr_target[i], f_hrv_target[i], f_index_target[i])
+        # if bpf_flag:
+        #     f_hr_target, f_hrv_target, f_index_target = calc_hr_torch('PEAK', torch.from_numpy(f_target.copy()), fs, low, high)
+        #     f_hr_pred, f_hrv_pred, f_index_pred = calc_hr_torch('PEAK', torch.from_numpy(f_pred.copy()), fs, low, high)
+            # pred = normalize_torch(pred)
+            # f_pred = normalize_torch(f_pred)
+            # target = normalize_torch(target)
+            # f_target = normalize_torch(f_target)
+            # for i in range(len(pred)):
+            #     plot(pred[i], hr_pred[i], hrv_pred[i], index_pred[i], f_pred[i], f_hr_pred[i], f_hrv_pred[i], f_index_pred[i],
+            #          target[i], hr_target[i], hrv_target[i], index_target[i], f_target[i], f_hr_target[i], f_hrv_target[i], f_index_target[i])
         return [hr_pred, hrv_pred], [hr_target, hrv_target]
     else:
         hr_pred_fft = calc_hr_torch('FFT', pred, fs, low, high)

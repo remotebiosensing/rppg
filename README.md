@@ -226,9 +226,8 @@ Please feel free to contact us and [join Slack](https://join.slack.com/t/remobeb
 
 ## Contacts
 
-- DaeYeol Kim, spicyyeol@gmail.com
-- KwangKee Lee, kwangkeelee@gmail.com
-- JongEui Chae, forownsake@gmail.com
+- Dae Yeol Kim, spicyyeol@gmail.com
+- Kwangkee Lee, kwangkeelee@gmail.com
 
 ## Funding
 

@@ -1,7 +1,7 @@
 ---
-data_root_path: "/ssd/ssd0/dataset/raw/rppg/"            # raw data path
-dataset_path: "/ssd/ssd0/dataset/preprocessed/rppg/"     # preprocessed data save/load path
-model_save_path: "/ssd/ssd0/models/rppg/"                # model save path
+data_root_path: "/media/hdd1/dataset/"            # raw data path
+dataset_path: "/media/hdd1/dy_project/dataset/"     # preprocessed data save/load path
+model_save_path: "/media/hdd1/dy_project/dy_project/model/"                # model save path
 
 preprocess:
   flag: False                                            # true: preprocess, false: not preprocess
@@ -32,9 +32,9 @@ preprocess:
 
 
 wandb:
-  flag: True
-  project_name: physformer
-  entity: paperchae
+  flag: false
+  project_name: rppg
+  entity: daeyeolkim
 
 
 fit:
@@ -43,7 +43,7 @@ fit:
   time_length: 180
   overlap_interval: 0 # default 0
   img_size: 72
-  train_flag: True
+  train_flag: False
   eval_flag: True
   eval_interval: 100
   debug_flag: False                        # True: debug mode (load small dataset, False: normal mode
