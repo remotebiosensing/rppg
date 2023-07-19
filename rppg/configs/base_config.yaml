@@ -47,7 +47,7 @@ fit:
   eval_flag: True
   eval_interval: 100
   debug_flag: False                        # True: debug mode (load small dataset, False: normal mode
-  model_save_flag: False                   # True: save model, False: not save model
+  model_save_flag: True                   # True: save model, False: not save model
 
   train:
     dataset: UBFC
@@ -69,7 +69,7 @@ fit:
     shuffle: False
     fs: 30 #video fps
     batch_size: 8
-    cal_type: FFT
+    cal_type: PEAK                        # PEAK or FFT
     metric: [ 'MAE','RMSE','MAPE','Pearson' ]
     eval_time_length: 5 # second
 

@@ -40,12 +40,12 @@ models:
 #    batch_size: 72
 #    optimizer: AdamW
 #    loss: MSE
-#    learning_rate: 9e-3
+#    learning_rate: 0.009
 #    eval_time_length: 10
 #    epochs:
 #      ubfc: 15
 #      pure: 10
-#
+
 #- BigSmall:
 #    model: BigSmall
 #    type: DIFF
