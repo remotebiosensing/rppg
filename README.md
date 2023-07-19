@@ -133,6 +133,7 @@ Please feel free to contact us and [join Slack](https://join.slack.com/t/remobeb
 
 - Dae Yeol Kim, spicyyeol@gmail.com
 - Kwangkee Lee, kwangkeelee@gmail.com
+- Chae-Bong Sohn, cbsohn@gmail.com
 
 ## Funding
 
