@@ -17,7 +17,7 @@ from torch.autograd import Variable
 import torch.fft as fft
 
 from rppg.log import log_warning
-from rppg.utils.funcs import _nearest_power_of_2
+from rppg.utils.funcs import _nearest_power_of_2, normalize_torch
 
 
 def loss_fn(loss_name):
@@ -84,6 +84,8 @@ def loss_fn(loss_name):
         return BVPVelocityLoss()
     elif loss_name == "CLGDLoss":
         return CurriculumLearningGuidedDynamicLoss()
+    elif loss_name == "PDLoss":
+        return PeakDetectionLoss()
     else:
         log_warning("use implemented loss functions")
         raise NotImplementedError("implement a custom function(%s) in loss.py" % loss_fn)
@@ -99,7 +101,8 @@ def neg_Pearson_Loss(predictions, targets):
     targets = targets[:, :]
     # predictions = torch.squeeze(predictions)
     # Pearson correlation can be performed on the premise of normalization of input data
-    predictions = (predictions - torch.mean(predictions, dim=-1, keepdim=True)) / torch.std(predictions, dim=-1, keepdim=True)
+    predictions = (predictions - torch.mean(predictions, dim=-1, keepdim=True)) / torch.std(predictions, dim=-1,
+                                                                                            keepdim=True)
     targets = (targets - torch.mean(targets, dim=-1, keepdim=True)) / torch.std(targets, dim=-1, keepdim=True)
 
     for i in range(predictions.shape[0]):
@@ -594,3 +597,64 @@ class CurriculumLearningGuidedDynamicLoss(nn.Module):
 
         return label_distribution_loss / self.batch_size
 
+
+def peak_detection_loss(rppg, ppg, fs=30, epoch=15):
+    ppg = ppg.view(5, -1)
+    rppg = rppg.view(5, -1)
+    ppg = normalize_torch(ppg)
+    rppg = normalize_torch(rppg)
+    test_n, sig_length = ppg.shape
+
+    peak_score = 0.0
+    hr_score = 0.0
+
+    if epoch < 5:
+        alpha = 1.0
+        beta = 0.0
+    elif epoch < 10:
+        alpha = 0.5
+        beta = 0.5
+    else:
+        alpha = 0.0
+        beta = 1.0
+
+    # ppg_hr_list = torch.empty(test_n)
+    # hrv_list = torch.zeros((test_n, (sig_length // fs) * 3))
+    # index_list = torch.zeros((test_n, (sig_length // fs) * 3))
+    width = 11
+    ppg_window_max = torch.nn.functional.max_pool1d(ppg, width, stride=1, padding=width // 2, return_indices=True)[
+        1].squeeze()
+    rppg_window_max = torch.nn.functional.max_pool1d(rppg, width, stride=1, padding=width // 2, return_indices=True)[
+        1].squeeze()
+
+    for i in range(test_n):
+        ppg_candidate = ppg_window_max[i].unique()
+        rppg_candidate = rppg_window_max[i].unique()
+        ppg_nice_peaks = ppg_candidate[ppg_window_max[i][ppg_candidate] == ppg_candidate]
+        ppg_nice_peaks = ppg_nice_peaks[ppg[i][ppg_nice_peaks] > torch.mean(ppg[i][ppg_nice_peaks]) / 2]
+        # ppg_nice_peaks = ppg_nice_peaks[ppg_nice_peaks > 0.5] # if normalized from 0 to 1
+        rppg_nice_peaks = rppg_candidate[rppg_window_max[i][rppg_candidate] == rppg_candidate]
+        rppg_nice_peaks = rppg_nice_peaks[rppg[i][rppg_nice_peaks] > torch.mean(rppg[i][rppg_nice_peaks]) / 2]
+        # rppg_nice_peaks = rppg_nice_peaks[rppg_nice_peaks > 0.5]
+        # peak_diff = torch.abs(ppg_nice_peaks - rppg_nice_peaks)
+        ppg_hrv = torch.diff(ppg_nice_peaks) / fs
+        rppg_hrv = torch.diff(rppg_nice_peaks) / fs
+        ppg_hr = torch.mean(60 / ppg_hrv)
+        rppg_hr = torch.mean(60 / rppg_hrv)
+        # peak_score += len(rppg_hrv) / len(ppg_hrv)
+        peak_score += abs(len(ppg_hrv) - len(rppg_hrv)) / len(ppg_hrv)
+        hr_score += abs(ppg_hr - rppg_hr) / ppg_hr
+
+    # peak_score /= test_n
+    hr_score /= test_n
+
+    # return alpha * peak_score + beta * hr_score
+    return hr_score
+
+
+class PeakDetectionLoss(nn.Module):
+    def __init__(self):
+        super(PeakDetectionLoss, self).__init__()
+
+    def forward(self, rppg, ppg, fs=30, epoch=15):
+        return peak_detection_loss(rppg, ppg, fs, epoch)
