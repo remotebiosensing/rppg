@@ -2,6 +2,8 @@ import torch
 import numpy as np
 from scipy import signal
 from scipy.sparse import spdiags
+from rppg.utils.visualization import plot
+
 
 from matplotlib import pyplot as plt
 import neurokit2 as nk
@@ -77,6 +79,13 @@ def plot_graph(start_point, length, target, inference):
 def normalize(input_val):
     return (input_val - np.mean(input_val)) / np.std(input_val)
 
+def normalize_torch(input_val):
+    if type(input_val) != torch.Tensor:
+        input_val = torch.from_numpy(input_val.copy())
+    min = torch.min(input_val, dim=-1, keepdim=True)[0]
+    max = torch.max(input_val, dim=-1, keepdim=True)[0]
+    return (input_val - min) / (max - min)
+
 
 def _nearest_power_of_2(x):
     """Calculate the nearest power of 2."""
@@ -93,7 +102,6 @@ def calc_hr_torch(calc_type, ppg_signals, fs=30., low_freq=0.75, high_freq=2.5):
     # calc_type = 'Peak'
     test_n, sig_length = ppg_signals.shape
     hr_list = torch.empty(test_n)
-
     if calc_type == "FFT":
         N = _nearest_power_of_2(sig_length)
         psd = torch.abs(torch.fft.rfft(ppg_signals, n=N, dim=-1) ** 2)
@@ -103,9 +111,12 @@ def calc_hr_torch(calc_type, ppg_signals, fs=30., low_freq=0.75, high_freq=2.5):
         psd = psd[:, f_mask]
         hr_list = freq[torch.argmax(psd, dim=-1)] * 60
 
+        return hr_list
     else:
+        hrv_list = torch.zeros((test_n, sig_length // fs * 4))
+        index_list = torch.zeros((test_n, sig_length // fs * 4))
         width = 11  # odd (11)
-        window_maxima = torch.nn.functional.max_pool1d_with_indices(ppg_signals, width, 1, padding=width // 2)[
+        window_maxima = torch.nn.functional.max_pool1d(ppg_signals, width, 1, padding=width // 2, return_indices=True)[
             1].squeeze()
         # candidates = [x.unique() for x in window_maxima]
 
@@ -114,11 +125,14 @@ def calc_hr_torch(calc_type, ppg_signals, fs=30., low_freq=0.75, high_freq=2.5):
             nice_peaks = candidate[window_maxima[i][candidate] == candidate]
             nice_peaks = nice_peaks[
                 ppg_signals[i][nice_peaks] > torch.mean(ppg_signals[i][nice_peaks] / 2)]  # threshold
-            hrv = torch.diff(nice_peaks)
-            hr = 60 / (torch.mean(torch.tensor(hrv, dtype=torch.float)) / 30)
+            beat_interval = torch.diff(nice_peaks)   # sample
+            hrv = beat_interval / fs  # second
+            hr = torch.mean(60 / hrv)
             hr_list[i] = hr
+            hrv_list[i, :len(hrv)] = hrv * 1000  # milli second
+            index_list[i, :len(nice_peaks)] = nice_peaks
 
-    return hr_list
+        return hr_list, hrv_list, index_list
 
 
 def calculate_hr(cal_type, ppg_signal, fs=60., low_pass=0.75, high_pass=2.5):
@@ -144,30 +158,46 @@ def mag2db(magnitude):
     return 20. * np.log10(magnitude)
 
 
-def get_hr(pred, label, model_type, cal_type='FFT', fs=30, bpf_flag=True, low=0.75, high=2.5):
+def get_hr(pred, target, model_type, cal_type='FFT', fs=30, bpf_flag=True, low=0.75, high=2.5):
     if model_type == "DIFF":
+        target = detrend_torch(torch.cumsum(target, dim=-1), 100)
         pred = detrend_torch(torch.cumsum(pred, dim=-1), 100)
-        label = detrend_torch(torch.cumsum(label, dim=-1), 100)
     else:
+        target = detrend_torch(target, 100)
         pred = detrend_torch(pred, 100)
-        label = detrend_torch(label, 100)
+    if bpf_flag:
+        f_target = BPF(target, fs, low, high)
+        f_pred = BPF(pred, fs, low, high)
 
     # TODO: torch bpf
     if cal_type == 'FFT':
+        hr_target = calc_hr_torch('FFT', target, fs, low, high)
         hr_pred = calc_hr_torch('FFT', pred, fs, low, high)
-        hr_label = calc_hr_torch('FFT', label, fs, low, high)
+        if bpf_flag:
+            f_hr_target = calc_hr_torch('FFT', torch.from_numpy(f_target.copy()), fs, low, high)
+            f_hr_pred = calc_hr_torch('FFT', torch.from_numpy(f_pred.copy()), fs, low, high)
+        return hr_pred, hr_target
     elif cal_type == 'PEAK':
-        hr_pred = calc_hr_torch('PEAK', pred, fs, low, high)
-        hr_label = calc_hr_torch('PEAK', label, fs, low, high)
+        hr_target, hrv_target, index_target = calc_hr_torch('PEAK', target, fs, low, high)
+        hr_pred, hrv_pred, index_pred = calc_hr_torch('PEAK', pred, fs, low, high)
+        if bpf_flag:
+            f_hr_target, f_hrv_target, f_index_target = calc_hr_torch('PEAK', torch.from_numpy(f_target.copy()), fs, low, high)
+            f_hr_pred, f_hrv_pred, f_index_pred = calc_hr_torch('PEAK', torch.from_numpy(f_pred.copy()), fs, low, high)
+            pred = normalize_torch(pred)
+            f_pred = normalize_torch(f_pred)
+            target = normalize_torch(target)
+            f_target = normalize_torch(f_target)
+            for i in range(len(pred)):
+                plot(pred[i], hr_pred[i], hrv_pred[i], index_pred[i], f_pred[i], f_hr_pred[i], f_hrv_pred[i], f_index_pred[i],
+                     target[i], hr_target[i], hrv_target[i], index_target[i], f_target[i], f_hr_target[i], f_hrv_target[i], f_index_target[i])
+        return [hr_pred, hrv_pred], [hr_target, hrv_target]
     else:
-        hr_pred_fft = calculate_hr('FFT', pred, fs, low, high)
-        hr_label_fft = calculate_hr('FFT', label, fs, low, high)
-        hr_pred_peak = calculate_hr('PEAK', pred, fs, low, high)
-        hr_label_peak = calculate_hr('PEAK', label, fs, low, high)
+        hr_pred_fft = calc_hr_torch('FFT', pred, fs, low, high)
+        hr_label_fft = calc_hr_torch('FFT', target, fs, low, high)
+        hr_pred_peak = calc_hr_torch('PEAK', pred, fs, low, high)
+        hr_label_peak = calc_hr_torch('PEAK', target, fs, low, high)
         hr_pred = [hr_pred_fft, hr_pred_peak]
-        hr_label = [hr_label_fft, hr_label_peak]
-
-    return hr_pred, hr_label
+        hr_target = [hr_label_fft, hr_label_peak]
 
 
 def MAE(pred, label):
