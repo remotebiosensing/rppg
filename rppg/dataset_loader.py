@@ -92,35 +92,32 @@ def data_loader(datasets, fit_cfg):
             validation_loader = DataLoader(datasets[1], batch_size=(train_batch_size * time_length),
                                            sampler=sampler_validation, shuffle=shuffle,
                                            worker_init_fn=seed_worker, generator=g)
-            if datasets.__len__() == 2:
+            if datasets.__len__() == 2:  # for training and validation
                 return [train_loader, validation_loader]
-            elif datasets.__len__() == 3:
-                test_loader = DataLoader(datasets[2], batch_size=(train_batch_size * time_length),
+            elif datasets.__len__() == 3:  # for training, validation and test
+                test_loader = DataLoader(datasets[2], batch_size=(test_batch_size * time_length),
                                          shuffle=shuffle, worker_init_fn=seed_worker, generator=g)
                 return [train_loader, validation_loader, test_loader]
-        # elif fit_type == 'CONT':
-        else:
+        else:  # model_type == 'CONT'
             train_loader = DataLoader(datasets[0], batch_size=train_batch_size, shuffle=shuffle,
                                       worker_init_fn=seed_worker, generator=g)
             validation_loader = DataLoader(datasets[1], batch_size=train_batch_size,
                                            shuffle=shuffle, worker_init_fn=seed_worker, generator=g)
-            if datasets.__len__() == 2:
+            if datasets.__len__() == 2:  # for training and validation
                 return [train_loader, validation_loader]
-            elif datasets.__len__() == 3:
-                for dataset in datasets[2]:
-                    test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False,
-                                                  worker_init_fn=seed_worker, generator=g))
+            elif datasets.__len__() == 3:  # for training, validation and test
+                test_loader = DataLoader(datasets[2], batch_size=(test_batch_size * time_length),
+                                         shuffle=shuffle, worker_init_fn=seed_worker, generator=g)
                 return [train_loader, validation_loader, test_loader]
 
     elif datasets.__len__() == 1:
         if model_type == 'DIFF':
-            for dataset in datasets[0]:
-                test_loader.append(DataLoader(dataset, (test_batch_size * time_length), shuffle=False))
-            return [test_loader]
-        else:
-            for dataset in datasets[0]:
-                test_loader.append(DataLoader(dataset, test_batch_size, shuffle=False))
-            return [test_loader]
+            test_loader = DataLoader(datasets[0], batch_size=(test_batch_size * time_length), shuffle=False,
+                                     worker_init_fn=seed_worker, generator=g)
+        else:  # model_type == 'CONT'
+            test_loader = DataLoader(datasets[0], batch_size=test_batch_size, shuffle=False,
+                                     worker_init_fn=seed_worker, generator=g)
+        return [test_loader]
 
 
 def dataset_loader(fit_cfg, dataset_path):
