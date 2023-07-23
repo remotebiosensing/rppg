@@ -31,7 +31,7 @@ def check_preprocessed_data(cfg):
     if cfg.preprocess.flag:
         if not os.path.exists(cfg.dataset_path + cfg.preprocess.train_dataset.name + "/" + cfg.preprocess.common.type):
             print('Preprocessing train_dataset({}-{}) dataset...'
-                  .format(cfg.preprocess.train_dataset.dataset, cfg.preprocess.common.type))
+                  .format(cfg.preprocess.train_dataset.name, cfg.preprocess.common.type))
             print("Preprocess type: ", cfg.preprocess.common.type)
             preprocessing(cfg=cfg, dataset=cfg.preprocess.train_dataset)
         else:
@@ -39,7 +39,7 @@ def check_preprocessed_data(cfg):
 
         if not os.path.exists(cfg.dataset_path + cfg.preprocess.test_dataset.name + "/" + cfg.preprocess.common.type):
             print('Preprocessing test_dataset({}-{}) dataset...'
-                  .format(cfg.preprocess.train_dataset.dataset, cfg.preprocess.common.type))
+                  .format(cfg.preprocess.train_dataset.name, cfg.preprocess.common.type))
             preprocessing(cfg=cfg, dataset=cfg.preprocess.test_dataset)
         else:
             print('Preprocessed {} data already exists.'.format(cfg.preprocess.test_dataset.name))
