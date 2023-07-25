@@ -14,8 +14,7 @@ Remote Biosensing (`rPPG`) is an open-source framework for remote photoplethysmo
 We aim to implement, evaluate, and benchmark DNN models for remote photoplethysmography (rPPG) and continuous non-invasive blood pressure (CNIBP). Our code is based on PyTorch.
 
 
-## Reference
-[link](https://arxiv.org/abs/2307.12644)
+## Reference [![link](https://img.shields.io/badge/Paper-link-purple)](https://arxiv.org/abs/2307.12644)
 ```
 @misc{kim2023remote,
       title={Remote Bio-Sensing: Open Source Benchmark Framework for Fair Evaluation of rPPG}, 
