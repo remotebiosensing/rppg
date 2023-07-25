@@ -78,7 +78,7 @@ Remote Bio-Sensing: Open Source Benchmark Framework for Fair Evaluation of rPPG,
 2023/IEEE Access/Heart Rate Estimation From Remote Photoplethysmography Based on Light-Weight U-Net and Attention Modules/[paper](https://ieeexplore.ieee.org/abstract/document/10141618)
 
 - #### CNIBP (Continuous non-invasive blood pressure)
-- [ ] PP-Net exmaple [paper](https://ieeexplore.ieee.org/document/9082808)
+- [ ] PP-Net example [paper](https://ieeexplore.ieee.org/document/9082808)
 
 DATASET INFO
 ------------------- 
