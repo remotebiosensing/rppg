@@ -1,66 +1,66 @@
 ---
 models:
-- CHROM:
-        model: CHROM
-        type: CONT
-        preprocess_type: CONT
-        img_size: 128
-        time_length: 48
-        batch_size: 100
-        optimizer: AdamW
-        loss: neg_pearson
-        learning_rate: 0.001
-- GREEN: # done
-      model: GREEN
-      type: CONT
-      preprocess_type: CONT
-      img_size: 128
-      time_length: 300
-      batch_size: 4
-      optimizer: AdamW
-      loss: neg_pearson
-      learning_rate: 0.001
-- POS: # done
-      model: POS
-      type: CONT
-      preprocess_type: CONT
-      img_size: 128
-      time_length: 300
-      batch_size: 100
-      optimizer: AdamW
-      loss: neg_pearson
-      learning_rate: 0.001
-- LGI: # done
-      model: LGI
-      type: CONT
-      preprocess_type: CONT
-      img_size: 128
-      time_length: 300
-      batch_size: 4
-      optimizer: AdamW
-      loss: neg_pearson
-      learning_rate: 0.001
-- PCA:
-      model: PCA
-      type: CONT
-      preprocess_type: CONT
-      img_size: 128
-      time_length: 300
-      batch_size: 4
-      optimizer: AdamW
-      loss: neg_pearson
-      learning_rate: 0.001
-
-- SSR:
-      model: SSR
-      type: CONT
-      preprocess_type: CONT
-      img_size: 128
-      time_length: 300
-      batch_size: 4
-      optimizer: AdamW
-      loss: neg_pearson
-      learning_rate: 0.001
+#- CHROM:
+#        model: CHROM
+#        type: CONT
+#        preprocess_type: CONT
+#        img_size: 128
+#        time_length: 48
+#        batch_size: 100
+#        optimizer: None
+#        loss: None
+#        learning_rate: None
+#- GREEN: # done
+#      model: GREEN
+#      type: CONT
+#      preprocess_type: CONT
+#      img_size: 128
+#      time_length: 300
+#      batch_size: 4
+#      optimizer: None
+#      loss: None
+#      learning_rate: None
+#- POS: # done
+#      model: POS
+#      type: CONT
+#      preprocess_type: CONT
+#      img_size: 128
+#      time_length: 300
+#      batch_size: 100
+#      optimizer: None
+#      loss: None
+#      learning_rate: None
+#- LGI: # done
+#      model: LGI
+#      type: CONT
+#      preprocess_type: CONT
+#      img_size: 128
+#      time_length: 300
+#      batch_size: 4
+#      optimizer: None
+#      loss: None
+#      learning_rate: None
+#- PCA:
+#      model: PCA
+#      type: CONT
+#      preprocess_type: CONT
+#      img_size: 128
+#      time_length: 300
+#      batch_size: 4
+#      optimizer: None
+#      loss: None
+#      learning_rate: None
+#
+#- SSR:
+#      model: SSR
+#      type: CONT
+#      preprocess_type: CONT
+#      img_size: 128
+#      time_length: 300
+#      batch_size: 4
+#      optimizer: None
+#      loss: None
+#      learning_rate: None
 #- ICA:
 #      model: ICA
 #      type: CONT
@@ -68,9 +68,9 @@ models:
 #      img_size: 128
 #      time_length: 300
 #      batch_size: 4
-#      optimizer: AdamW
-#      loss: neg_pearson
-#      learning_rate: 0.001
+#      optimizer: None
+#      loss: None
+#      learning_rate: None
 
 
 #- DeepPhys:
@@ -87,22 +87,37 @@ models:
 #    epochs:
 #        ubfc: 15
 #        pure: 10
-##
 #
-#- EfficientPhys:
-#    model: EfficientPhys
+#
+#- TSCAN:
+#    model: TSCAN
 #    type: DIFF
-#    preprocess_type: CONT
+#    preprocess_type: DIFF
 #    img_size: 72
-#    time_length: 10
-#    batch_size: 72
+#    time_length: 20
+#    batch_size: 36
 #    optimizer: AdamW
 #    loss: MSE
 #    learning_rate: 0.009
 #    eval_time_length: 10
 #    epochs:
-#      ubfc: 15
-#      pure: 10
+#      ubfc: 10
+#      pure: 15
+
+- EfficientPhys:
+    model: EfficientPhys
+    type: DIFF
+    preprocess_type: CONT
+    img_size: 72
+    time_length: 10
+    batch_size: 72
+    optimizer: AdamW
+    loss: MSE
+    learning_rate: 0.009
+    eval_time_length: 10
+    epochs:
+      ubfc: 15
+      pure: 10
 
 #- BigSmall:
 #    model: BigSmall
