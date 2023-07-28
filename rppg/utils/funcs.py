@@ -170,9 +170,9 @@ def mag2db(magnitude):
 
 def get_hr(rppg, bvp, model_type, vital_type='HR', cal_type='FFT', fs=30, bpf=None):
     if cal_type == 'FFT' and vital_type == 'HRV':
-        raise ValueError("'FFT' cannot calculate HRV. To calculate HRV, use 'Peak' method instead.")
-    if cal_type not in ['FFT', 'Peak']:
-        raise NotImplementedError("cal_type must be 'FFT' or 'Peak'.")
+        raise ValueError("'FFT' cannot calculate HRV. To calculate HRV, use 'PEAK' method instead.")
+    if cal_type not in ['FFT', 'PEAK']:
+        raise NotImplementedError("cal_type must be 'FFT' or 'PEAK'.")
 
     if model_type == "DIFF":
         bvp = detrend_torch(torch.cumsum(bvp, dim=-1))
