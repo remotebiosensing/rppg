@@ -41,6 +41,7 @@ if __name__ == "__main__":
     result_save_path = 'result/csv/'
 
     diffnorm_based_model = ['DeepPhys', 'TSCAN', 'EfficientPhys', 'BigSmall']
+    non_dnn_model = ['CHROM', 'GREEN', 'POS', 'LGI', 'PCA', 'SSR', 'ICA']
 
     preset_cfg = get_config("configs/model_preset.yaml")
     models = [list(m)[0] for m in preset_cfg.models]
@@ -76,7 +77,6 @@ if __name__ == "__main__":
             cfg.wandb.flag = False
             cfg.fit.model_save_flag = False
         cfg.wandb.flag = not cfg.fit.debug_flag
-        # preprocess_cfg = get_config("configs/preprocess.yaml")
         cfg.fit.train.dataset = cfg.preprocess.train_dataset.name = d[0]
         cfg.fit.test.dataset = cfg.preprocess.test_dataset.name = d[1]
 
@@ -89,6 +89,9 @@ if __name__ == "__main__":
             cfg.fit.train.batch_size, cfg.fit.test.batch_size = b, b
             cfg.fit.train.loss, cfg.fit.train.optimizer = loss, o
 
+            if cfg.fit.model in non_dnn_model:
+                cfg.fit.train_flag = False
+                # cfg.fit.type = 'CONT_RAW'
             check_preprocessed_data(cfg)
             dset = dataset_loader(fit_cfg=cfg.fit, dataset_path=cfg.dataset_path)
             data_loaders = data_loader(datasets=dset, fit_cfg=cfg.fit)

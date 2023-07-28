@@ -30,7 +30,10 @@ def save_single_result(result_path, result, cfg):
 
 
 def save_sweep_result(result_path, results, cfg):
-    csv_file = 'calc_comp.csv'
+    if cfg.type == 'CONT_RAW':
+        csv_file = 'non_dnn.csv'
+    else:
+        csv_file = 'calc_comp.csv'
     idxs = []
     # if str(cfg.test.cal_type) == 'PEAK':
     for et in cfg.test.eval_time_length:
@@ -56,4 +59,4 @@ def save_sweep_result(result_path, results, cfg):
         new_result[cfg.test.metric] = results
         new_result.to_csv(result_path + csv_file)
 
-    print('sweep')
+    print("Saved results to {}".format(result_path + csv_file))

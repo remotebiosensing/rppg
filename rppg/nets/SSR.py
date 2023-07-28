@@ -138,7 +138,10 @@ class SSR(nn.Module):
                 idx2 = torch.logical_and(torch.logical_and(idx[:, :, 0], idx[:, :, 1]), idx[:, :, 2])
                 # V_skin_only = torch.masked_select(V,idx2)
                 idx2_expanded = idx2.unsqueeze(-1).expand(-1, -1, 3)
-                V_skin_only = torch.masked_select(V, idx2_expanded).view(h,w,c)
+                # unique_values = torch.unique(idx2_expanded) /
+                mask = torch.where(idx2_expanded != 0, torch.tensor(1), torch.tensor(0))
+                # V_skin_only = torch.masked_select(V, mask).view(h,w,c)
+                V_skin_only = V * mask
                 VV.append(V_skin_only)
 
                 VV = torch.vstack(VV)

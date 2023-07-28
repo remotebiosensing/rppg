@@ -1,7 +1,7 @@
 ---
-data_root_path: "/media/hdd1/dataset/"            # raw data path
-dataset_path: "/media/hdd1/dy_project/dataset/"     # preprocessed data save/load path
-model_save_path: "/media/hdd1/dy_project/dy_project/model/"                # model save path
+data_root_path: "/ssd/ssd0/dataset/raw/rppg/"            # raw data path
+dataset_path: "/ssd/ssd0/dataset/preprocessed/rppg/"     # preprocessed data save/load path
+model_save_path: "/ssd/ssd0/models/rppg/"                # model save path
 
 preprocess:
   flag: False                                            # true: preprocess, false: not preprocess
@@ -46,7 +46,7 @@ fit:
   train_flag: False
   eval_flag: True
   eval_interval: 100
-  debug_flag: False                        # True: debug mode (load small dataset, False: normal mode
+  debug_flag: True                        # True: debug mode (load small dataset, False: normal mode
   model_save_flag: True                   # True: save model, False: not save model
 
   train:
@@ -69,7 +69,10 @@ fit:
     shuffle: False
     fs: 30 #video fps
     batch_size: 8
-    cal_type: PEAK                        # PEAK or FFT
+    vital_type: HR                             # HR or HRV
+    cal_type: PEAK                              # PEAK or FFT
+#    bpf: [0.75, 2.5]                            # None: None / 60~100bpm : [1, 1.67] / 45~150bpm : [0.75, 2.5]
+    bpf: None                            # None: None / 60~100bpm : [1, 1.67] / 45~150bpm : [0.75, 2.5]
     metric: [ 'MAE','RMSE','MAPE','Pearson' ]
     eval_time_length: 5 # second
 
