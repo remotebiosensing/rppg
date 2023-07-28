@@ -139,8 +139,8 @@ def calc_hr_torch(calc_type, ppg_signals, fs=30.):
             hrv_list[i, :len(hrv)] = hrv * 1000  # milli second
             index_list[i, :len(nice_peaks)] = nice_peaks
 
-        hrv_list = hrv_list[torch.max(torch.sum(hrv_list > 0, dim=-1))]
-        index_list = index_list[torch.max(torch.sum(index_list > 0, dim=-1))]
+        hrv_list = hrv_list[:, :torch.max(torch.sum(hrv_list > 0, dim=-1))]
+        index_list = index_list[:, :torch.max(torch.sum(index_list > 0, dim=-1))]
 
         return hr_list, hrv_list, index_list
 
