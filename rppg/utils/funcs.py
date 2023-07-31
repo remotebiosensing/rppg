@@ -3,6 +3,8 @@ import numpy as np
 from scipy import signal
 from scipy.sparse import spdiags
 from rppg.utils.visualization import hrv_comparison_plot, hr_comparison_bpf
+from rppg.utils.HRV_Analyze.hrv_utils import TimeHRVAnalysis, FrequencyHRVAnalysis, GraphicalReport
+
 
 from matplotlib import pyplot as plt
 import neurokit2 as nk
@@ -106,7 +108,7 @@ def get_hrv(ppg_signal, fs=30.):
     return hrv
 
 
-def calc_hr_torch(calc_type, ppg_signals, fs=30.):
+def calc_hr_torch(calc_type, ppg_signals, fs=30., report_flag=False):
     test_n, sig_length = ppg_signals.shape
     hr_list = torch.empty(test_n)
     if calc_type == "FFT":
@@ -132,6 +134,7 @@ def calc_hr_torch(calc_type, ppg_signals, fs=30.):
             nice_peaks = candidate[window_maxima[i][candidate] == candidate]
             nice_peaks = nice_peaks[
                 ppg_signals[i][nice_peaks] > torch.mean(ppg_signals[i][nice_peaks] / 2)]  # peak thresholding
+            # nice_peaks = nice_peaks[1:-1]  # remove first and last peak
             beat_interval = torch.diff(nice_peaks)  # sample
             hrv = beat_interval / fs  # second
             hr = torch.mean(60 / hrv)
@@ -139,9 +142,11 @@ def calc_hr_torch(calc_type, ppg_signals, fs=30.):
             hrv_list[i, :len(hrv)] = hrv * 1000  # milli second
             index_list[i, :len(nice_peaks)] = nice_peaks
 
-        hrv_list = hrv_list[torch.max(torch.sum(hrv_list > 0, dim=-1))]
-        index_list = index_list[torch.max(torch.sum(index_list > 0, dim=-1))]
-
+        hrv_list = hrv_list[:, :torch.max(torch.sum(hrv_list > 0, dim=-1))]
+        index_list = index_list[:, :torch.max(torch.sum(index_list > 0, dim=-1))]
+        if report_flag:
+            time_hrv = TimeHRVAnalysis(hrv_list, fs=fs)
+            freq_hrv = FrequencyHRVAnalysis(hrv_list, fs=fs)
         return hr_list, hrv_list, index_list
 
 
@@ -168,7 +173,7 @@ def mag2db(magnitude):
     return 20. * np.log10(magnitude)
 
 
-def get_hr(rppg, bvp, model_type, vital_type='HR', cal_type='FFT', fs=30, bpf=None):
+def get_hr(rppg, bvp, model_type, vital_type='HR', cal_type='FFT', fs=30, bpf=None, report_flag=False):
     if cal_type == 'FFT' and vital_type == 'HRV':
         raise ValueError("'FFT' cannot calculate HRV. To calculate HRV, use 'PEAK' method instead.")
     if cal_type not in ['FFT', 'PEAK']:
@@ -190,8 +195,8 @@ def get_hr(rppg, bvp, model_type, vital_type='HR', cal_type='FFT', fs=30, bpf=No
         rppg = normalize_torch(rppg)
 
     # TODO: torch bpf
-    hr_pred = calc_hr_torch(cal_type, rppg, fs)
-    hr_target = calc_hr_torch(cal_type, bvp, fs)
+    hr_pred = calc_hr_torch(cal_type, rppg, fs, report_flag)
+    hr_target = calc_hr_torch(cal_type, bvp, fs, report_flag)
 
     if cal_type == 'PEAK':
         hr_pred, hrv_pred, index_pred = hr_pred
