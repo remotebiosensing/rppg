@@ -69,10 +69,11 @@ fit:
     shuffle: False
     fs: 30 #video fps
     batch_size: 8
-    vital_type: HR                             # HR or HRV
+    vital_type: HRV                             # HR or HRV
     cal_type: PEAK                              # PEAK or FFT
 #    bpf: [0.75, 2.5]                            # None: None / 60~100bpm : [1, 1.67] / 45~150bpm : [0.75, 2.5]
     bpf: None                            # None: None / 60~100bpm : [1, 1.67] / 45~150bpm : [0.75, 2.5]
     metric: [ 'MAE','RMSE','MAPE','Pearson' ]
+    report_flag: True
     eval_time_length: 5 # second
 
