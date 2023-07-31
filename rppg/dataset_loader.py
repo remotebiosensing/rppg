@@ -106,7 +106,7 @@ def data_loader(datasets, fit_cfg):
             if datasets.__len__() == 2:  # for training and validation
                 return [train_loader, validation_loader]
             elif datasets.__len__() == 3:  # for training, validation and test
-                test_loader = DataLoader(datasets[2], batch_size=(test_batch_size * time_length),
+                test_loader = DataLoader(datasets[2], batch_size=test_batch_size,
                                          shuffle=shuffle, worker_init_fn=seed_worker, generator=g)
                 return [train_loader, validation_loader, test_loader]
 
