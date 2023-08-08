@@ -49,19 +49,20 @@ def detrend_torch(signals, Lambda=100):
     :return:
     """
     test_n, length = signals.shape
+    signals = signals.to(torch.float).to('cuda')
 
-    H = torch.eye(length)
-    ones = torch.ones(length - 2)
+    H = torch.eye(length).to('cuda')
+    ones = torch.diag(torch.ones(length - 2)).to('cuda')
+    zeros_1 = torch.zeros((length - 2, 1)).to('cuda')
+    zeros_2 = torch.zeros((length - 2, 2)).to('cuda')
 
-    diag1 = torch.cat((torch.diag(ones), torch.zeros((length - 2, 2))), dim=-1)
-    diag2 = torch.cat((torch.zeros((length - 2, 1)), torch.diag(-2 * ones), torch.zeros((length - 2, 1))), dim=-1)
-    diag3 = torch.cat((torch.zeros((length - 2, 2)), torch.diag(ones)), dim=-1)
-    D = diag1 + diag2 + diag3
+    D = torch.cat((ones, zeros_2), dim=-1) +\
+        torch.cat((zeros_1, -2 * ones, zeros_1), dim=-1) +\
+        torch.cat((zeros_2, ones), dim=-1)
 
     detrended_signal = torch.bmm(signals.unsqueeze(1),
-                                 (H - torch.linalg.inv(H + (Lambda ** 2) * torch.t(D) @ D)).to('cuda').expand(test_n,
-                                                                                                              -1,
-                                                                                                              -1)).squeeze()
+                                 (H - torch.linalg.inv(H + (Lambda ** 2) * torch.t(D) @ D)).expand(test_n, -1, -1)).squeeze()
+    detrended_signal += torch.mean(signals, dim=-1, keepdim=True)
     return detrended_signal
 
 
