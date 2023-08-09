@@ -69,10 +69,10 @@ def multi_processing_sort_by_file_size(model_name, target_function, mode: str,
     print('Sorting data by file size...')
 
     print('reading_total_data...')
-    ple_tot = np.zeros((1, 750))
+    ple_tot = np.zeros((1, parameters['chunk_size']))
     ple_cyc_len = np.zeros(1)
     ple_cyc = np.zeros((1, 100))
-    abp_tot = np.zeros((1, 750))
+    abp_tot = np.zeros((1, parameters['chunk_size']))
     abp_cyc_len = np.zeros(1)
     abp_cyc = np.zeros((1, 100))
     dbp_tot = np.zeros((1, 2, 15))

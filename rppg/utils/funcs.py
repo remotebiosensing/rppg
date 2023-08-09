@@ -2,9 +2,6 @@ import torch
 import numpy as np
 from scipy import signal
 from scipy.sparse import spdiags
-from rppg.utils.visualization import hrv_comparison_plot, hr_comparison_bpf
-from rppg.utils.HRV_Analyze.hrv_utils import TimeHRVAnalysis, FrequencyHRVAnalysis, GraphicalReport
-
 
 from matplotlib import pyplot as plt
 import neurokit2 as nk
@@ -108,8 +105,63 @@ def get_hrv(ppg_signal, fs=30.):
     hrv = nk.signal_rate(ppg_peaks, sampling_rate=fs, desired_length=len(ppg_signal))
     return hrv
 
+def watch_peaks(raw_signals, index_list, num, start_idx, end_idx):
+    raw_signals = raw_signals[num].cpu().numpy()
+    index_list = index_list[num].to(torch.int).cpu().numpy()
+    index_list = index_list[np.logical_and(index_list > start_idx, index_list < end_idx)]
+    index_list = peak_correction(index_list)
+    plt.plot(np.arange(start_idx, end_idx, 1), raw_signals[start_idx:end_idx])
+    plt.plot(index_list, raw_signals[index_list], 'ro')
+    plt.show()
+
+
+def peak_correction(abnormal_indices, device='cuda'):
+    std_list = []
+    if device == 'cpu':
+        diff_mean = np.mean(np.diff(abnormal_indices))
+        bad_idx = np.where(np.diff(abnormal_indices) < 0.8 * diff_mean)[0] + 1
+        if len(bad_idx) == 0:
+            return abnormal_indices
+        else:
+            for i in bad_idx:
+                std_list.append(np.std(np.diff(np.delete(abnormal_indices, i))))
+            corrected_indices = np.delete(abnormal_indices, bad_idx[np.argmin(std_list)])
+            return corrected_indices
+    else:
+        diff_mean = torch.mean(torch.diff(abnormal_indices).to(torch.float))
+        bad_idx = torch.split(torch.where(torch.diff(abnormal_indices) < 0.8 * diff_mean)[0] + 1, 2)
+        remove_cnt = 0
+        if len(bad_idx[0]) == 0:
+            return abnormal_indices
+        else:
+            for pair in bad_idx:
+                if len(pair) == 1:
+                    abnormal_indices = torch.cat((abnormal_indices[:pair[0]], abnormal_indices[pair[0]+1:]))
+                    return abnormal_indices
+                else:
+                    pair -= remove_cnt
+                    roi = abnormal_indices[pair[0]-5:pair[1]+5]
+                    roi_pair = [5, 6]
+                    std_1 = torch.std(torch.diff(torch.cat((roi[:roi_pair[0]], roi[roi_pair[0]+1:]))).to(torch.float))
+                    std_2 = torch.std(torch.diff(torch.cat((roi[:roi_pair[1]], roi[roi_pair[1]+1:]))).to(torch.float))
+                    if std_1 < std_2:
+                        abnormal_indices = torch.cat((abnormal_indices[:pair[0]], abnormal_indices[pair[0]+1:]))
+                    else:
+                        abnormal_indices = torch.cat((abnormal_indices[:pair[1]], abnormal_indices[pair[1]+1:]))
+                    remove_cnt += 1
+                # if std_1 < std_2:
+
+                # for i in pair:
+                #     std_list.append(torch.std(torch.diff(torch.cat(abnormal_indices[:i], abnormal_indices[i+1:]))))
+                # corrected_indices = torch.cat(abnormal_indices[:bad_idx[torch.argmin(torch.tensor(std_list))]], abnormal_indices[bad_idx[torch.argmin(torch.tensor(std_list))]+1:])
+            return abnormal_indices
+
 
 def calc_hr_torch(calc_type, ppg_signals, fs=30., report_flag=False):
+    if type(ppg_signals) != torch.Tensor:
+        ppg_signals = torch.from_numpy(ppg_signals.copy())
+    if torch.cuda.is_available():
+        ppg_signals = ppg_signals.to('cuda')
     test_n, sig_length = ppg_signals.shape
     hr_list = torch.empty(test_n)
     if calc_type == "FFT":
@@ -124,31 +176,43 @@ def calc_hr_torch(calc_type, ppg_signals, fs=30., report_flag=False):
 
         return hr_list
     else:  # calc_type == "Peak"
-        hrv_list = -torch.ones((test_n, sig_length // fs * 10))
-        index_list = -torch.ones((test_n, sig_length // fs * 10))
+        hrv_list = -torch.ones((test_n, int(sig_length // fs) * 10)).to('cuda')
+        index_list = -torch.ones((test_n, int(sig_length // fs) * 10)).to('cuda')
         width = 11  # odd / physnet(5), diff (11)
         window_maxima = torch.nn.functional.max_pool1d(ppg_signals, width, 1, padding=width // 2, return_indices=True)[
-            1].squeeze()
-
+            1].to('cuda')
+        window_minima = torch.nn.functional.max_pool1d(-ppg_signals, width, 1, padding=width // 2, return_indices=True)[
+            1].to('cuda')
+        # if window_maxima.dim() == 1:
+        #     window_maxima = window_maxima.unsqueeze(0)
         for i in range(test_n):
-            candidate = window_maxima[i].unique()
-            nice_peaks = candidate[window_maxima[i][candidate] == candidate]
-            nice_peaks = nice_peaks[
-                ppg_signals[i][nice_peaks] > torch.mean(ppg_signals[i][nice_peaks] / 2)]  # peak thresholding
-            # nice_peaks = nice_peaks[1:-1]  # remove first and last peak
-            beat_interval = torch.diff(nice_peaks)  # sample
+            peak_candidate = window_maxima[i].unique()
+            nice_peak = peak_candidate[window_maxima[i][peak_candidate] == peak_candidate]
+            valley_candidate = window_minima[i].unique()
+            nice_valley = valley_candidate[window_minima[i][valley_candidate] == valley_candidate]
+            # thresholding
+            nice_peak = nice_peak[
+                ppg_signals[i][nice_peak] > torch.mean(ppg_signals[i][nice_peak]) * 0.8]  # peak thresholding
+            nice_valley = nice_valley[
+                ppg_signals[i][nice_valley] < torch.mean(ppg_signals[i][nice_valley]) * 1.2]  # min thresholding
+            if len(nice_peak) / len(nice_valley) > 1.8:  # remove false peaks
+                if torch.all(nice_peak[:2] > nice_valley[0]):
+                    nice_peak = nice_peak[0::2]
+                else:
+                    nice_peak = nice_peak[1::2]
+            nice_peak = peak_correction(nice_peak, 'cuda')
+            beat_interval = torch.diff(nice_peak)  # sample
             hrv = beat_interval / fs  # second
             hr = torch.mean(60 / hrv)
             hr_list[i] = hr
             hrv_list[i, :len(hrv)] = hrv * 1000  # milli second
-            index_list[i, :len(nice_peaks)] = nice_peaks
+            index_list[i, :len(nice_peak)] = nice_peak
+
 
         hrv_list = hrv_list[:, :torch.max(torch.sum(hrv_list > 0, dim=-1))]
         index_list = index_list[:, :torch.max(torch.sum(index_list > 0, dim=-1))]
-        if report_flag:
-            time_hrv = TimeHRVAnalysis(hrv_list, fs=fs)
-            freq_hrv = FrequencyHRVAnalysis(hrv_list, fs=fs)
-        return hr_list, hrv_list, index_list
+        # watch_peaks(ppg_signals, index_list, 1, 12000, 14000)
+        return hr_list.cpu(), hrv_list.cpu(), index_list.to(torch.long).cpu()
 
 
 def calculate_hr(cal_type, ppg_signal, fs=60., low_pass=0.75, high_pass=2.5):
@@ -196,12 +260,12 @@ def get_hr(rppg, bvp, model_type, vital_type='HR', cal_type='FFT', fs=30, bpf=No
         rppg = normalize_torch(rppg)
 
     # TODO: torch bpf
-    hr_pred = calc_hr_torch(cal_type, rppg, fs, report_flag)
     hr_target = calc_hr_torch(cal_type, bvp, fs, report_flag)
+    hr_pred = calc_hr_torch(cal_type, rppg, fs, report_flag)
 
     if cal_type == 'PEAK':
-        hr_pred, hrv_pred, index_pred = hr_pred
         hr_target, hrv_target, index_target = hr_target
+        hr_pred, hrv_pred, index_pred = hr_pred
         if vital_type == 'HRV':
             return hrv_pred, hrv_target
 
@@ -226,6 +290,7 @@ def corr(pred, label):
 
 def SD(pred, label):
     return np.std(pred - label)
+
 
 class IrrelevantPowerRatio(torch.nn.Module):
     # we reuse the code in Gideon2021 to get irrelevant power ratio
