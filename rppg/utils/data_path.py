@@ -303,7 +303,7 @@ class VIPL_HR_RawDataPathLoader:
 
 class COHFACE_RawDataPathLoader:
     def __init__(self, data_root_path, select_data_flag=False, task_list=None):
-        if (task_list is None) or (task_list == []):
+        if (task_list is None) or (not task_list):
             task_list = ['all']
 
         self.data_root_path = data_root_path
@@ -313,12 +313,14 @@ class COHFACE_RawDataPathLoader:
         self.ppg_name = 'data.hdf5'
 
         protocol = self.dataset_root_path + "/" + "protocols/"
+        print(task_list)
         if 'all' in task_list:
             protocol += "all/all.txt"
         elif 'clean' in task_list:
             protocol += "clean/all.txt"
         elif 'natural' in task_list:
             protocol += "natural/all.txt"
+        print('Protocol :: ' + protocol)
         f = open(protocol, 'r')
         data_list = f.readlines()
         self.data_list = ['/' + path.replace("data\n", "") for path in data_list]

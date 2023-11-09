@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import rppg.utils.funcs
+import utils.funcs
 import numpy as np
 
 

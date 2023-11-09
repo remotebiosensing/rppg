@@ -2,7 +2,7 @@ import random
 from glob import glob
 
 import torch
-from rppg.nets.UNet import UNet
+from nets.UNet import UNet
 
 import cv2
 import face_recognition

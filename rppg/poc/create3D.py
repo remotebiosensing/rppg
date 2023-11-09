@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import json
 import cv2
 import numpy as np
-from rppg.preprocessing.image_preprocess import faceUnwrapping
+from preprocessing.image_preprocess import faceUnwrapping
 def imshow(img):
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.imshow(img)

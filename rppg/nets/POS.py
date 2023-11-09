@@ -1,5 +1,5 @@
 import torch
-from rppg.utils.funcs import detrend
+from utils.funcs import detrend
 from scipy import signal
 import numpy as np
 

@@ -3,11 +3,11 @@ import random
 import numpy as np
 import torch
 
-from rppg.models import get_model
-from rppg.config import get_config
-from rppg.dataset_loader import (dataset_loader, data_loader)
-from rppg.preprocessing.dataset_preprocess import check_preprocessed_data
-from rppg.utils.funcs import (MAE, RMSE, MAPE, corr)
+from models import get_model
+from config import get_config
+from dataset_loader import (dataset_loader, data_loader)
+from preprocessing.dataset_preprocess import check_preprocessed_data
+from utils.funcs import (MAE, RMSE, MAPE, corr)
 
 import neurokit2 as nk
 from scipy.sparse import spdiags

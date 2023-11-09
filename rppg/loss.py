@@ -16,8 +16,8 @@ import torch.utils.checkpoint as cp
 from torch.autograd import Variable
 import torch.fft as fft
 
-from rppg.log import log_warning
-from rppg.utils.funcs import _nearest_power_of_2, normalize_torch
+from log import log_warning
+from utils.funcs import _nearest_power_of_2, normalize_torch
 
 
 def loss_fn(loss_name):

@@ -2,7 +2,7 @@ import math
 import torch
 import wandb
 from tqdm import tqdm
-from rppg.utils.funcs import (get_hr, MAE, RMSE, MAPE, corr,SD, IrrelevantPowerRatio, normalize_torch)
+from utils.funcs import (get_hr, MAE, RMSE, MAPE, corr,SD, IrrelevantPowerRatio, normalize_torch)
 
 import numpy as np
 import os
@@ -143,6 +143,7 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
 def test_fn(epoch, model, dataloaders, vital_type, cal_type, bpf, metrics, eval_time_length=10, wandb_flag: bool = False):
     # To evaluate a model by subject, you can use the meta option
     step = "Test"
+    isGpu = torch.cuda.is_available()
     model_name = model.__module__.split('.')[-1]
     if model_name in ["DeepPhys", "TSCAN", "MTTS", "BigSmall", "EfficientPhys"]:
         model_type = 'DIFF'
@@ -155,14 +156,24 @@ def test_fn(epoch, model, dataloaders, vital_type, cal_type, bpf, metrics, eval_
     fs = 30
 
     interval = fs * eval_time_length
-    empty_tensor = torch.empty(1).to('cuda')
-    empty_tensor2 = torch.empty(1).to('cuda')
+
+    empty_tensor = torch.empty(1).to('cpu')
+    empty_tensor2 = torch.empty(1).to('cpu')
+    
+    if isGpu : 
+        empty_tensor = torch.empty(1).to('cuda')
+        empty_tensor2 = torch.empty(1).to('cuda')
+
+
+    print(dataloaders)
     with tqdm(dataloaders, desc=step, total=len(dataloaders), disable=False) as tepoch:
         _pred = []
         _target = []
         with torch.no_grad():
             for te in tepoch:
-                torch.cuda.empty_cache()
+                if isGpu :
+                    torch.cuda.empty_cache()
+
                 if model_name == 'PhysFormer':
                     inputs, target, _ = te
                 else:
@@ -173,7 +184,10 @@ def test_fn(epoch, model, dataloaders, vital_type, cal_type, bpf, metrics, eval_
                     empty_tensor2 = torch.cat((empty_tensor2, target.squeeze()), dim=-1)
                 else:
                     if outputs.get_device() != empty_tensor.get_device():  # for non-DNN Methods
-                        outputs = outputs.to('cuda')
+                        if isGpu :
+                            outputs = outputs.to('cuda')
+                        else :
+                            outputs = outputs.to('cpu')
                     empty_tensor = torch.cat((empty_tensor, outputs.view(-1).squeeze()), dim=-1)
                     empty_tensor2 = torch.cat((empty_tensor2, target.view(-1).squeeze()), dim=-1)
     pred_chunks = torch.stack(list(torch.split(empty_tensor[1:].detach(), interval))[:-1], dim=0)

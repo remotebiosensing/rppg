@@ -1,32 +1,33 @@
+import torch
 import torchinfo
 
-from rppg.log import log_warning, log_info
+from log import log_warning, log_info
 # DNN Method
 # from nets.models.AxisNet import AxisNet, PhysiologicalGenerator
-from rppg.nets.DeepPhys import DeepPhys
-from rppg.nets.TSCAN import TSCAN
+from nets.DeepPhys import DeepPhys
+from nets.TSCAN import TSCAN
 # from nets.models.DeepPhys_DA import DeepPhys_DA
 # from nets.models.ETArPPGNet import ETArPPGNet
 # from nets.models.PPNet import PPNet
 # from nets.models.PhysNet import PhysNet_2DCNN_LSTM
 # from nets.models.RhythmNet import RhythmNet
 # from nets.models.sub_models.VitaMon import Vitamon
-from rppg.nets.APNETv2 import APNETv2
-from rppg.nets.PhysNet import PhysNet
-from rppg.nets.PhysFormer import PhysFormer
-from rppg.nets.EfficientPhys import EfficientPhys
-from rppg.nets.BigSmall import BigSmall
-from rppg.nets.LSTCrPPG import LSTCrPPG
+from nets.APNETv2 import APNETv2
+from nets.PhysNet import PhysNet
+from nets.PhysFormer import PhysFormer
+from nets.EfficientPhys import EfficientPhys
+from nets.BigSmall import BigSmall
+from nets.LSTCrPPG import LSTCrPPG
 # from rppg.nets.JAMSNet import JAMSNet
 # Non-DNN Method
-from rppg.nets.GREEN import GREEN
-from rppg.nets.POS import POS
-from rppg.nets.CHROM import CHROM
-from rppg.nets.LGI import LGI
-from rppg.nets.PBV import PBV
-from rppg.nets.SSR import SSR
-from rppg.nets.PCA import PCA
-from rppg.nets.ICA import ICA
+from nets.GREEN import GREEN
+from nets.POS import POS
+from nets.CHROM import CHROM
+from nets.LGI import LGI
+from nets.PBV import PBV
+from nets.SSR import SSR
+from nets.PCA import PCA
+from nets.ICA import ICA
 
 NUM_FEATURES = 5
 NUM_CLASSES = 10
@@ -95,7 +96,10 @@ def get_model(fit_cfg):
         log_warning("pls implemented model")
         raise NotImplementedError("implement a custom model(%s)" % model_name)
 
-    return model.cuda()
+    if(torch.cuda.is_available()):
+        return model.cuda()
+    else:
+        return model
 
 
 def summary(model_name, model):

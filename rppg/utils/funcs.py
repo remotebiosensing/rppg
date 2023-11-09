@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from scipy import signal
 from scipy.sparse import spdiags
-from rppg.utils.visualization import hrv_comparison_plot, hr_comparison_bpf
+from utils.visualization import hrv_comparison_plot, hr_comparison_bpf
 
 from matplotlib import pyplot as plt
 import neurokit2 as nk

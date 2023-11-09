@@ -6,14 +6,15 @@ import numpy as np
 import torch
 import wandb
 
-from rppg.loss import loss_fn
-from rppg.models import get_model
-from rppg.optim import optimizer
-from rppg.config import get_config
-from rppg.dataset_loader import (dataset_loader, dataset_split, data_loader)
-from rppg.preprocessing.dataset_preprocess import check_preprocessed_data
-from rppg.run import run
-from rppg.utils.test_utils import save_single_result
+from loss import loss_fn
+from models import get_model
+from optim import optimizer
+from config import get_config
+from dataset_loader import (dataset_loader, dataset_split, data_loader)
+from preprocessing.dataset_preprocess import check_preprocessed_data
+from run import run
+from utils.test_utils import save_single_result
+
 
 SEED = 0
 

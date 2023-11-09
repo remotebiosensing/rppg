@@ -1,5 +1,5 @@
 import torch
-from rppg.nets.TSCAN import TSM
+from nets.TSCAN import TSM
 
 
 class BigSmall(torch.nn.Module):

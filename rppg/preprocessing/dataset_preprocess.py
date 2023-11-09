@@ -5,16 +5,17 @@ import csv
 import json
 import h5py
 import scipy.io as sio
-
+import time 
+import scipy
 import cv2
 import face_recognition
 import math
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
-from rppg.utils.funcs import detrend, BPF, get_hrv
+from utils.funcs import detrend, BPF, get_hrv
 from tqdm import tqdm
-from rppg.utils.data_path import *
+from utils.data_path import *
 
 
 def check_preprocessed_data(cfg):
@@ -104,10 +105,9 @@ def preprocessing(cfg, dataset):
 
     img_size = cfg.preprocess.common.image_size
     large_box_coef = cfg.preprocess.common.larger_box_coef
-
     if not os.path.isdir(cfg.data_root_path + dataset.name):
         # os.makedirs(dataset_root_path)
-        raise ValueError("dataset path does not exist, check data_root_path in config.yaml")
+        raise ValueError("dataset path does not exist, check data_root_path in config file")
     return_dict = manager.dict()
 
     RawDataPathLoader = None
@@ -255,6 +255,7 @@ def chunk_preprocessing(preprocess_type, data_list, dataset_root_path, vid_name,
     return_dict = manager.dict()
 
     for index, data_path in enumerate(data_list):
+        data_path = "/" + data_path
         proc = multiprocessing.Process(target=preprocess_Dataset,
                                        args=(preprocess_type, dataset_root_path, data_path, vid_name,
                                              ground_truth_name, return_dict)
@@ -422,24 +423,24 @@ def get_label(label_path, frame_total):
         f = h5py.File(label_path, 'r')
         label = np.asarray(f['pulse'])
 
-        # label = decimate(label,int(len(label)/frame_total))
-        # label_bvp = bvp.bvp(label, 256, show=False)
-        # label = label_bvp['filtered']
+        #label = decimate(label,int(len(label)/frame_total))
+        #label_bvp = bvp.bvp(label, 256, show=False)
+        #label = label_bvp['filtered']
 
-        # label = smooth(label, 128)
-        # label = resample_poly(label, 15, 128)
+        #label = smooth(label, 128)
+        #label = resample_poly(label, 15, 128)
         # label = resample(label,frame_total)
         # label = detrend(label,100)
 
-        # start = label_bvp['onsets'][3]
-        # end = label_bvp['onsets'][-2]
-        # label = label[start:end]
+        #start = label_bvp['onsets'][3]
+        #end = label_bvp['onsets'][-2]
+        #label = label[start:end]
         # plt.plot(label)
-        # label = resample(label,frame_total)
-        # label -= np.mean(label)
-        # label /= np.std(label)
-        # start = math.ceil(start / 32)
-        # end = math.floor(end / 32)
+        #label = resample(label,frame_total)
+        #label -= np.mean(label)
+        #label /= np.std(label)
+        #start = math.ceil(start / 32)
+        #end = math.floor(end / 32)
     elif label_path.__contains__("json"):
         name = label_path.split("/")
         label = []

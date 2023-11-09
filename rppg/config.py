@@ -19,5 +19,5 @@ def get_config(file):
     return cfg
 
 if __name__ == '__main__':
-    cfg = get_config("./configs/PRE_CONT_UBFC.yaml")
+    cfg = get_config("./configs/base_config.yaml")
     print(cfg)

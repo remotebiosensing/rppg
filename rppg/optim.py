@@ -1,6 +1,6 @@
 import torch.optim as opt
 
-from rppg.log import log_warning
+from log import log_warning
 
 
 def optimizer(model_params, learning_rate: float = 1, optim: str = "mse", log_flag: bool = True):

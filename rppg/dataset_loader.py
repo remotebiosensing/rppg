@@ -8,15 +8,15 @@ from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 from torch.utils.data.sampler import Sampler
 
-from rppg.datasets.APNETv2Dataset import APNETv2Dataset
-from rppg.datasets.DeepPhysDataset import DeepPhysDataset
-from rppg.datasets.ETArPPGNetDataset import ETArPPGNetDataset
-from rppg.datasets.PhysNetDataset import PhysNetDataset
-from rppg.datasets.PhysFormerDataset import PhysFormerDataset
-from rppg.datasets.RhythmNetDataset import RhythmNetDataset
-from rppg.datasets.VitamonDataset import VitamonDataset
-from rppg.datasets.EfficientPhysDataset import EfficientPhysDataset
-from rppg.utils.funcs import detrend
+from datasets.APNETv2Dataset import APNETv2Dataset
+from datasets.DeepPhysDataset import DeepPhysDataset
+from datasets.ETArPPGNetDataset import ETArPPGNetDataset
+from datasets.PhysNetDataset import PhysNetDataset
+from datasets.PhysFormerDataset import PhysFormerDataset
+from datasets.RhythmNetDataset import RhythmNetDataset
+from datasets.VitamonDataset import VitamonDataset
+from datasets.EfficientPhysDataset import EfficientPhysDataset
+from utils.funcs import detrend
 import torch
 
 

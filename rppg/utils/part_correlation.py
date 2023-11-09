@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 import signal_utils as su
-import rppg.dataset_loader as dl
+import dataset_loader as dl
 import matplotlib.pyplot as plt
 from sklearn import preprocessing as pp
 import itertools as it

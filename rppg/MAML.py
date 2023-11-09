@@ -1,6 +1,6 @@
 import torch
-from rppg.optim import optimizer
-from rppg.loss import loss_fn
+from optim import optimizer
+from loss import loss_fn
 from copy import deepcopy
 from tqdm import tqdm
 

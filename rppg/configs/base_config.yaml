@@ -1,8 +1,8 @@
 ---
-data_root_path: "/ssd/ssd0/dataset/raw/rppg/"            # raw data path
-dataset_path: "/ssd/ssd0/dataset/preprocessed/rppg/"     # preprocessed data save/load path
-model_save_path: "/ssd/ssd0/models/rppg/"                # model save path
-
+data_root_path: "../dataset/raw/"            # raw data path
+dataset_path: "../dataset/preprocessed/"     # preprocessed data save/load path
+model_save_path: "./models/rppg/"                # model save path
+#TODO : yaml에서 상대경로 가능한지 확인하기
 preprocess:
   flag: False                                            # true: preprocess, false: not preprocess
 
@@ -15,7 +15,7 @@ preprocess:
     image_size: 128                                      # cropped image size
 
   train_dataset:
-    name: UBFC                                           # dataset name
+    name: cohface                                           # dataset name
     select_data:                                         # Empty the list if you want to select all person/task/source
       flag: False                                        # False if you want to select all data
       person_list: [ ]                                   # If V4V dataset, fill in the format 'Fxxx' or 'Mxxx'
@@ -23,7 +23,7 @@ preprocess:
       source_list: [ ]                                   # Fill only in case of VIPL_HR dataset.
 
   test_dataset:
-    name: UBFC                                           # dataset name
+    name: cohface                                           # dataset name
     select_data:                                         # Empty the list if you want to select all person/task/source
       flag: False                                        # False if you want to select all data
       person_list: [ ]                                   # If V4V dataset, fill in the format 'Fxxx' or 'Mxxx'
@@ -50,7 +50,7 @@ fit:
   model_save_flag: True                   # True: save model, False: not save model
 
   train:
-    dataset: UBFC
+    dataset: cohface
     shuffle: True
     fs: 30 #video fps
     batch_size: 8
@@ -65,7 +65,7 @@ fit:
       inner_lr: 0.01
 
   test:
-    dataset: UBFC
+    dataset: cohface
     shuffle: False
     fs: 30 #video fps
     batch_size: 8
