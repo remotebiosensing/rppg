@@ -231,6 +231,9 @@ def preprocess_Dataset(preprocess_type, dataset_root_path, data_path, vid_name, 
     if dataset_name == "UBFC_Phys":
         add_info = data_path[-2] + "/"
         data_path = data_path[-1]
+    if dataset_name == "cohface":
+        data_path = data_path.split('/')
+        data_path = data_path[1] + '_' + data_path[2]
 
     dir_path = save_root_path + "/" + dataset_name + "/" + preprocess_type + "/" + add_info
     if not os.path.isdir(dir_path):
@@ -355,8 +358,9 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
     else:
         cap = cv2.VideoCapture(video_path)
         frame_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
         raw_label = get_label(label_path, frame_total)
-        hrv = get_hrv_label(raw_label, fs=30.)
+        hrv = get_hrv_label(raw_label, fs=fps)
 
         for i in tqdm(range(frame_total), position=0, leave=True, desc=video_path):
             ret, frame = cap.read()
@@ -387,10 +391,10 @@ def data_preprocess(preprocess_type, video_path, label_path, **kwargs):
         raw_video = np.empty((xy_points.__len__(), img_size, img_size, 3), dtype=np.float32)
         for frame_num in range(rear_idx + 1):
             ret, frame = cap.read()
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             if not ret:
                 print(f"Can't receive frame: {video_path}")
                 break
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             # crop face from frame
             face = np.take(frame, range(y_x_w[frame_num][0] - y_x_w[frame_num][2],
                                         y_x_w[frame_num][0] + y_x_w[frame_num][2]), 0, mode='clip')
@@ -419,23 +423,23 @@ def get_label(label_path, frame_total):
         label = np.asarray(f['pulse'])
 
         # label = decimate(label,int(len(label)/frame_total))
-        label_bvp = bvp.bvp(label, 256, show=False)
-        label = label_bvp['filtered']
+        # label_bvp = bvp.bvp(label, 256, show=False)
+        # label = label_bvp['filtered']
 
         # label = smooth(label, 128)
-        label = resample_poly(label, 15, 128)
+        # label = resample_poly(label, 15, 128)
         # label = resample(label,frame_total)
         # label = detrend(label,100)
 
-        start = label_bvp['onsets'][3]
-        end = label_bvp['onsets'][-2]
-        label = label[start:end]
+        # start = label_bvp['onsets'][3]
+        # end = label_bvp['onsets'][-2]
+        # label = label[start:end]
         # plt.plot(label)
         # label = resample(label,frame_total)
-        label -= np.mean(label)
-        label /= np.std(label)
-        start = math.ceil(start / 32)
-        end = math.floor(end / 32)
+        # label -= np.mean(label)
+        # label /= np.std(label)
+        # start = math.ceil(start / 32)
+        # end = math.floor(end / 32)
     elif label_path.__contains__("json"):
         name = label_path.split("/")
         label = []
