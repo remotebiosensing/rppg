@@ -34,6 +34,19 @@ Remote Bio-Sensing: Open Source Benchmark Framework for Fair Evaluation of rPPG,
 
 `conda activate rppg`
 
+### Quick Environment Setting with Docker
+
+`docker build -t rppg_docker_test .`
+
+`docker run rppg_docker_test`
+
+`docker exec -it {container_name} /bin/bash`
+
+`conda activate rppg`
+
+`Build the rPPG !!`
+
+
 ### Quick Start with our examples
  
 - #### rPPG( remote PPG) models
