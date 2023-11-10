@@ -303,16 +303,16 @@ class VIPL_HR_RawDataPathLoader:
 
 class COHFACE_RawDataPathLoader:
     def __init__(self, data_root_path, select_data_flag=False, task_list=None):
-        if task_list is None:
+        if (task_list is None) or (task_list == []):
             task_list = ['all']
 
         self.data_root_path = data_root_path
         self.dataset_root_path = self.data_root_path + 'cohface'
 
-        self.video_name = 'data.mkv'
+        self.video_name = 'data.avi'
         self.ppg_name = 'data.hdf5'
 
-        protocol = dataset_root_path + "/" + "protocols/"
+        protocol = self.dataset_root_path + "/" + "protocols/"
         if 'all' in task_list:
             protocol += "all/all.txt"
         elif 'clean' in task_list:
@@ -321,7 +321,7 @@ class COHFACE_RawDataPathLoader:
             protocol += "natural/all.txt"
         f = open(protocol, 'r')
         data_list = f.readlines()
-        self.data_list = [path.replace("data\n", "") for path in data_list]
+        self.data_list = ['/' + path.replace("data\n", "") for path in data_list]
         f.close()
 
 
