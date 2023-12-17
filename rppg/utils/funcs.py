@@ -55,7 +55,7 @@ def detrend_torch(signals, Lambda=100):
     diag2 = torch.cat((torch.zeros((length - 2, 1)), torch.diag(-2 * ones), torch.zeros((length - 2, 1))), dim=-1)
     diag3 = torch.cat((torch.zeros((length - 2, 2)), torch.diag(ones)), dim=-1)
     D = diag1 + diag2 + diag3
-
+    signals = signals.to('cuda')
     detrended_signal = torch.bmm(signals.unsqueeze(1),
                                  (H - torch.linalg.inv(H + (Lambda ** 2) * torch.t(D) @ D)).to('cuda').expand(test_n,
                                                                                                               -1,
