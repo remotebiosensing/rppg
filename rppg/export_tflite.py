@@ -70,14 +70,14 @@ class ori(tf.Module):
 
         return tf.squeeze(filtered_signal)
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[256, 3], dtype=tf.float32)])
+    @tf.function(input_signature=[tf.TensorSpec(shape=[512, 3], dtype=tf.float32)])
     def __call__(self, x):
         x = tf.transpose(x, perm=[1, 0])  # (B,C,N,H, W)  (B, N, C)
         x = self.rectangular_smoothing(x[1], 5)
         x = self.detrend_tf(x, 100)  # (B,C,N,H, W)  (B, N, C)
-        x = tf.signal.rfft(x, fft_length=[256])
+        x = tf.signal.rfft(x, fft_length=[512])
         x = tf.abs(x)
-        f_ppg = tf.linspace(0.0, 15, 65)
+        f_ppg = tf.linspace(0.0, 15, 257)
 
         # Mask for filtering frequencies
         fmask_ppg = tf.where((f_ppg >= 0.75) & (f_ppg <= 3.5))
@@ -86,7 +86,7 @@ class ori(tf.Module):
 
         # Calculate heart rate
         # print(mask_pxx.shape)
-        hr_index = tf.argmax(mask_pxx) + 3
+        hr_index = tf.argmax(mask_pxx) + 7
         hr = tf.gather(mask_ppg, hr_index)[0]
         return hr*60
 

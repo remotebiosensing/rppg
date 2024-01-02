@@ -10,7 +10,7 @@ import face_recognition
 from matplotlib import pyplot as plt
 from scipy.sparse import spdiags
 
-frame_num = 256
+frame_num = 512
 
 def detrend(signal, Lambda):
     """detrend(signal, Lambda) -> filtered_signal
@@ -75,7 +75,7 @@ class Transpose_test(tf.Module):
     def __init__(self):
         super().__init__()
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[256, 3], dtype=tf.float32)])
+    @tf.function(input_signature=[tf.TensorSpec(shape=[512, 3], dtype=tf.float32)])
     def __call__(self, x):
         x = tf.transpose(x, perm=[1, 0])  # (B,C,N,H, W)  (B, N, C)
         return x
@@ -101,7 +101,7 @@ class Smoothing_test(tf.Module):
         # 결과를 1D로 재구성
         return tf.reshape(smoothed_signal, [-1])
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[3, 256], dtype=tf.float32)])
+    @tf.function(input_signature=[tf.TensorSpec(shape=[3, 512], dtype=tf.float32)])
     def __call__(self, x):
         x = self.rectangular_smoothing(x[1],5)
         return x
@@ -132,7 +132,7 @@ class Detrend_test(tf.Module):
         return tf.squeeze(filtered_signal)
 
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[252], dtype=tf.float32)])
+    @tf.function(input_signature=[tf.TensorSpec(shape=[508], dtype=tf.float32)])
     def __call__(self, x):
         x = self.detrend_tf(x,100)  # (B,C,N,H, W)  (B, N, C)
         return x
@@ -144,10 +144,10 @@ class Fft_test(tf.Module):
     def _nearest_power_of_2(self, x):
         return 2 ** tf.cast(tf.math.round(tf.math.log(tf.cast(x, tf.float32)) / tf.math.log(2.0)), tf.int32)
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[252], dtype=tf.float32)])
+    @tf.function(input_signature=[tf.TensorSpec(shape=[508], dtype=tf.float32)])
     def __call__(self, x):
 
-        x = tf.signal.rfft(x, fft_length=[256])
+        x = tf.signal.rfft(x, fft_length=[512])
         x = tf.abs(x)
         return x
 
@@ -155,9 +155,9 @@ class Calculate_HR(tf.Module):
     def __init__(self):
         super().__init__()
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[129], dtype=tf.float32)])
+    @tf.function(input_signature=[tf.TensorSpec(shape=[257], dtype=tf.float32)])
     def __call__(self, signal, fs=30, low_pass=0.75, high_pass=2.5 ):
-        f_ppg = tf.linspace(0.0, fs / 2, 65)
+        f_ppg = tf.linspace(0.0, frameRate//2, 257)
 
         # Mask for filtering frequencies
         fmask_ppg = tf.where((f_ppg >= low_pass) & (f_ppg <= high_pass))
@@ -166,7 +166,7 @@ class Calculate_HR(tf.Module):
 
         # Calculate heart rate
         # print(mask_pxx.shape)
-        hr_index = tf.argmax(mask_pxx)+3
+        hr_index = tf.argmax(mask_pxx) + 7
         hr = tf.gather(mask_ppg, hr_index)[0]
 
         # f_ppg1 = tf.linspace(0.0, 15, 65)
@@ -181,8 +181,8 @@ class Calculate_HR(tf.Module):
 if __name__ == "__main__":
 
 
-    if os.path.isfile("C:\data\\rppg_dataset\\raw\\UBFC\subject1\\vid.avi"):
-        cap = cv2.VideoCapture("C:\data\\rppg_dataset\\raw\\UBFC\subject1\\vid.avi")
+    if os.path.isfile("C:\data\\mobile\\5.mp4"):
+        cap = cv2.VideoCapture("C:\data\\mobile\\5.mp4")
 
     frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))  # 영상의 넓이(가로) 프레임
     frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # 영상의 높이(세로) 프레임
@@ -195,24 +195,29 @@ if __name__ == "__main__":
 
     cnt = 0
 
-    skip = 300
+    skip = 0
 
     while True:
         retval, frame = cap.read()
         if not (retval):  # 프레임정보를 정상적으로 읽지 못하면
             break  # while문을 빠져나가기
-        cnt += 1
-        if cnt <= skip:
-            continue
+
         face_locations = face_recognition.face_locations(frame, 1, model='hog')
         if len(face_locations) >= 1:
             (bottom, right, top, left) = face_locations[0]
+            tmp = cv2.resize(frame[bottom:top, left:right], (1, 1))
+            data.append(tmp)
+            cnt += 1
         else:
-            exit(0)
+            if len(data) > 0:
+                data.append(data[-1])
+                cnt += 1
+            else:
+                continue
+            #exit(0)
 
-        tmp = cv2.resize(frame[bottom:top, left:right], (1, 1))
-        data.append(tmp)
-
+        if cnt <= skip:
+            continue
 
         print(cnt)
         if cnt == frame_num+skip:
@@ -277,7 +282,7 @@ if __name__ == "__main__":
     plt.plot(out_fft)
     plt.show()
     #
-    f_ppg1 = tf.linspace(0.0, 15, 65)
+    f_ppg1 = tf.linspace(0.0, frameRate//2, 257)
     fmask_ppg1 = tf.where((f_ppg1 >= 0.8) & (f_ppg1 <= 3.5))
     mask_ppg1 = tf.gather(f_ppg1, fmask_ppg1)
     mask_pxx1 = tf.gather(tf.squeeze(out_fft), fmask_ppg1)
@@ -287,7 +292,7 @@ if __name__ == "__main__":
 
     ppg_signal = np.expand_dims(out_detrend, 0)
     #N = _nearest_power_of_2(ppg_signal.shape[1])
-    f_ppg, pxx_ppg = signal.periodogram(ppg_signal, fs=30, nfft=128, detrend=False)
+    f_ppg, pxx_ppg = signal.periodogram(ppg_signal, fs=frameRate//2, nfft=512, detrend=False)
     fmask_ppg = np.argwhere((f_ppg >= 0.8) & (f_ppg <= 3.5))
     mask_ppg = np.take(f_ppg, fmask_ppg)
     mask_pxx = np.take(pxx_ppg, fmask_ppg)
