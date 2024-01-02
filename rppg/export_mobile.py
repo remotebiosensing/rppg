@@ -160,7 +160,7 @@ class BandPassFilter(torch.nn.Module):
         return signal_real
 
     def forward(self, signals):
-        self.set_cutoff_frequencies(0.18,0.5)
+        self.set_cutoff_frequencies(0.8,3)
         b, signal_len = signals.shape
         # signal_list = freq[torch.argmax(amplitude, dim=-1)] * 60
         filtered_signals = torch.empty(signals.shape)
@@ -183,13 +183,30 @@ class BandPassFilter(torch.nn.Module):
             filtered_signals[i] = filtered_signal_real
         return filtered_signals
 class DetrendClass(nn.Module):
-    def iterative_inverse(self,matrix, iterations=10):
-        # 초기 근사치는 단위 행렬
-        inverse_approx = torch.eye(matrix.size(0), device=matrix.device)
 
-        # 반복적인 방법으로 근사치 업데이트
+    def qr_inverse(self,matrix):
+        # QR 분해
+        q, r = torch.qr(matrix)
+
+        # 상삼각 행렬 R의 역행렬을 계산
+        r_inv = torch.inverse(r)
+
+        # 역행렬 계산: R_inv * Q^T
+        return r_inv @ q.transpose(-2, -1)
+    def iterative_inverse(self,matrix, iterations=10, epsilon=1e-5):
+        # 초기 근사치는 단위 행렬
+        if torch.linalg.cond(matrix) > 1 / epsilon:
+            matrix += epsilon * torch.eye(matrix.size(0), device=matrix.device)
+
+            # 초기 근사치는 matrix의 전치 또는 단위 행렬
+        inverse_approx = matrix.transpose(-2, -1).clone()  # 또는 torch.eye(matrix.size(0), device=matrix.device)
+
         for _ in range(iterations):
             inverse_approx = 2 * inverse_approx - inverse_approx @ matrix @ inverse_approx
+
+            # 발산 감지
+            if torch.isinf(inverse_approx).any() or torch.isnan(inverse_approx).any():
+                break
 
         return inverse_approx
     def detrend_torch(self,signals: torch.Tensor, Lambda: float = 100.0) -> torch.Tensor:
@@ -233,7 +250,7 @@ class DetrendClass(nn.Module):
         I = torch.eye(H.size(0), device=H.device)
 
         # 선형 시스템 해결을 사용하여 역행렬 계산
-        inv_matrix = self.iterative_inverse(H + (Lambda ** 2) * torch.transpose(D, 0, 1) @ D)
+        inv_matrix = self.qr_inverse(H + (Lambda ** 2) * torch.transpose(D, 0, 1) @ D)
 
         # 원래 연산 수행
         detrended_signal = torch.bmm(signals.unsqueeze(1), (H - inv_matrix).expand(test_n, -1, -1)).squeeze()
@@ -346,6 +363,7 @@ class MobileClass(nn.Module):
 
     def forward(self,x):
         rppg = self.model(x)
+        return rppg
         #rppg = self.detrend_torch(rppg)
 
         #rppg_hr = self.normalize_torch(self.bpf_hr(rppg))
@@ -354,12 +372,32 @@ class MobileClass(nn.Module):
         #hr = self.calc_hr_torch( rppg_hr)
         #rr = self.calc_hr_torch(rppg_rr)
 
-        return torch.tensor([70, 15, 2.0, 98, 30, 117, 68])
+        #return torch.tensor([70, 15, 2.0, 98, 30, 117, 68])
+
+
+class CombinationClass(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.mobileclass = MobileClass()
+        self.detrendclass = DetrendClass()
+        self.bpf = BandPassFilter()
+        self.normalize = NormalizeClass()
+        self.calc = clacClass()
+    def forward(self,x):
+        x = self.mobileclass(x)
+        #x = self.detrendclass(x)
+        x = self.bpf(x)
+        x = self.normalize(x)
+        x = self.calc(x)
+        return x
+
+
+
 from torch.utils.mobile_optimizer import optimize_for_mobile
 if __name__ == "__main__":
     print(torch.has_lapack)
-    # x = torch.randn(2, 3, 300, 50, 50)
-    rppg = torch.randn(2,300)
+    x = torch.randn(2, 3, 300, 50, 50)
+    #rppg = torch.randn(2,300)
     # mobileclass = MobileClass(model_name="POS")
     # torch.save(mobileclass, './pos.pt')
     # traced_script_module = torch.jit.trace(mobileclass, x)
@@ -367,15 +405,15 @@ if __name__ == "__main__":
     #detrendclass = DetrendClass()
     # hrbpfclass = BandPassFilter()
     # normalizeclass = NormalizeClass()
-    calcclass = clacClass()
-
-    torch.onnx.export(calcclass,  # 실행될 모델
-                      rppg,  # 모델 입력값 (튜플 또는 여러 입력값들도 가능)
-                      "calc.onnx",  # 모델 저장 경로 (파일 또는 파일과 유사한 객체 모두 가능)
+    #calcclass = clacClass()
+    combinationclass = CombinationClass()
+    torch.onnx.export(combinationclass,  # 실행될 모델
+                      x,  # 모델 입력값 (튜플 또는 여러 입력값들도 가능)
+                      "com.onnx",  # 모델 저장 경로 (파일 또는 파일과 유사한 객체 모두 가능)
                       input_names=['input'],  # 모델의 입력값을 가리키는 이름
                       output_names=['output']
                       )
-
+    print(combinationclass(x))
 
     # traced_script_module_optimized = optimize_for_mobile(traced_script_module)
     # traced_script_module_optimized._save_for_lite_interpreter("model.ptl")
